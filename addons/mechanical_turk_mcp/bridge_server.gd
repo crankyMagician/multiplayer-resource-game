@@ -3,7 +3,9 @@ extends Node
 ## WebSocket bridge server for MCP communication.
 ## Listens on port 9080 and dispatches JSON-RPC requests to handlers.
 
-const PORT: int = 9080
+var port: int = 9080
+var auth_token: String = ""
+var bridge_mode: String = "editor"
 
 var _tcp_server: TCPServer = null
 var _peers: Array[WebSocketPeer] = []
@@ -134,11 +136,11 @@ func _ready() -> void:
 
 func _start_server() -> void:
 	_tcp_server = TCPServer.new()
-	var err := _tcp_server.listen(PORT)
+	var err := _tcp_server.listen(port)
 	if err != OK:
-		push_error("[MCP Bridge] Failed to listen on port %d: %s" % [PORT, error_string(err)])
+		push_error("[MCP Bridge] Failed to listen on port %d: %s" % [port, error_string(err)])
 		return
-	print("[MCP Bridge] Server listening on port %d" % PORT)
+	print("[MCP Bridge] Server listening on port %d (%s mode)" % [port, bridge_mode])
 
 
 func stop_server() -> void:
@@ -205,6 +207,13 @@ func _handle_message(peer: WebSocketPeer, data: String) -> void:
 	var method: String = msg.get("method", "")
 	var params = msg.get("params", {})
 
+	# Auth check (skipped when auth_token is empty)
+	if not auth_token.is_empty():
+		var request_token: String = str(msg.get("auth", ""))
+		if request_token != auth_token:
+			_send_error(peer, id, -32603, "Authentication failed")
+			return
+
 	if method.is_empty():
 		_send_error(peer, id, -32600, "Missing method")
 		return
@@ -250,5 +259,6 @@ func _handle_ping(_params) -> Dictionary:
 	return {
 		"status": "ok",
 		"server": "mechanical-turk-mcp",
-		"version": "0.2.0"
+		"version": "0.2.0",
+		"mode": bridge_mode
 	}

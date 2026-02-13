@@ -5,6 +5,7 @@ const JUMP_VELOCITY = 4.5
 const GRAVITY = 9.8
 
 @onready var mesh: MeshInstance3D = $PlayerMesh
+@onready var nameplate: Label3D = $Nameplate
 @onready var camera_pivot: Node3D = $CameraPivot
 @onready var spring_arm: SpringArm3D = $CameraPivot/SpringArm3D
 @onready var camera: Camera3D = $CameraPivot/SpringArm3D/Camera3D
@@ -20,6 +21,11 @@ var tool_action_pressed: bool = false
 var mouse_sensitivity: float = 0.003
 var mouse_captured: bool = false
 var pitch_limit: float = deg_to_rad(70)
+
+# Visual properties (synced via StateSync on spawn)
+var player_color: Color = Color(0.2, 0.5, 0.9)
+var player_name_display: String = "Player"
+var mesh_rotation_y: float = 0.0
 
 var peer_id: int = 1
 
@@ -50,6 +56,8 @@ func _ready() -> void:
 		camera.current = false
 		# Disable processing input for non-local players
 		set_process_input(false)
+
+	_apply_visuals()
 
 func _input(event: InputEvent) -> void:
 	if peer_id != multiplayer.get_unique_id():
@@ -89,7 +97,23 @@ func _resolve_peer_id(local_id: int) -> int:
 		return local_id
 	return 1
 
+func _apply_visuals() -> void:
+	# Duplicate material so each player has unique color
+	if mesh and mesh.material_override:
+		var mat = mesh.material_override.duplicate() as StandardMaterial3D
+		mat.albedo_color = player_color
+		mesh.material_override = mat
+	if nameplate:
+		nameplate.text = player_name_display
+		# Hide own nameplate
+		var local_id = multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else -1
+		if peer_id == local_id:
+			nameplate.visible = false
+
 func _process(_delta: float) -> void:
+	# Apply synced rotation to mesh (all clients + server)
+	if mesh:
+		mesh.rotation.y = mesh_rotation_y
 	if peer_id != multiplayer.get_unique_id():
 		return
 	# Gather input
@@ -113,9 +137,9 @@ func _physics_process(delta: float) -> void:
 	if move_dir.length() > 0.1:
 		velocity.x = move_dir.x * SPEED
 		velocity.z = move_dir.z * SPEED
-		# Rotate mesh to face movement direction
+		# Rotate mesh to face movement direction (synced via StateSync)
 		var target_angle = atan2(move_dir.x, move_dir.z)
-		mesh.rotation.y = lerp_angle(mesh.rotation.y, target_angle, 10 * delta)
+		mesh_rotation_y = lerp_angle(mesh_rotation_y, target_angle, 10 * delta)
 	else:
 		velocity.x = move_toward(velocity.x, 0, SPEED * delta * 5)
 		velocity.z = move_toward(velocity.z, 0, SPEED * delta * 5)

@@ -47,8 +47,9 @@ func _try_interact() -> void:
 	# Check for water source
 	var water_source = _find_nearest_area("water_source", pos, 3.0)
 	if water_source:
-		PlayerData.refill_watering_can()
-		print("Watering can refilled!")
+		var water_farm_mgr = get_node_or_null("/root/Main/GameWorld/Zones/FarmZone/FarmManager")
+		if water_farm_mgr:
+			water_farm_mgr._request_refill.rpc_id(1)
 		return
 	# Check for farm plots
 	var farm_mgr = get_node_or_null("/root/Main/GameWorld/Zones/FarmZone/FarmManager")
@@ -67,11 +68,7 @@ func _interact_with_plot(farm_mgr: Node, plot_idx: int) -> void:
 		PlayerData.Tool.HOE:
 			action = "till"
 		PlayerData.Tool.WATERING_CAN:
-			if PlayerData.use_watering_can():
-				action = "water"
-			else:
-				print("Watering can is empty!")
-				return
+			action = "water"
 		PlayerData.Tool.SEEDS:
 			action = "plant"
 			extra = PlayerData.selected_seed_id

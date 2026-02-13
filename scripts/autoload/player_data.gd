@@ -28,6 +28,7 @@ var watering_can_current: int = 10
 
 # Player state
 var player_name: String = "Player"
+var player_color: Color = Color(0.2, 0.5, 0.9)
 
 func _ready() -> void:
 	# Only give starter creature for offline/singleplayer testing
@@ -69,6 +70,10 @@ func load_from_server(data: Dictionary) -> void:
 	# Load money and trainer defeats
 	money = int(data.get("money", 0))
 	defeated_trainers = data.get("defeated_trainers", {})
+	# Load player color
+	var cd = data.get("player_color", {})
+	if cd is Dictionary and not cd.is_empty():
+		player_color = Color(cd.get("r", 0.2), cd.get("g", 0.5), cd.get("b", 0.9))
 	# Reset tool
 	current_tool = Tool.HANDS
 	selected_seed_id = ""
@@ -83,6 +88,7 @@ func to_dict() -> Dictionary:
 		"watering_can_current": watering_can_current,
 		"money": money,
 		"defeated_trainers": defeated_trainers.duplicate(),
+		"player_color": {"r": player_color.r, "g": player_color.g, "b": player_color.b},
 	}
 
 func reset() -> void:
@@ -92,6 +98,7 @@ func reset() -> void:
 	selected_seed_id = ""
 	watering_can_current = watering_can_capacity
 	player_name = "Player"
+	player_color = Color(0.2, 0.5, 0.9)
 	money = 0
 	defeated_trainers.clear()
 	inventory_changed.emit()

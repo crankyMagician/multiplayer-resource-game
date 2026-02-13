@@ -78,11 +78,20 @@ func request_farm_action(plot_index: int, action: String, extra: String) -> void
 			success = plot.try_till(sender)
 		"plant":
 			if extra != "":
-				# Verify player has seeds
-				_request_plant_validation.rpc_id(sender, plot_index, extra)
-				return
+				if NetworkManager.server_remove_inventory(sender, extra, 1):
+					success = plots[plot_index].try_plant(sender, extra)
+					if success:
+						_sync_inventory_remove.rpc_id(sender, extra, 1)
+					else:
+						NetworkManager.server_add_inventory(sender, extra, 1)
 		"water":
-			success = plot.try_water(sender)
+			if NetworkManager.server_use_watering_can(sender):
+				success = plot.try_water(sender)
+				var remaining = int(NetworkManager.player_data_store[sender].get("watering_can_current", 0))
+				_sync_watering_can.rpc_id(sender, remaining)
+			else:
+				_farm_action_result.rpc_id(sender, plot_index, action, false)
+				return
 		"harvest":
 			result = plot.try_harvest(sender)
 			if result.size() > 0:
@@ -99,33 +108,31 @@ func _farm_action_result(_plot_index: int, _action: String, _success: bool) -> v
 	pass
 
 @rpc("authority", "reliable")
+func _sync_watering_can(amount: int) -> void:
+	PlayerData.watering_can_current = amount
+
+@rpc("authority", "reliable")
 func _grant_harvest(items: Dictionary) -> void:
 	for item_id in items:
 		PlayerData.add_to_inventory(item_id, items[item_id])
 
 @rpc("authority", "reliable")
-func _request_plant_validation(plot_index: int, seed_id: String) -> void:
-	# Client validates they have the seed and responds
-	if PlayerData.has_item(seed_id, 1):
-		PlayerData.remove_from_inventory(seed_id, 1)
-		_confirm_plant.rpc_id(1, plot_index, seed_id, multiplayer.get_unique_id())
+func _sync_inventory_remove(item_id: String, _amount: int) -> void:
+	PlayerData.remove_from_inventory(item_id, _amount)
 
 @rpc("any_peer", "reliable")
-func _confirm_plant(plot_index: int, seed_id: String, peer_id: int) -> void:
+func _request_refill() -> void:
 	if not multiplayer.is_server():
 		return
-	if plot_index >= 0 and plot_index < plots.size():
-		var success = plots[plot_index].try_plant(peer_id, seed_id)
-		if success:
-			NetworkManager.server_remove_inventory(peer_id, seed_id, 1)
-		else:
-			# Refund seed
-			_refund_seed.rpc_id(peer_id, seed_id)
-			NetworkManager.server_add_inventory(peer_id, seed_id, 1)
+	var sender = multiplayer.get_remote_sender_id()
+	NetworkManager.server_refill_watering_can(sender)
+	var amount = int(NetworkManager.player_data_store[sender].get("watering_can_current", 10))
+	_receive_refill.rpc_id(sender, amount)
 
 @rpc("authority", "reliable")
-func _refund_seed(seed_id: String) -> void:
-	PlayerData.add_to_inventory(seed_id, 1)
+func _receive_refill(amount: int) -> void:
+	PlayerData.watering_can_current = amount
+	print("Watering can refilled!")
 
 func get_save_data() -> Array:
 	var data = []

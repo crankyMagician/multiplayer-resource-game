@@ -137,6 +137,10 @@ func request_join(player_name: String) -> void:
 		print("  -> New player, created default data")
 	else:
 		print("  -> Loaded saved data for ", player_name)
+	# Backfill player color for old saves that lack it
+	var pc = data.get("player_color", {})
+	if not pc is Dictionary or pc.is_empty():
+		data["player_color"] = _generate_player_color(sender_id)
 	# Store server-side
 	player_data_store[sender_id] = data
 	join_state[sender_id] = {
@@ -191,6 +195,12 @@ func client_ready_for_spawn() -> void:
 	print("Client ready for spawn: ", sender_id)
 	player_connected.emit(sender_id, info)
 
+func _generate_player_color(peer_id: int) -> Dictionary:
+	# Golden-angle hue distribution for visually distinct colors
+	var hue = fmod(peer_id * 0.618033988749895, 1.0)
+	var c = Color.from_hsv(hue, 0.7, 0.9)
+	return {"r": c.r, "g": c.g, "b": c.b}
+
 func _create_default_player_data(player_name: String) -> Dictionary:
 	var starter = {
 		"species_id": "rice_ball",
@@ -220,6 +230,7 @@ func _create_default_player_data(player_name: String) -> Dictionary:
 		"watering_can_current": 10,
 		"money": 0,
 		"defeated_trainers": {},
+		"player_color": {},
 	}
 
 # === Server-side player data tracking ===
@@ -265,6 +276,20 @@ func server_update_party(peer_id: int, party_array: Array) -> void:
 	if peer_id not in player_data_store:
 		return
 	player_data_store[peer_id]["party"] = party_array
+
+func server_use_watering_can(peer_id: int) -> bool:
+	if peer_id not in player_data_store:
+		return false
+	var current = int(player_data_store[peer_id].get("watering_can_current", 0))
+	if current <= 0:
+		return false
+	player_data_store[peer_id]["watering_can_current"] = current - 1
+	return true
+
+func server_refill_watering_can(peer_id: int) -> void:
+	if peer_id not in player_data_store:
+		return
+	player_data_store[peer_id]["watering_can_current"] = 10
 
 func is_server() -> bool:
 	return multiplayer.multiplayer_peer != null and multiplayer.is_server()

@@ -3,7 +3,10 @@
     "godot": {
       "command": "node",
       "args": ["/Users/sam/Documents/GitHub/mechanicalturk/mechanical-turk/mcp_server/build/index.js"],
-      "env": { "GODOT_PATH": "/Applications/Mechanical Turk.app/Contents/MacOS/Mechanical Turk" }
+      "env": {
+        "GODOT_PATH": "/Applications/Mechanical Turk.app/Contents/MacOS/Mechanical Turk",
+        "GODOT_RUNTIME_BRIDGE_PORT": "9081"
+      }
     },
     "kubernetes-mcp-server": {
       "command": "bash",

@@ -142,6 +142,13 @@ func _spawn_player(peer_id: int) -> void:
 			player.position = Vector3(randf_range(-2, 2), 1, randf_range(2, 4))
 	else:
 		player.position = Vector3(randf_range(-2, 2), 1, randf_range(2, 4))
+	# Set visual properties from server data
+	if peer_id in NetworkManager.player_data_store:
+		var pdata = NetworkManager.player_data_store[peer_id]
+		var cd = pdata.get("player_color", {})
+		if cd is Dictionary and not cd.is_empty():
+			player.player_color = Color(cd.get("r", 0.2), cd.get("g", 0.5), cd.get("b", 0.9))
+		player.player_name_display = str(pdata.get("player_name", "Player"))
 	# Keep exact numeric node names (peer_id) so authority/camera logic works on clients.
 	players_node.add_child(player)
 	print("Spawned player: ", peer_id)

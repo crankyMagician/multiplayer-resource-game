@@ -15,7 +15,7 @@ cd "$PROJECT_ROOT"
 IMAGE="ghcr.io/crankymagician/mt-creature-crafting-server:latest"
 K8S_NAMESPACE="godot-multiplayer"
 K8S_DEPLOYMENT="creature-crafting-server"
-SERVER_ENDPOINT="10.225.0.153:30777"
+SERVER_ENDPOINT="207.32.216.76:7777"
 RBAC_YAML="../blazar-kubernetes-mcp/k8s/rbac-setup.yaml"
 
 SKIP_BUILD=false

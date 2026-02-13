@@ -126,7 +126,7 @@ func try_water(_peer_id: int) -> bool:
 		set_state(PlotState.GROWING)
 	return true
 
-func try_harvest(peer_id: int) -> Dictionary:
+func try_harvest(_peer_id: int) -> Dictionary:
 	if plot_state != PlotState.READY:
 		return {}
 	var ingredient = DataRegistry.get_ingredient(planted_seed_id)

@@ -21,6 +21,9 @@
 - Player movement uses server authority with replicated input.
 - Camera defaults to over-the-shoulder and captures mouse during world control.
 - Mouse is explicitly made visible during battle UI and recaptured after battle ends.
+- **Player visuals** (color, nameplate): set on the player node server-side **before** `add_child()` in `_spawn_player()`, synced via StateSync spawn-only mode (replication_mode=0). `_apply_visuals()` runs on all peers to apply color to mesh material and set nameplate text.
+- **Mesh rotation**: `mesh_rotation_y` computed server-side in `_physics_process`, synced via StateSync always-mode. All clients apply it in `_process()` to `mesh.rotation.y`.
+- **StateSync properties** (5 total): `position`, `velocity` (always), `player_color`, `player_name_display` (spawn-only), `mesh_rotation_y` (always).
 
 ## Battle System
 - **3 battle modes**: Wild, Trainer (7 NPCs), PvP (V key challenge)
@@ -37,6 +40,8 @@
 - **16 ingredients**: farm crops (season-locked) + battle drops
 - Crafting UI splits into "Creature Recipes" and "Held Item Recipes" sections
 - New plantable crops: lemon (summer), pickle_brine (autumn)
+- **Planting flow** (server-authoritative): Client sends `request_farm_action(plot_idx, "plant", seed_id)` RPC to server. Server removes seed from `player_data_store` inventory, attempts plant, rolls back on failure. No client-side inventory deduction.
+- **Watering flow** (server-authoritative): Client sends `request_farm_action(plot_idx, "water", "")` RPC. Server calls `server_use_watering_can()` to decrement, then syncs remaining charges to client via `_sync_watering_can` RPC. Refill via `_request_refill` RPC at water sources.
 
 ## Wild Encounter Zones
 - 6 zones total: Herb Garden, Flame Kitchen, Frost Pantry, Harvest Field, Sour Springs, Fusion Kitchen
@@ -48,6 +53,35 @@
 - Area3D proximity detection triggers battle; re-trigger after leaving and re-entering
 - Color-coded by difficulty: green=easy, yellow=medium, red=hard
 - Trainers: Sous Chef Pepper, Farmer Green, Pastry Chef Dulce, Brinemaster Vlad, Chef Umami, Head Chef Roux, Grand Chef Michelin
+
+## Networking Rules (IMPORTANT)
+
+This is a server-authoritative multiplayer game. **Every gameplay change — new feature, new action, new resource, any UI that affects game state — must be evaluated for networking impact.** If the user does not specify whether a change should be networked, always ask before implementing.
+
+### Questions to resolve before writing code
+- Should this run on **server only**, **client only**, or **both**?
+- Does the server need to **validate/authorize** this action? (Almost always yes for anything that changes player data, inventory, party, or world state.)
+- Do other clients need to **see the result**? If so, how is it synced — RPC, MultiplayerSynchronizer property, or MultiplayerSpawner?
+- Is there a **race condition** if the client optimistically updates before the server confirms?
+
+### Authority model
+| System | Authority | Sync mechanism |
+|--------|-----------|---------------|
+| Player movement | Server (`_physics_process`) | StateSync (position, velocity) |
+| Player rotation | Server (`_physics_process`) | StateSync (`mesh_rotation_y`) |
+| Player visuals (color, name) | Server (set before spawn) | StateSync (spawn-only) |
+| Camera / input | Client (InputSync) | InputSync → server reads |
+| Inventory changes | Server (`server_add/remove_inventory`) | RPC to client (`_sync_inventory_remove`, `_grant_harvest`) |
+| Watering can | Server (`server_use/refill_watering_can`) | RPC to client (`_sync_watering_can`, `_receive_refill`) |
+| Farm actions (plant/water/harvest/till) | Server (`request_farm_action` RPC) | Server validates, then RPC result to client |
+| Battle state | Server (BattleManager) | RPCs to involved clients |
+| Crafting | Server (CraftingSystem validates) | RPC results to client |
+| Save/load | Server only (SaveManager) | Data sent to client via `_receive_player_data` |
+
+### Never do this
+- **Never deduct resources client-side before server confirms.** Always let the server deduct first, then sync to client via RPC. The old planting flow had this bug — client removed seed, then told server, creating desync on disconnect.
+- **Never assume a gameplay feature is local-only** unless explicitly told so. Even "cosmetic" things like player color need syncing in multiplayer.
+- **Never modify `PlayerData` (the autoload) on the server.** `PlayerData` is the client's local mirror. The server uses `NetworkManager.player_data_store[peer_id]`. Sync changes from server store to client PlayerData via RPC.
 
 ## GDScript Conventions
 - Use `class_name` for static utility classes (BattleCalculator, StatusEffects, FieldEffects, AbilityEffects, HeldItemEffects, BattleAI)
@@ -63,7 +97,9 @@
 ## Kubernetes Deployment
 - **Namespace**: `godot-multiplayer` (shared with other multiplayer game servers)
 - **Image**: `ghcr.io/crankymagician/mt-creature-crafting-server:latest`
-- **Endpoint**: `10.225.0.153:30777` (UDP) — NodePort 30777 → container 7777
+- **Public endpoint**: `207.32.216.76:7777` (UDP) — NodePort 7777 → container 7777.
+- **Internal/VPN endpoint**: `10.225.0.153:7777`.
+- **Node SSH access**: `ssh jayhawk@10.225.0.153` (password: `fir3W0rks!`). User has sudo. k3s config at `/etc/rancher/k3s/config.yaml`. NodePort range: `7000-32767`.
 - **Persistent storage**: 1Gi PVC (`creature-crafting-data`) mounted at `/app/data` for player/world saves
 - **Deploy strategy**: `Recreate` (RWO PVC can't be shared during rolling update)
 - **MCP config**: `.claude/mcp.json` provides both Godot and Kubernetes MCP servers
@@ -77,11 +113,13 @@
 ./scripts/deploy-k8s.sh --skip-build # redeploy without rebuilding image
 ```
 
-## MCP Limitations
+## MCP Testing Workflow
 - MCP bridge only communicates with the editor process, NOT the running game
 - `execute_gdscript`, `send_input_event`, `send_action`, and screenshots all target the editor only
-- To test the running game: temporarily add auto-connect to connect_ui.gd, run project, check `get_debug_output`, then revert
 - `batch_scene_operations` creates wrong node types — write .tscn files directly instead
+- **To test server-side logic via MCP**: add temporary test code to `connect_ui.gd` `_ready()`, call `NetworkManager.host_game()`, run tests synchronously (no `await`), then check `get_debug_output`. Revert the test code afterward.
+- **IMPORTANT**: Do NOT call `GameManager.start_game()` before your test code finishes — it frees ConnectUI via `queue_free`, killing any running coroutine. Run all assertions before `start_game()`.
+- **Port conflict**: If `host_game()` returns error 20 (ERR_CANT_CREATE), check `lsof -i :7777` — a Docker container or previous server may be holding the port. Stop it with `docker compose down` first.
 
 ## File Structure Overview
 - `scripts/autoload/` — NetworkManager, GameManager, PlayerData, SaveManager
