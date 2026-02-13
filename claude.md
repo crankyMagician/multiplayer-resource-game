@@ -27,11 +27,25 @@
 
 ## Kubernetes Deployment
 - **Namespace**: `godot-multiplayer` (shared with other multiplayer game servers)
+- **Image**: `ghcr.io/crankymagician/mt-creature-crafting-server:latest`
+- **Endpoint**: `10.225.0.153:30777` (UDP) — NodePort 30777 → container 7777
+- **Persistent storage**: 1Gi PVC (`creature-crafting-data`) mounted at `/app/data` for player/world saves
+- **Deploy strategy**: `Recreate` (RWO PVC can't be shared during rolling update)
 - **MCP config**: `.claude/mcp.json` provides both Godot and Kubernetes MCP servers
 - **K8s MCP**: Uses `blazar-kubernetes-mcp/run-mcp.sh` with `K8S_NAMESPACE=godot-multiplayer`
 - **RBAC**: Service account `mcp-admin` in `godot-multiplayer` namespace (configured in `blazar-kubernetes-mcp/k8s/rbac-setup.yaml`)
 
+### K8s Deploy Workflow
+```bash
+./scripts/deploy-k8s.sh --setup      # first-time: namespace + ghcr-secret + RBAC
+./scripts/deploy-k8s.sh              # full build + push + deploy
+./scripts/deploy-k8s.sh --skip-build # redeploy without rebuilding image
+```
+
 ## Recent Infrastructure Changes
+- `k8s/deployment.yaml`: PVC + Deployment for creature-crafting-server in `godot-multiplayer` namespace.
+- `k8s/service.yaml`: NodePort service (30777 → 7777/UDP).
+- `scripts/deploy-k8s.sh`: automated build, push, and deploy script with `--setup` bootstrapping.
 - `scripts/autoload/network_manager.gd`: port switched to `7777`; join handshake and readiness flow hardened.
 - `scripts/player/player_controller.gd`: authority setup and movement/camera reliability updates.
 - `scripts/world/tall_grass.gd`: encounter zone visuals and multiplayer safety guards.
