@@ -25,11 +25,17 @@ func _ready() -> void:
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
 
-	var is_dedicated := DisplayServer.get_name() == "headless" or OS.has_feature("dedicated_server") or "--server" in OS.get_cmdline_user_args()
+	var is_dedicated := DisplayServer.get_name() == "headless" or OS.has_feature("dedicated_server") or _has_server_flag()
 	if is_dedicated:
 		print("Server mode detected — auto-starting server...")
 		host_game("Server")
 		GameManager.start_game()
+
+static func _has_server_flag() -> bool:
+	for arg in OS.get_cmdline_user_args():
+		if arg == "--server" or arg == "--role=server" or arg == "--instance-index=0":
+			return true
+	return false
 
 func _process(_delta: float) -> void:
 	if multiplayer.multiplayer_peer == null or not multiplayer.is_server():
