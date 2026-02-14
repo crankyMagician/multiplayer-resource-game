@@ -53,6 +53,11 @@ func _load_prefs() -> void:
 		if OS.has_feature("editor"):
 			ip_input.text = DEFAULT_IP
 		else:
-			ip_input.text = config.get_value("connect", "address", DEFAULT_IP)
+			var saved_ip: String = config.get_value("connect", "address", DEFAULT_IP)
+			# Don't use saved localhost in exported builds — it's a dev artifact
+			if saved_ip == "127.0.0.1" or saved_ip == "localhost":
+				ip_input.text = DEFAULT_IP
+			else:
+				ip_input.text = saved_ip
 	else:
 		ip_input.text = DEFAULT_IP
