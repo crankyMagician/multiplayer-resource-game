@@ -206,6 +206,19 @@ func _init_creature_battle_state(creature: Dictionary) -> void:
 	creature["is_charging"] = false
 	creature["charged_move_id"] = ""
 
+# === SERVER SIDE — Build party from authoritative store ===
+
+func _build_party_from_store(peer_id: int) -> Array:
+	if peer_id not in NetworkManager.player_data_store:
+		return []
+	var store_party = NetworkManager.player_data_store[peer_id].get("party", [])
+	var battle_party: Array = []
+	for creature in store_party:
+		var c = creature.duplicate(true)
+		_init_creature_battle_state(c)
+		battle_party.append(c)
+	return battle_party
+
 # === SERVER SIDE — Wild Battles ===
 
 func server_start_battle(peer_id: int, enemy_data: Dictionary) -> void:
@@ -221,8 +234,30 @@ func server_start_battle(peer_id: int, enemy_data: Dictionary) -> void:
 	_init_creature_battle_state(enemy)
 	battle.side_b_party = [enemy]
 	battle.side_b_active_idx = 0
-	# Request party data from client
-	_request_party_data.rpc_id(peer_id, BattleMode.WILD)
+	# Build party from server-authoritative store (no client trust)
+	var player_party = _build_party_from_store(peer_id)
+	if player_party.is_empty():
+		print("[BattleManager] server_start_battle: no party for peer ", peer_id)
+		player_battle_map.erase(peer_id)
+		battles.erase(battle_id)
+		return
+	battle.side_a_party = player_party
+	# Send battle start to client
+	var enemy_active = battle.side_b_party[battle.side_b_active_idx]
+	print("[BattleManager] Sending _start_battle_client to peer ", peer_id, " mode=", battle.mode)
+	_start_battle_client.rpc_id(peer_id, enemy_active, battle.mode, "")
+	# Fire on_enter abilities for both sides at battle start
+	var player_active = battle.side_a_party[battle.side_a_active_idx]
+	var initial_log: Array = []
+	var p_enter_msgs = AbilityEffects.on_enter(player_active, enemy_active, battle)
+	for msg in p_enter_msgs:
+		initial_log.append({"type": "ability_trigger", "actor": "player", "message": msg.get("message", "")})
+	var e_enter_msgs = AbilityEffects.on_enter(enemy_active, player_active, battle)
+	for msg in e_enter_msgs:
+		initial_log.append({"type": "ability_trigger", "actor": "enemy", "message": msg.get("message", "")})
+	if initial_log.size() > 0:
+		_send_turn_result.rpc_id(peer_id, initial_log, player_active.hp, player_active.get("pp", []), enemy_active.hp)
+	_send_state_to_peer(battle, peer_id)
 
 # === SERVER SIDE — Trainer Battles ===
 
@@ -256,9 +291,31 @@ func server_start_trainer_battle(peer_id: int, trainer_id: String) -> void:
 	battle.participants_b = []
 	for i in range(trainer_party.size()):
 		battle.participants_b.append(i)
-	# Send dialogue then request party
+	# Build party from server-authoritative store (no client trust)
+	var player_party = _build_party_from_store(peer_id)
+	if player_party.is_empty():
+		print("[BattleManager] server_start_trainer_battle: no party for peer ", peer_id)
+		player_battle_map.erase(peer_id)
+		battles.erase(battle_id)
+		return
+	battle.side_a_party = player_party
+	# Send dialogue then start
 	_trainer_dialogue_client.rpc_id(peer_id, trainer.display_name, trainer.dialogue_before, true)
-	_request_party_data.rpc_id(peer_id, BattleMode.TRAINER)
+	var enemy_active = battle.side_b_party[battle.side_b_active_idx]
+	print("[BattleManager] Sending _start_battle_client to peer ", peer_id, " mode=", battle.mode)
+	_start_battle_client.rpc_id(peer_id, enemy_active, battle.mode, trainer.display_name)
+	# Fire on_enter abilities
+	var player_active = battle.side_a_party[battle.side_a_active_idx]
+	var initial_log: Array = []
+	var p_enter_msgs = AbilityEffects.on_enter(player_active, enemy_active, battle)
+	for msg in p_enter_msgs:
+		initial_log.append({"type": "ability_trigger", "actor": "player", "message": msg.get("message", "")})
+	var e_enter_msgs = AbilityEffects.on_enter(enemy_active, player_active, battle)
+	for msg in e_enter_msgs:
+		initial_log.append({"type": "ability_trigger", "actor": "enemy", "message": msg.get("message", "")})
+	if initial_log.size() > 0:
+		_send_turn_result.rpc_id(peer_id, initial_log, player_active.hp, player_active.get("pp", []), enemy_active.hp)
+	_send_state_to_peer(battle, peer_id)
 
 # === SERVER SIDE — PvP Battles ===
 
@@ -299,63 +356,17 @@ func respond_pvp_challenge(challenger_peer: int, accepted: bool) -> void:
 		return
 	# Create PvP battle
 	var battle_id = _create_battle(BattleMode.PVP, challenger_peer, sender)
-	battles[battle_id].state = "waiting_both"
-	_request_party_data.rpc_id(challenger_peer, BattleMode.PVP)
-	_request_party_data.rpc_id(sender, BattleMode.PVP)
-
-# === PARTY DATA EXCHANGE ===
-
-@rpc("authority", "reliable")
-func _request_party_data(_battle_mode: int) -> void:
-	# Client sends party to server
-	var party_data = []
-	for creature in PlayerData.party:
-		var c = creature.duplicate(true)
-		_init_creature_battle_state(c)
-		party_data.append(c)
-	_receive_party_data.rpc_id(1, party_data)
-
-@rpc("any_peer", "reliable")
-func _receive_party_data(party_data: Array) -> void:
-	if not multiplayer.is_server():
+	var battle = battles[battle_id]
+	# Build both parties from server-authoritative store
+	battle.side_a_party = _build_party_from_store(challenger_peer)
+	battle.side_b_party = _build_party_from_store(sender)
+	if battle.side_a_party.is_empty() or battle.side_b_party.is_empty():
+		print("[BattleManager] PvP: missing party data, aborting")
+		player_battle_map.erase(challenger_peer)
+		player_battle_map.erase(sender)
+		battles.erase(battle_id)
 		return
-	var sender = multiplayer.get_remote_sender_id()
-	print("[BattleManager] _receive_party_data from peer ", sender)
-	var battle = _get_battle_for_peer(sender)
-	if battle == null:
-		print("[BattleManager] _receive_party_data: no battle found for peer ", sender)
-		return
-	var side = _get_side(battle, sender)
-	if side == "a":
-		battle.side_a_party = party_data
-		if battle.mode == BattleMode.WILD or battle.mode == BattleMode.TRAINER:
-			# side_b already set up, send battle start to client
-			var enemy_active = battle.side_b_party[battle.side_b_active_idx]
-			var trainer_name = ""
-			if battle.mode == BattleMode.TRAINER and battle.trainer_id != "":
-				var trainer = DataRegistry.get_trainer(battle.trainer_id)
-				if trainer:
-					trainer_name = trainer.display_name
-			print("[BattleManager] Sending _start_battle_client to peer ", sender, " mode=", battle.mode)
-			_start_battle_client.rpc_id(sender, enemy_active, battle.mode, trainer_name)
-			# Fire on_enter abilities for both sides at battle start
-			var player_active = battle.side_a_party[battle.side_a_active_idx]
-			var initial_log: Array = []
-			var p_enter_msgs = AbilityEffects.on_enter(player_active, enemy_active, battle)
-			for msg in p_enter_msgs:
-				initial_log.append({"type": "ability_trigger", "actor": "player", "message": msg.get("message", "")})
-			var e_enter_msgs = AbilityEffects.on_enter(enemy_active, player_active, battle)
-			for msg in e_enter_msgs:
-				initial_log.append({"type": "ability_trigger", "actor": "enemy", "message": msg.get("message", "")})
-			if initial_log.size() > 0:
-				_send_turn_result.rpc_id(sender, initial_log, player_active.hp, player_active.get("pp", []), enemy_active.hp)
-			_send_state_to_peer(battle, sender)
-	elif side == "b":
-		battle.side_b_party = party_data
-	# Check if PvP and both parties received
-	if battle.mode == BattleMode.PVP:
-		if battle.side_a_party.size() > 0 and battle.side_b_party.size() > 0:
-			_start_pvp_battle(battle)
+	_start_pvp_battle(battle)
 
 func _start_pvp_battle(battle: Dictionary) -> void:
 	battle.state = "waiting_both"
@@ -399,6 +410,22 @@ func request_battle_action(action_type: String, action_data: String) -> void:
 	if side == "":
 		return
 	DataRegistry.ensure_loaded()
+
+	# Validate actions against server-side party data
+	if action_type == "move":
+		var active_key = "side_" + side + "_active_idx"
+		var party_key = "side_" + side + "_party"
+		var creature = battle[party_key][battle[active_key]]
+		var creature_moves = creature.get("moves", [])
+		if action_data not in creature_moves:
+			print("[BattleManager] Rejected move '", action_data, "' — not in creature's moveset for peer ", sender)
+			return
+	elif action_type == "switch":
+		var party_key = "side_" + side + "_party"
+		var switch_idx = action_data.to_int()
+		if switch_idx < 0 or switch_idx >= battle[party_key].size():
+			print("[BattleManager] Rejected switch to idx ", switch_idx, " — out of bounds for peer ", sender)
+			return
 
 	if battle.mode == BattleMode.PVP:
 		_handle_pvp_action(battle, side, action_type, action_data)

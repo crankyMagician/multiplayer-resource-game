@@ -49,18 +49,27 @@ func has_spawn_path_ready() -> bool:
 	)
 
 func _load_world_state() -> void:
-	var world_data = SaveManager.load_world()
+	# Async load: signal-based for API mode, immediate for file fallback
+	SaveManager.world_loaded.connect(_on_world_loaded, CONNECT_ONE_SHOT)
+	SaveManager.load_world_async()
+
+func _on_world_loaded(world_data: Dictionary) -> void:
 	if world_data.is_empty():
 		print("[GameWorld] No saved world state, starting fresh")
 		return
 	print("[GameWorld] Loading saved world state...")
-	# Load season data
+	# Load season/calendar data
 	var season_mgr = $SeasonManager
-	if season_mgr and world_data.has("season"):
+	if season_mgr:
 		season_mgr.load_save_data({
 			"current_season": world_data.get("season", 0),
 			"season_timer": world_data.get("season_timer", 0.0),
-			"day_count": world_data.get("day_count", 1)
+			"day_count": world_data.get("day_count", 1),
+			"current_year": world_data.get("current_year", 1),
+			"day_in_season": world_data.get("day_in_season", 1),
+			"day_timer": world_data.get("day_timer", 0.0),
+			"total_day_count": world_data.get("total_day_count", 1),
+			"current_weather": world_data.get("current_weather", 0),
 		})
 	# Load farm plot data
 	var farm_mgr = get_node_or_null(FARM_MANAGER_PATH)
@@ -88,6 +97,11 @@ func get_save_data() -> Dictionary:
 		data["season"] = sd.get("current_season", 0)
 		data["season_timer"] = sd.get("season_timer", 0.0)
 		data["day_count"] = sd.get("day_count", 1)
+		data["current_year"] = sd.get("current_year", 1)
+		data["day_in_season"] = sd.get("day_in_season", 1)
+		data["day_timer"] = sd.get("day_timer", 0.0)
+		data["total_day_count"] = sd.get("total_day_count", 1)
+		data["current_weather"] = sd.get("current_weather", 0)
 	var farm_mgr = get_node_or_null(FARM_MANAGER_PATH)
 	if farm_mgr:
 		data["farm_plots"] = farm_mgr.get_save_data()
@@ -437,10 +451,10 @@ func _get_spread_spawn_position() -> Vector3:
 func _sync_world_to_client(peer_id: int) -> void:
 	if not multiplayer.is_server():
 		return
-	# Sync season
+	# Sync season/calendar/weather
 	var season_mgr = $SeasonManager
 	if season_mgr:
-		season_mgr._broadcast_season.rpc_id(peer_id, season_mgr.current_season, season_mgr.day_count)
+		season_mgr._broadcast_time.rpc_id(peer_id, season_mgr.current_year, season_mgr.current_season, season_mgr.day_in_season, season_mgr.total_day_count, season_mgr.current_weather)
 	# Sync farm plots
 	var farm_mgr = get_node_or_null(FARM_MANAGER_PATH)
 	if farm_mgr:

@@ -66,6 +66,7 @@ func request_craft(recipe_id: String) -> void:
 			return
 		var creature = CreatureInstance.create_from_species(species, 1)
 		var creature_data = creature.to_dict()
+		creature_data["creature_id"] = NetworkManager._generate_uuid()
 		if sender in NetworkManager.player_data_store:
 			var server_party = NetworkManager.player_data_store[sender].get("party", [])
 			server_party.append(creature_data)

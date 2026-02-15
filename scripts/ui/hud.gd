@@ -56,8 +56,8 @@ func _process(_delta: float) -> void:
 	water_label.text = "Water: %d/%d" % [PlayerData.watering_can_current, PlayerData.get_watering_can_capacity()]
 	var season_mgr = get_node_or_null("/root/Main/GameWorld/SeasonManager")
 	if season_mgr:
-		season_label.text = "Season: %s" % season_mgr.get_season_name().capitalize()
-		day_label.text = "Day %d" % season_mgr.day_count
+		season_label.text = "Year %d, %s Day %d" % [season_mgr.current_year, season_mgr.get_season_name().capitalize(), season_mgr.day_in_season]
+		day_label.text = "%s" % season_mgr.get_weather_name().capitalize()
 	if money_label:
 		money_label.text = "$%d" % PlayerData.money
 	# Update buff display

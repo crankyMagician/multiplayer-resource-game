@@ -12,12 +12,19 @@ const MAX_CLIENTS = 32
 const JOIN_READY_TIMEOUT_MS = 15000
 const BUFF_CHECK_INTERVAL = 5.0
 
+# Rate limiting
+const MAX_RPCS_PER_SECOND = 20
+var _rpc_timestamps: Dictionary = {} # peer_id → Array of timestamps (msec)
+
 var player_info: Dictionary = {"name": "Player"}
 var players: Dictionary = {} # peer_id -> player_info
 
 # Server-side: full player data for persistence
 var player_data_store: Dictionary = {} # peer_id -> full data dict
 var join_state: Dictionary = {} # peer_id -> {"state": String, "player_name": String, "joined_at_ms": int}
+
+# Name uniqueness tracking (server-side)
+var active_player_names: Dictionary = {} # player_name -> peer_id
 
 var _buff_check_timer: float = 0.0
 
@@ -67,6 +74,25 @@ func _process(delta: float) -> void:
 		_buff_check_timer = 0.0
 		_check_buff_expiry()
 
+# === Rate Limiting ===
+
+func _check_rate_limit(peer_id: int) -> bool:
+	var now = Time.get_ticks_msec()
+	if peer_id not in _rpc_timestamps:
+		_rpc_timestamps[peer_id] = []
+	var timestamps: Array = _rpc_timestamps[peer_id]
+	# Remove timestamps older than 1 second
+	var cutoff = now - 1000
+	while timestamps.size() > 0 and int(timestamps[0]) < cutoff:
+		timestamps.pop_front()
+	if timestamps.size() >= MAX_RPCS_PER_SECOND:
+		print("[RateLimit] Peer ", peer_id, " exceeded ", MAX_RPCS_PER_SECOND, " RPCs/sec — disconnecting")
+		if multiplayer.multiplayer_peer is ENetMultiplayerPeer:
+			(multiplayer.multiplayer_peer as ENetMultiplayerPeer).disconnect_peer(peer_id)
+		return false
+	timestamps.append(now)
+	return true
+
 func _check_buff_expiry() -> void:
 	var now = Time.get_unix_time_from_system()
 	for peer_id in player_data_store:
@@ -110,6 +136,17 @@ func _on_peer_connected(id: int) -> void:
 
 func _on_peer_disconnected(id: int) -> void:
 	print("Peer disconnected: ", id)
+	# Clean up rate limit tracking
+	_rpc_timestamps.erase(id)
+	# Clean up active name tracking
+	var disconnecting_name = ""
+	for pname in active_player_names:
+		if active_player_names[pname] == id:
+			disconnecting_name = pname
+			break
+	if disconnecting_name != "":
+		active_player_names.erase(disconnecting_name)
+		print("[Names] Released name '", disconnecting_name, "' (peer ", id, " disconnected)")
 	join_state.erase(id)
 	# Handle battle disconnect (PvP forfeit, cleanup)
 	var battle_mgr = get_node_or_null("/root/Main/GameWorld/BattleManager")
@@ -132,7 +169,7 @@ func _on_peer_disconnected(id: int) -> void:
 				data["position"] = {"x": player_node.position.x, "y": player_node.position.y, "z": player_node.position.z}
 		var pname = data.get("player_name", "")
 		if pname != "" and pname != "Server":
-			SaveManager.save_player(pname, data)
+			SaveManager.save_player(data)
 			print("[Save] Saved player on disconnect: ", pname)
 		player_data_store.erase(id)
 	players.erase(id)
@@ -160,6 +197,43 @@ func _on_server_disconnected() -> void:
 	get_tree().reload_current_scene()
 	server_disconnected.emit()
 
+# === Name Validation ===
+
+func _validate_player_name(name: String) -> String:
+	# Strip leading/trailing whitespace
+	var clean = name.strip_edges()
+	# Allow only alphanumeric, spaces, underscores, hyphens
+	var regex = RegEx.new()
+	regex.compile("[^a-zA-Z0-9 _\\-]")
+	clean = regex.sub(clean, "", true)
+	# Enforce length
+	if clean.length() < 2:
+		return ""
+	if clean.length() > 16:
+		clean = clean.substr(0, 16)
+	return clean
+
+# === UUID Generation ===
+
+func _generate_uuid() -> String:
+	var bytes: Array = []
+	for i in 16:
+		bytes.append(randi() % 256)
+	# Set version 4 bits
+	bytes[6] = (bytes[6] & 0x0f) | 0x40
+	bytes[8] = (bytes[8] & 0x3f) | 0x80
+	return "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x" % bytes
+
+# === Creature UUID Backfill ===
+
+func _backfill_creature_ids(data: Dictionary) -> void:
+	for creature in data.get("party", []):
+		if not creature.has("creature_id") or creature["creature_id"] == "":
+			creature["creature_id"] = _generate_uuid()
+	for creature in data.get("creature_storage", []):
+		if not creature.has("creature_id") or creature["creature_id"] == "":
+			creature["creature_id"] = _generate_uuid()
+
 # === Join Flow RPCs ===
 
 @rpc("any_peer", "reliable")
@@ -167,14 +241,71 @@ func request_join(player_name: String) -> void:
 	if not multiplayer.is_server():
 		return
 	var sender_id = multiplayer.get_remote_sender_id()
+	if not _check_rate_limit(sender_id):
+		return
 	print("Join request from peer ", sender_id, ": ", player_name)
-	# Load or create player data
-	var data = SaveManager.load_player(player_name)
+
+	# Validate name
+	var clean_name = _validate_player_name(player_name)
+	if clean_name == "":
+		print("  -> Rejected: invalid name '", player_name, "'")
+		_join_rejected.rpc_id(sender_id, "Invalid name. Use 2-16 characters (letters, numbers, spaces, underscores).")
+		return
+
+	# Check name uniqueness (already online)
+	if clean_name in active_player_names:
+		print("  -> Rejected: name '", clean_name, "' already online (peer ", active_player_names[clean_name], ")")
+		_join_rejected.rpc_id(sender_id, "Name '" + clean_name + "' is already in use by another player.")
+		return
+
+	# Track pending join
+	join_state[sender_id] = {
+		"state": "loading",
+		"player_name": clean_name,
+		"joined_at_ms": Time.get_ticks_msec()
+	}
+
+	# Async load via SaveManager
+	SaveManager.player_loaded.connect(_on_player_loaded.bind(sender_id, clean_name), CONNECT_ONE_SHOT)
+	SaveManager.load_player_async(clean_name)
+
+func _on_player_loaded(loaded_name: String, data: Dictionary, sender_id: int, expected_name: String) -> void:
+	# Verify this callback matches the expected join
+	if loaded_name != expected_name:
+		return
+	if sender_id not in join_state or join_state[sender_id].get("state", "") != "loading":
+		return
+	# Check peer is still connected
+	if not multiplayer.multiplayer_peer:
+		return
+
 	if data.is_empty():
-		data = _create_default_player_data(player_name)
-		print("  -> New player, created default data")
+		# New player — create with UUID
+		var default_data = _create_default_player_data(expected_name)
+		SaveManager.player_created.connect(_on_player_created.bind(sender_id, expected_name), CONNECT_ONE_SHOT)
+		SaveManager.create_player_async(default_data)
+		print("  -> New player, creating with UUID...")
 	else:
-		print("  -> Loaded saved data for ", player_name)
+		# Existing player loaded
+		print("  -> Loaded saved data for ", expected_name)
+		_finalize_join(sender_id, expected_name, data)
+
+func _on_player_created(created_name: String, data: Dictionary, sender_id: int, expected_name: String) -> void:
+	if created_name != expected_name:
+		return
+	if sender_id not in join_state or join_state[sender_id].get("state", "") != "loading":
+		return
+	if data.is_empty():
+		print("  -> Failed to create player for ", expected_name)
+		_join_rejected.rpc_id(sender_id, "Server error: failed to create player data.")
+		join_state.erase(sender_id)
+		return
+	print("  -> Created new player with UUID: ", data.get("player_id", "?"))
+	_finalize_join(sender_id, expected_name, data)
+
+func _finalize_join(sender_id: int, player_name: String, data: Dictionary) -> void:
+	# Backfill creature IDs for old saves
+	_backfill_creature_ids(data)
 	# Backfill player color for old saves that lack it
 	var pc = data.get("player_color", {})
 	if not pc is Dictionary or pc.is_empty():
@@ -218,6 +349,7 @@ func request_join(player_name: String) -> void:
 			data["restaurant"] = rest
 	# Store server-side
 	player_data_store[sender_id] = data
+	active_player_names[player_name] = sender_id
 	join_state[sender_id] = {
 		"state": "pending_world_ready",
 		"player_name": player_name,
@@ -225,6 +357,13 @@ func request_join(player_name: String) -> void:
 	}
 	# Send data to client
 	_receive_player_data.rpc_id(sender_id, data)
+
+@rpc("authority", "reliable")
+func _join_rejected(reason: String) -> void:
+	print("[NetworkManager] Join rejected: ", reason)
+	# Disconnect and show error to player
+	multiplayer.multiplayer_peer = null
+	connection_failed.emit()
 
 @rpc("authority", "reliable")
 func _receive_player_data(data: Dictionary) -> void:
@@ -296,6 +435,7 @@ func _create_default_player_data(player_name: String) -> Dictionary:
 		"ability_id": "crusty_armor",
 		"held_item_id": "",
 		"evs": {},
+		"creature_id": _generate_uuid(),
 	}
 	return {
 		"player_name": player_name,
@@ -556,6 +696,8 @@ func request_use_food(food_id: String) -> void:
 	if not multiplayer.is_server():
 		return
 	var sender = multiplayer.get_remote_sender_id()
+	if not _check_rate_limit(sender):
+		return
 	if not server_has_inventory(sender, food_id):
 		return
 	DataRegistry.ensure_loaded()
@@ -586,6 +728,8 @@ func request_use_recipe_scroll(scroll_id: String) -> void:
 	if not multiplayer.is_server():
 		return
 	var sender = multiplayer.get_remote_sender_id()
+	if not _check_rate_limit(sender):
+		return
 	if not server_has_inventory(sender, scroll_id):
 		return
 	DataRegistry.ensure_loaded()
@@ -609,6 +753,8 @@ func request_equip_held_item(creature_idx: int, item_id: String) -> void:
 	if not multiplayer.is_server():
 		return
 	var sender = multiplayer.get_remote_sender_id()
+	if not _check_rate_limit(sender):
+		return
 	if sender not in player_data_store:
 		return
 	var party = player_data_store[sender].get("party", [])
@@ -636,6 +782,8 @@ func request_unequip_held_item(creature_idx: int) -> void:
 	if not multiplayer.is_server():
 		return
 	var sender = multiplayer.get_remote_sender_id()
+	if not _check_rate_limit(sender):
+		return
 	if sender not in player_data_store:
 		return
 	var party = player_data_store[sender].get("party", [])
@@ -656,6 +804,8 @@ func request_sell_item(item_id: String, qty: int) -> void:
 	if not multiplayer.is_server():
 		return
 	var sender = multiplayer.get_remote_sender_id()
+	if not _check_rate_limit(sender):
+		return
 	if qty <= 0:
 		return
 	if not server_has_inventory(sender, item_id, qty):
@@ -676,6 +826,8 @@ func request_equip_tool(tool_id: String) -> void:
 	if not multiplayer.is_server():
 		return
 	var sender = multiplayer.get_remote_sender_id()
+	if not _check_rate_limit(sender):
+		return
 	DataRegistry.ensure_loaded()
 	var tool_def = DataRegistry.get_tool(tool_id)
 	if tool_def == null:
@@ -738,6 +890,8 @@ func request_deposit_creature(party_idx: int) -> void:
 	if not multiplayer.is_server():
 		return
 	var sender = multiplayer.get_remote_sender_id()
+	if not _check_rate_limit(sender):
+		return
 	if server_deposit_creature(sender, party_idx):
 		_sync_party_full.rpc_id(sender, player_data_store[sender].get("party", []))
 		_sync_storage_full.rpc_id(sender, player_data_store[sender].get("creature_storage", []), int(player_data_store[sender].get("storage_capacity", 10)))
@@ -748,6 +902,8 @@ func request_withdraw_creature(storage_idx: int) -> void:
 	if not multiplayer.is_server():
 		return
 	var sender = multiplayer.get_remote_sender_id()
+	if not _check_rate_limit(sender):
+		return
 	if server_withdraw_creature(sender, storage_idx):
 		_sync_party_full.rpc_id(sender, player_data_store[sender].get("party", []))
 		_sync_storage_full.rpc_id(sender, player_data_store[sender].get("creature_storage", []), int(player_data_store[sender].get("storage_capacity", 10)))
@@ -758,6 +914,8 @@ func request_upgrade_storage(tier: int) -> void:
 	if not multiplayer.is_server():
 		return
 	var sender = multiplayer.get_remote_sender_id()
+	if not _check_rate_limit(sender):
+		return
 	if sender not in player_data_store:
 		return
 	if tier < 0 or tier >= STORAGE_TIERS.size():

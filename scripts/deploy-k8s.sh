@@ -12,9 +12,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$PROJECT_ROOT"
 
-IMAGE="ghcr.io/crankymagician/mt-creature-crafting-server:latest"
+IMAGE_SERVER="ghcr.io/crankymagician/mt-creature-crafting-server:latest"
+IMAGE_API="ghcr.io/crankymagician/mt-creature-crafting-api:latest"
 K8S_NAMESPACE="godot-multiplayer"
-K8S_DEPLOYMENT="creature-crafting-server"
+K8S_DEPLOYMENT_SERVER="creature-crafting-server"
+K8S_DEPLOYMENT_API="creature-crafting-api"
 SERVER_ENDPOINT="207.32.216.76:7777"
 RBAC_YAML="../blazar-kubernetes-mcp/k8s/rbac-setup.yaml"
 
@@ -81,31 +83,50 @@ fi
 
 # --- Build ---
 if [ "$SKIP_BUILD" = false ]; then
-	echo "==> Building Docker image ($IMAGE)..."
-	docker build --platform linux/amd64 -t "$IMAGE" .
+	echo "==> Building game server Docker image ($IMAGE_SERVER)..."
+	docker build --platform linux/amd64 -t "$IMAGE_SERVER" .
+
+	echo "==> Building API service Docker image ($IMAGE_API)..."
+	docker build --platform linux/amd64 -t "$IMAGE_API" ./api
 else
-	echo "==> Skipping build (using existing image)."
+	echo "==> Skipping build (using existing images)."
 fi
 
 # --- Push ---
-echo "==> Pushing image to GHCR..."
-if ! docker push "$IMAGE"; then
+echo "==> Pushing images to GHCR..."
+if ! docker push "$IMAGE_SERVER"; then
 	echo ""
-	echo "ERROR: Push failed. Make sure you are authenticated:"
+	echo "ERROR: Push failed for game server. Make sure you are authenticated:"
+	echo "  docker login ghcr.io -u YOUR_GITHUB_USERNAME"
+	exit 1
+fi
+
+if ! docker push "$IMAGE_API"; then
+	echo ""
+	echo "ERROR: Push failed for API service. Make sure you are authenticated:"
 	echo "  docker login ghcr.io -u YOUR_GITHUB_USERNAME"
 	exit 1
 fi
 
 # --- Deploy ---
 echo "==> Applying Kubernetes manifests..."
+kubectl apply -f k8s/mongodb.yaml
+kubectl apply -f k8s/api-service.yaml
 kubectl apply -f k8s/deployment.yaml
 kubectl apply -f k8s/service.yaml
 
-echo "==> Restarting deployment to pull new image..."
-kubectl rollout restart "deployment/$K8S_DEPLOYMENT" -n "$K8S_NAMESPACE"
+echo "==> Waiting for MongoDB to be ready..."
+kubectl rollout status "deployment/creature-crafting-mongodb" -n "$K8S_NAMESPACE" --timeout=120s
+
+echo "==> Restarting API service..."
+kubectl rollout restart "deployment/$K8S_DEPLOYMENT_API" -n "$K8S_NAMESPACE"
+kubectl rollout status "deployment/$K8S_DEPLOYMENT_API" -n "$K8S_NAMESPACE" --timeout=120s
+
+echo "==> Restarting game server..."
+kubectl rollout restart "deployment/$K8S_DEPLOYMENT_SERVER" -n "$K8S_NAMESPACE"
 
 echo "==> Waiting for rollout to complete..."
-if kubectl rollout status "deployment/$K8S_DEPLOYMENT" -n "$K8S_NAMESPACE" --timeout=180s; then
+if kubectl rollout status "deployment/$K8S_DEPLOYMENT_SERVER" -n "$K8S_NAMESPACE" --timeout=180s; then
 	echo ""
 	echo "Deploy successful! Server available at $SERVER_ENDPOINT (UDP)"
 else

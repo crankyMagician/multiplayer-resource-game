@@ -1,13 +1,7 @@
 extends Node3D
 
 var plots: Array[Node] = []
-var rain_timer: float = 0.0
-var rain_interval_min: float = 120.0
-var rain_interval_max: float = 240.0
-var next_rain_time: float = 0.0
 var is_raining: bool = false
-var rain_duration: float = 15.0
-var rain_elapsed: float = 0.0
 
 const FARM_PLOT_SCENE = preload("res://scenes/world/farm_plot.tscn")
 @export var grid_size: int = 6
@@ -15,8 +9,6 @@ const PLOT_SPACING = 2.0
 
 func _ready() -> void:
 	add_to_group("farm_manager")
-	if multiplayer.is_server():
-		next_rain_time = randf_range(rain_interval_min, rain_interval_max)
 	# Generate farm plot grid
 	_generate_plots()
 	# Collect all farm plots
@@ -37,26 +29,14 @@ func _generate_plots() -> void:
 			)
 			add_child(plot)
 
-func _physics_process(delta: float) -> void:
-	if not multiplayer.is_server():
-		return
-	# Rain system
-	rain_timer += delta
-	if is_raining:
-		rain_elapsed += delta
-		if rain_elapsed >= rain_duration:
-			is_raining = false
-			_broadcast_rain.rpc(false)
-	elif rain_timer >= next_rain_time:
-		is_raining = true
-		rain_elapsed = 0.0
-		rain_timer = 0.0
-		next_rain_time = randf_range(rain_interval_min, rain_interval_max)
-		# Water all plots
-		for plot in plots:
+func rain_water_all() -> void:
+	# Called by SeasonManager when daily weather is rainy/stormy
+	is_raining = true
+	_broadcast_rain.rpc(true)
+	for plot in plots:
+		if plot.has_method("rain_water"):
 			plot.rain_water()
-		_broadcast_rain.rpc(true)
-		print("Rain started!")
+	print("[FarmManager] Rain watered all plots")
 
 @rpc("authority", "call_local", "reliable")
 func _broadcast_rain(raining: bool) -> void:

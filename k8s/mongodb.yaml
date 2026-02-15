@@ -1,0 +1,66 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: creature-crafting-mongo-data
+  namespace: godot-multiplayer
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: creature-crafting-mongodb
+  namespace: godot-multiplayer
+  labels:
+    app: creature-crafting-mongodb
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: creature-crafting-mongodb
+  template:
+    metadata:
+      labels:
+        app: creature-crafting-mongodb
+    spec:
+      containers:
+        - name: mongodb
+          image: mongo:7
+          ports:
+            - containerPort: 27017
+          volumeMounts:
+            - name: mongo-data
+              mountPath: /data/db
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "1"
+              memory: "512Mi"
+      volumes:
+        - name: mongo-data
+          persistentVolumeClaim:
+            claimName: creature-crafting-mongo-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: creature-crafting-mongodb
+  namespace: godot-multiplayer
+  labels:
+    app: creature-crafting-mongodb
+spec:
+  type: ClusterIP
+  selector:
+    app: creature-crafting-mongodb
+  ports:
+    - port: 27017
+      targetPort: 27017

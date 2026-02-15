@@ -1,11 +1,33 @@
 services:
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+
+  api-service:
+    build: ./api
+    ports:
+      - "3000:3000"
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/creature_crafting
+    depends_on:
+      - mongodb
+    restart: unless-stopped
+
   game-server:
     build: .
     platform: linux/amd64
     ports:
       - "7777:7777/udp"
-    restart: unless-stopped
     environment:
       - GODOT_SERVER=true
-    volumes:
-      - ./server_data:/app/data
+      - SAVE_API_URL=http://api-service:3000/api
+    depends_on:
+      - api-service
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
