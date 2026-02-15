@@ -127,8 +127,12 @@ func _on_battle_started() -> void:
 	if pvp_ui:
 		pvp_ui.visible = false
 
-	# Fade to black via HUD, then show battle UI
+	# Hide trainer prompt if player was near a trainer
 	var hud = get_node_or_null("/root/Main/GameWorld/UI/HUD")
+	if hud and hud.has_method("hide_trainer_prompt"):
+		hud.hide_trainer_prompt()
+
+	# Fade to black via HUD, then show battle UI
 	if hud and hud.has_method("play_battle_transition"):
 		await hud.play_battle_transition()
 

@@ -536,7 +536,7 @@ func server_remove_money(peer_id: int, amount: int) -> bool:
 func server_update_party(peer_id: int, party_array: Array) -> void:
 	if peer_id not in player_data_store:
 		return
-	player_data_store[peer_id]["party"] = party_array
+	player_data_store[peer_id]["party"] = party_array.duplicate(true)
 
 func server_use_watering_can(peer_id: int) -> bool:
 	if peer_id not in player_data_store:

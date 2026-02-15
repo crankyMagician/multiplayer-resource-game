@@ -171,6 +171,7 @@ The server Docker image requires matching the Mechanical Turk engine (Godot 4.7 
 - **Visual polish**: HP bar tweens (0.5s smooth decrease, green→yellow→red color shift), hit flash on enemy mesh, damage number popups, fade-to-black battle transitions (via HUD CanvasLayer), summary panel slide-in + fade animation, XP bar fill animation (0.8s).
 - **Summary screen**: shown after battle ends — hides all battle panels, shows Victory!/Defeat, XP per creature (with level-up highlights), item drops, trainer money + bonus ingredients. Continue button dismisses and returns to world.
 - **PvP-specific**: no Flee button, "Waiting for opponent..." label after submitting move, both perspectives actor-swapped. PvP challenge UI auto-hides when battle starts.
+- **Trainer prompt cleanup**: `_on_battle_started()` calls `hud.hide_trainer_prompt()` to hide any visible trainer prompt when a battle begins (prevents stale "Press E to challenge" text overlaying battle UI).
 
 ### Battle Manager Server-Side
 - Battle state keyed by `battle_id` (auto-increment), `player_battle_map[peer_id] → battle_id`
@@ -338,6 +339,7 @@ This is a server-authoritative multiplayer game. **Every gameplay change — new
 - **Name validation**: Server-side regex check (2-16 chars, `[a-zA-Z0-9_ ]+`), prevents injection via player names
 - **Single-phase crafting**: `request_craft` RPC does all validation + deduction server-side in one atomic operation. No client-side deduction that could desync.
 - **No client trust**: Server never reads game-state data from client RPCs (inventory amounts, creature stats, etc.). All state lives in `player_data_store`.
+- **Party deep-copy**: `server_update_party()` uses `.duplicate(true)` to store a deep copy of the party array. Without this, multiple battles could share references to the same creature dictionaries, causing cross-player state corruption (e.g., one player's battle modifying another's stored HP).
 
 ## GDScript Conventions
 - Use `class_name` for static utility classes (BattleCalculator, StatusEffects, FieldEffects, AbilityEffects, HeldItemEffects, BattleAI)
@@ -409,11 +411,13 @@ This is a server-authoritative multiplayer game. **Every gameplay change — new
 - **Client 2**: launched manually with `-- --bridge-port=9083`
 
 ### Runtime bridge caveats
-- **GDScript injection caveats**: runtime errors in injected scripts trigger the Godot debugger break, freezing the entire process. All subsequent MCP calls will timeout. Requires killing and restarting the process. GDScript has no try/catch.
+- **GDScript injection caveats**: runtime errors in injected scripts trigger the Godot debugger break, freezing the entire process. All subsequent MCP calls will timeout. Requires killing and restarting the process. GDScript has no try/catch. Common freeze causes: using `await`, accessing non-existent properties (e.g. `.state` instead of `.plot_state`), calling `.get()` on Resource objects, calling `rpc_id()` from injected scripts, using `is` operator on Arrays.
+- **Server-side direct testing preferred**: For battle testing, call `bm._process_move_turn(battle, "move", "grain_bash")` and `bm._handle_pvp_action(battle, "a", "move", "grain_bash")` directly on the server — avoids `get_remote_sender_id()` issues. Similarly call `rm._enter_restaurant_server(peer_id, owner_name)` and `plot.try_clear(peer_id)` directly.
+- **Key node paths**: FarmManager is at `Main/GameWorld/Zones/FarmZone/FarmManager` (NOT `Main/GameWorld/FarmManager`). HUD trainer label property is `trainer_prompt_label`. FarmPlot state property is `plot_state` (not `state`). DataRegistry stores Resource objects — use `.property_name` not `.get("property")`.
 - **Screenshot size**: use small resolutions (400x300) to avoid WebSocket `ERR_OUT_OF_MEMORY` on large images
 - **PvP testing**: players must be within 5 units for challenge flow. Move them on server via `nm._get_player_node(peer_id).position = Vector3(...)`. PvP has 30s turn timeout — act quickly or increase temporarily.
 - **Battle dict access via MCP**: Battle state is a Dictionary (not an object). Use `bm.battles` (not `active_battles`), `battle.get("side_b_party")`, creature HP key is `"hp"` (not `"current_hp"`). The `request_battle_action` RPC takes `(action_type, action_data)` where action_data for moves is the **move ID string** (e.g. `"grain_bash"`), NOT an index.
-- **Force-winning battles via MCP**: Set all enemy party creatures' `"hp"` to 1 (active) and 0 (rest) via dict access, then submit a move RPC from the client. Do NOT use `_end_battle_full()` — it bypasses trainer reward flow (defeated_trainers, XP, drops, gate opening).
+- **Force-winning battles via MCP**: Set enemy creature `"hp"` to 1, set `battle.state = "processing"`, then call `bm._process_move_turn(battle, "move", "quick_bite")` directly on the server. Do NOT use `_end_battle_full()` — it bypasses trainer reward flow. For PvP, use `bm._handle_pvp_action(battle, "a"/"b", "move", "move_id")` for both sides.
 - **Area3D re-detection**: Teleporting a player directly into an Area3D zone may not trigger `body_entered` if the physics engine doesn't detect the transition. Move the player far away first, then back, to guarantee signal fires.
 
 ### Port conflicts
