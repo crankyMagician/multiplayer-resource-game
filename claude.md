@@ -31,7 +31,7 @@
 
 **Rules for UUIDs:**
 - **New entities** (players, creatures, future items): ALWAYS generate a UUID on creation. Never rely on array index or display name as an identifier.
-- **Existing entities without UUIDs**: Auto-backfilled on load via `_backfill_creature_ids()`. Old JSON saves get UUIDs added transparently.
+- **Existing entities without UUIDs**: Auto-backfilled on load via `_backfill_creature_ids()`. Old JSON saves get UUIDs added transparently. Same function also backfills IVs, bond_points, bond_level, and battle_affinities via `_backfill_creature_stats()`.
 - **Cross-reference by UUID**: Held item equip/unequip, storage deposit/withdraw, battle creature references should use `creature_id` (not party index) for robustness.
 - **Player names are unique** (MongoDB unique index + `active_player_names` runtime check) but names are for display/lookup, NOT identity. The `player_id` UUID is the stable key.
 - **If you add a new persistent entity type** (e.g. guilds, mail, auction listings), it MUST get a UUID field generated server-side.
@@ -56,7 +56,7 @@
 3. Server checks `active_player_names` — rejects if name already online
 4. Server calls `SaveManager.load_player_async(player_name)` → signal
 5. `_on_player_loaded`: if empty → `create_player_async()` (new player with UUID); if found → `_finalize_join()`
-6. `_finalize_join()`: backfills creature UUIDs, stores in `player_data_store`, tracks `active_player_names`, sends `_receive_player_data` RPC
+6. `_finalize_join()`: backfills creature UUIDs + IVs + bond data, stores in `player_data_store`, tracks `active_player_names`, sends `_receive_player_data` RPC
 
 ### Docker Compose (Local Dev)
 ```yaml
@@ -111,19 +111,59 @@ The server Docker image requires matching the Mechanical Turk engine (Godot 4.7 
 
 ## Battle System
 - **3 battle modes**: Wild, Trainer (7 NPCs), PvP (V key challenge within 5 units of another player)
-- **18 creatures** (9 original + 9 new), 4 evolution chains, MAX_PARTY_SIZE = 3
+- **21 creatures** (9 original + 9 gen2 + 3 evolutions), 7 evolution chains, MAX_PARTY_SIZE = 3
 - **Starter creature**: All new players spawn with Rice Ball (Grain, Lv 5, 45 HP) with moves: grain_bash, quick_bite, bread_wall, syrup_trap
-- **42 moves** including weather setters, hazards, protection, charging, multi-hit, recoil, drain
-- **18 abilities** with trigger-based dispatch (on_enter/on_attack/on_defend/on_status/end_of_turn/on_weather)
-- **12 held items** (6 type boosters, 6 utility) — all craftable from ingredients
+- **57 moves** including weather setters, hazards, protection, charging, multi-hit, recoil, drain, crit-boosters, taunt, trick room, substitutes
+- **20 abilities** with trigger-based dispatch (on_enter/on_attack/on_defend/on_status/end_of_turn/on_weather)
+- **18 held items** (6 type boosters, 6 utility, 3 choice items, 3 specialist) — all craftable from ingredients
 - **XP/Leveling**: XP from battles, level-up stat recalc, learnset moves, evolution. Full XP to participants, 50% to bench.
 - **AI**: 3 tiers (easy=random, medium=type-aware, hard=damage-calc + prediction)
 - **PvP**: Both-submit simultaneous turns, 30s timeout, disconnect = forfeit. Loser forfeits 25% of each ingredient stack to winner.
 - **Defeat penalty**: 50% money loss, teleport to spawn point, all creatures healed
 
+### IV System (Individual Values)
+- Each creature has 6 IVs (hp, attack, defense, sp_attack, sp_defense, speed) ranging 0-31
+- IVs are rolled randomly on creature creation via `CreatureInstance.create_from_species()`
+- IVs are added directly to stat calculation: `stat = int(base_stat * level_mult) + iv`
+- Old saves without IVs are auto-backfilled via `_backfill_creature_stats()` in NetworkManager on join
+- IVs are displayed in PartyUI creature details
+- `CreatureInstance.IV_STATS` constant: `["hp", "attack", "defense", "sp_attack", "sp_defense", "speed"]`
+
+### Bond System
+- **Bond points**: Earned through battles (+10 active participant, +1 bench) and feeding (+15 per food)
+- **Bond levels**: 0-5, thresholds at 50/150/300/500/750 points (`CreatureInstance.compute_bond_level()`)
+- **Bond modifiers** (applied in BattleCalculator):
+  - Level 2: +5% accuracy bonus
+  - Level 3: 1.2x XP multiplier
+  - Level 4: Endure — survive one lethal hit at 1 HP per battle (`bond_endure_used` flag)
+  - Level 5: +10% stat boost to all stats
+- **Battle affinities**: Tracks type matchup experience (future expansion)
+- **Server-side**: `server_grant_bond_points_battle(peer_id)` called on victory, `request_feed_creature` RPC for food
+- **Persistence**: `bond_points`, `bond_level`, `battle_affinities` stored per creature in player_data_store, round-tripped via to_dict()/from_dict()
+
+### Crit Stage System
+- Per-creature `crit_stage` (0-3) tracked in battle state, initialized to 0 in `_build_party_from_store()`
+- Crit rates by stage: 0→6.25%, 1→12.5%, 2→25%, 3→50% (`BattleCalculator.get_crit_stage()`)
+- Moves can modify crit stage via `self_crit_stage_change` property (e.g. sharpen_knife: +2)
+- Crit stage resets each battle (not persistent)
+
+### Taunt, Trick Room, Substitutes
+- **Taunt**: `taunt_turns` per creature (3 turns), prevents status moves. Checked in `request_battle_action()` validation
+- **Trick Room**: `trick_room_turns` on battle dict, reverses speed priority for turn order
+- **Substitutes**: `substitute_hp` per creature, absorbs damage before real HP
+- All three displayed in Battle UI field effects section
+
+### New Move Properties (MoveDef)
+- `self_crit_stage_change: int` — crit stage modifier on use
+- `is_sound: bool` — bypasses substitutes
+- `taunts_target: bool` — applies taunt on hit
+- `knock_off: bool` — removes defender's held item
+- `sets_trick_room: bool` — toggles trick room
+
 ### Battle UI
-- **Enemy panel**: name, level, types, HP bar, status effect, stat stage labels (e.g. "Stats: DEF+2 SPA+1")
+- **Enemy panel**: name, level, types, HP bar, status effect, stat stage labels (e.g. "Stats: DEF+2 SPA+1"), crit stage indicator
 - **Player panel**: name, level, types, HP bar, XP bar, ability name, held item name
+- **Field effects bar**: shows active trick room, taunt turns, substitute HP, crit stage when non-zero
 - **Move buttons**: 3-line format — Name / Type|Category|Power / Accuracy|PP (e.g. "Grain Bash / Grain | Phys | Pwr:65 / Acc:100% | 15/15 PP")
 - **Weather bar**: shown when weather is active, displays weather name + remaining turns
 - **Flee/Switch**: Flee available in wild only, Switch always available (opens creature picker overlay)
@@ -143,8 +183,8 @@ The server Docker image requires matching the Mechanical Turk engine (Godot 4.7 
 - Client accumulates reward data in `summary_*` vars, summary screen displays after 0.5s delay
 
 ## Crafting & Item System (Unified Overhaul)
-- **46 recipes**: 13 creature (cauldron, unlockable), 12 held item (workbench), 12 food (kitchen), 9 tool upgrade (workbench)
-- **5 item types**: ingredients (16), held items (12), foods (12), tools (12), recipe scrolls (13) — all share single inventory namespace
+- **52 recipes**: 13 creature (cauldron, unlockable), 18 held item (workbench), 12 food (kitchen), 9 tool upgrade (workbench)
+- **5 item types**: ingredients (16), held items (18), foods (12), tools (12), recipe scrolls (13) — all share single inventory namespace
 - **3 crafting stations**: Kitchen (restaurant zone), Workbench (near spawn), Cauldron (deep wild zone) — each filters recipes by `station` field
 - **Recipe unlock system**: Creature recipes require recipe scrolls to unlock. Scrolls come from trainer first-defeat rewards, world pickups, or fragment collection (3-5 fragments auto-combine)
 - **Food & buffs**: 4 buff foods (speed_boost, xp_multiplier, encounter_rate, creature_heal) + 8 trade goods for selling. Buffs are timed, server-side expiry checked every 5s
@@ -270,6 +310,7 @@ This is a server-authoritative multiplayer game. **Every gameplay change — new
 | Gatekeeper challenge | Server (Area3D + pushback) | `_show_gatekeeper_challenge` RPC to client TrainerDialogueUI |
 | Gate open/close | Server (`defeated_trainers` in player_data_store) | `_notify_gate_opened` RPC per-client |
 | Calendar/weather | Server (SeasonManager) | `_broadcast_time` RPC to all clients, `request_season_sync` for late-joiners |
+| Bond points | Server (`server_grant_bond_points_battle`, `request_feed_creature`) | Bond data sync RPC to client |
 | Save/load | Server only (SaveManager → Express API → MongoDB) | Data sent to client via `_receive_player_data` |
 
 ### Never do this
@@ -389,4 +430,4 @@ This is a server-authoritative multiplayer game. **Every gameplay change — new
 - `scripts/crafting/` — CraftingSystem
 - `scripts/player/` — PlayerController, PlayerInteraction
 - `scripts/ui/` — ConnectUI, HUD (calendar + weather + trainer prompt), BattleUI, CraftingUI (station-filtered), InventoryUI (tabbed), PartyUI (networked equip), PvPChallengeUI, TrainerDialogueUI (gatekeeper accept/decline + post-battle dialogue)
-- `resources/` — ingredients/ (16), creatures/ (18), moves/ (42), encounters/ (6), recipes/ (46), abilities/ (18), held_items/ (12), trainers/ (7), foods/ (12), tools/ (12), recipe_scrolls/ (13)
+- `resources/` — ingredients/ (16), creatures/ (21), moves/ (57), encounters/ (6), recipes/ (52), abilities/ (20), held_items/ (18), trainers/ (7), foods/ (12), tools/ (12), recipe_scrolls/ (13)
