@@ -119,6 +119,11 @@ The server Docker image requires matching the Mechanical Turk engine (Godot 4.7 
 - **Collision**: Area3D with `collision_layer=0`, `collision_mask=3` (detects players on layer 2). SphereShape3D radius=1.2 for pickup range.
 - **HUD notification**: `hud.gd` `show_pickup_notification()` shows "Picked up [item] x[amount]" toast that fades out after 2.5s
 
+## World Layout
+- **Hub area**: Players spawn near (0, 1, 3). Farm zone at (25, 0, 0). Restaurant doors at z=12.
+- **Decorative nodes** in `game_world.tscn` under GameWorld: `Paths` (17 ground path meshes), `Signposts` (6 posts with Label3D), `Trees` (40 tree meshes), `ZoneOverlays` (6 zone ground overlays with Label3D)
+- **Trainer progression**: Optional trainers flank the main path south; gatekeepers block advancement to deeper zones
+
 ## Wild Encounter Zones
 - 6 zones total: Herb Garden, Flame Kitchen, Frost Pantry, Harvest Field, Sour Springs, Fusion Kitchen
 - Represented by glowing colored grass patches with floating in-world labels
@@ -198,6 +203,9 @@ This is a server-authoritative multiplayer game. **Every gameplay change — new
 | World item spawn/pickup | Server (WorldItemManager) | `_spawn/_despawn_world_item_client` RPCs to all |
 | Restaurant entry/exit | Server (RestaurantManager) | `_notify_location_change` RPC + client-side scene instantiation |
 | Restaurant doors | Server (collision) + Client (visual) | `_spawn/_remove_door_client` RPCs to all |
+| Trainer proximity prompt | Server (Area3D detect) | `_show/_hide_trainer_prompt` RPC to client HUD |
+| Gatekeeper challenge | Server (Area3D + pushback) | `_show_gatekeeper_challenge` RPC to client TrainerDialogueUI |
+| Gate open/close | Server (`defeated_trainers` in player_data_store) | `_notify_gate_opened` RPC per-client |
 | Save/load | Server only (SaveManager) | Data sent to client via `_receive_player_data` |
 
 ### Never do this
@@ -269,6 +277,9 @@ This is a server-authoritative multiplayer game. **Every gameplay change — new
 - **GDScript injection caveats**: runtime errors in injected scripts trigger the Godot debugger break, freezing the entire process. All subsequent MCP calls will timeout. Requires killing and restarting the process. GDScript has no try/catch.
 - **Screenshot size**: use small resolutions (400x300) to avoid WebSocket `ERR_OUT_OF_MEMORY` on large images
 - **PvP testing**: players must be within 5 units for challenge flow. Move them on server via `nm._get_player_node(peer_id).position = Vector3(...)`. PvP has 30s turn timeout — act quickly or increase temporarily.
+- **Battle dict access via MCP**: Battle state is a Dictionary (not an object). Use `bm.battles` (not `active_battles`), `battle.get("side_b_party")`, creature HP key is `"hp"` (not `"current_hp"`). The `request_battle_action` RPC takes `(action_type, action_data)` where action_data for moves is the **move ID string** (e.g. `"grain_bash"`), NOT an index.
+- **Force-winning battles via MCP**: Set all enemy party creatures' `"hp"` to 1 (active) and 0 (rest) via dict access, then submit a move RPC from the client. Do NOT use `_end_battle_full()` — it bypasses trainer reward flow (defeated_trainers, XP, drops, gate opening).
+- **Area3D re-detection**: Teleporting a player directly into an Area3D zone may not trigger `body_entered` if the physics engine doesn't detect the transition. Move the player far away first, then back, to guarantee signal fires.
 
 ### Port conflicts
 - If `host_game()` returns error 20 (ERR_CANT_CREATE), check `lsof -i :7777` — a Docker container or previous server may be holding the port. Stop it with `docker compose down` first.
@@ -281,5 +292,5 @@ This is a server-authoritative multiplayer game. **Every gameplay change — new
 - `scripts/world/` — FarmPlot, FarmManager, SeasonManager, TallGrass, EncounterManager, GameWorld, TrainerNPC, CraftingStation, RecipePickup, WorldItem, WorldItemManager, RestaurantManager, RestaurantInterior, RestaurantDoor
 - `scripts/crafting/` — CraftingSystem
 - `scripts/player/` — PlayerController, PlayerInteraction
-- `scripts/ui/` — ConnectUI, HUD, BattleUI, CraftingUI (station-filtered), InventoryUI (tabbed), PartyUI (networked equip), PvPChallengeUI, TrainerDialogueUI
+- `scripts/ui/` — ConnectUI, HUD (trainer prompt label), BattleUI, CraftingUI (station-filtered), InventoryUI (tabbed), PartyUI (networked equip), PvPChallengeUI, TrainerDialogueUI (gatekeeper accept/decline + post-battle dialogue)
 - `resources/` — ingredients/ (16), creatures/ (18), moves/ (42), encounters/ (6), recipes/ (46), abilities/ (18), held_items/ (12), trainers/ (7), foods/ (12), tools/ (12), recipe_scrolls/ (13)
