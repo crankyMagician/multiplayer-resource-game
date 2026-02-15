@@ -121,10 +121,15 @@ func _on_peer_disconnected(id: int) -> void:
 	# Save player data before removing
 	if id in player_data_store:
 		var data = player_data_store[id]
-		# Update position from player node
-		var player_node = _get_player_node(id)
-		if player_node:
-			data["position"] = {"x": player_node.position.x, "y": player_node.position.y, "z": player_node.position.z}
+		# Update position from player node (use overworld position if in restaurant)
+		var rest_mgr = get_node_or_null("/root/Main/GameWorld/RestaurantManager")
+		if rest_mgr and id in rest_mgr.overworld_positions:
+			var ow_pos = rest_mgr.overworld_positions[id]
+			data["position"] = {"x": ow_pos.x, "y": ow_pos.y, "z": ow_pos.z}
+		else:
+			var player_node = _get_player_node(id)
+			if player_node:
+				data["position"] = {"x": player_node.position.x, "y": player_node.position.y, "z": player_node.position.z}
 		var pname = data.get("player_name", "")
 		if pname != "" and pname != "Server":
 			SaveManager.save_player(pname, data)
@@ -186,12 +191,31 @@ func request_join(player_name: String) -> void:
 		data["creature_storage"] = []
 	if not data.has("storage_capacity"):
 		data["storage_capacity"] = 10
+	if not data.has("restaurant"):
+		data["restaurant"] = {
+			"restaurant_index": -1,
+			"tier": 0,
+			"name": player_name + "'s Restaurant",
+			"farm_plots": [],
+			"appliances": {},
+			"permissions": {
+				"default": {"water": false, "harvest": false, "craft": false},
+				"overrides": {},
+			},
+		}
 	# Backfill basic tools in inventory
 	var inv = data.get("inventory", {})
 	for tool_id in ["tool_hoe_basic", "tool_axe_basic", "tool_watering_can_basic"]:
 		if tool_id not in inv:
 			inv[tool_id] = 1
 	data["inventory"] = inv
+	# Allocate restaurant index if needed
+	var rest = data.get("restaurant", {})
+	if rest.get("restaurant_index", -1) == -1:
+		var rm = get_node_or_null("/root/Main/GameWorld/RestaurantManager")
+		if rm:
+			rest["restaurant_index"] = rm.allocate_restaurant_index(player_name)
+			data["restaurant"] = rest
 	# Store server-side
 	player_data_store[sender_id] = data
 	join_state[sender_id] = {
@@ -295,6 +319,17 @@ func _create_default_player_data(player_name: String) -> Dictionary:
 		"active_buffs": [],
 		"creature_storage": [],
 		"storage_capacity": 10,
+		"restaurant": {
+			"restaurant_index": -1,
+			"tier": 0,
+			"name": player_name + "'s Restaurant",
+			"farm_plots": [],
+			"appliances": {},
+			"permissions": {
+				"default": {"water": false, "harvest": false, "craft": false},
+				"overrides": {},
+			},
+		},
 	}
 
 # === Server-side player data tracking ===

@@ -6,6 +6,12 @@ signal tool_changed(tool_name: String)
 signal known_recipes_changed()
 signal buffs_changed()
 signal storage_changed()
+signal location_changed(zone: String, owner_name: String)
+
+# Location tracking (client-side mirror of server state)
+var current_zone: String = "overworld"
+var current_restaurant_owner: String = ""
+var restaurant_data: Dictionary = {}
 
 # Inventory: item_id -> count (all item types share this namespace)
 var inventory: Dictionary = {}
@@ -145,6 +151,8 @@ func load_from_server(data: Dictionary) -> void:
 	# Load creature storage
 	creature_storage = data.get("creature_storage", []).duplicate(true)
 	storage_capacity = int(data.get("storage_capacity", 10))
+	# Load restaurant data
+	restaurant_data = data.get("restaurant", {}).duplicate(true)
 	# Reset tool
 	current_tool_slot = ""
 	selected_seed_id = ""
@@ -168,6 +176,7 @@ func to_dict() -> Dictionary:
 		"active_buffs": active_buffs.duplicate(),
 		"creature_storage": creature_storage.duplicate(true),
 		"storage_capacity": storage_capacity,
+		"restaurant": restaurant_data.duplicate(true),
 	}
 
 func reset() -> void:
@@ -189,6 +198,9 @@ func reset() -> void:
 	active_buffs.clear()
 	creature_storage.clear()
 	storage_capacity = 10
+	current_zone = "overworld"
+	current_restaurant_owner = ""
+	restaurant_data.clear()
 	inventory_changed.emit()
 	party_changed.emit()
 	known_recipes_changed.emit()

@@ -10,10 +10,11 @@ var rain_duration: float = 15.0
 var rain_elapsed: float = 0.0
 
 const FARM_PLOT_SCENE = preload("res://scenes/world/farm_plot.tscn")
-const GRID_SIZE = 6
+@export var grid_size: int = 6
 const PLOT_SPACING = 2.0
 
 func _ready() -> void:
+	add_to_group("farm_manager")
 	if multiplayer.is_server():
 		next_rain_time = randf_range(rain_interval_min, rain_interval_max)
 	# Generate farm plot grid
@@ -24,9 +25,9 @@ func _ready() -> void:
 			plots.append(child)
 
 func _generate_plots() -> void:
-	var offset = -(GRID_SIZE - 1) * PLOT_SPACING / 2.0
-	for row in range(GRID_SIZE):
-		for col in range(GRID_SIZE):
+	var offset = -(grid_size - 1) * PLOT_SPACING / 2.0
+	for row in range(grid_size):
+		for col in range(grid_size):
 			var plot = FARM_PLOT_SCENE.instantiate()
 			plot.name = "Plot_%d_%d" % [row, col]
 			plot.position = Vector3(

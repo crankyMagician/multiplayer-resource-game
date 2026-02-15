@@ -1,0 +1,181 @@
+[gd_scene load_steps=20 format=3]
+
+[ext_resource type="Script" path="res://scripts/world/restaurant_interior.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/world/farm_manager.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/world/restaurant_door.gd" id="3"]
+
+[sub_resource type="BoxMesh" id="floor_mesh"]
+size = Vector3(20, 0.2, 20)
+
+[sub_resource type="BoxShape3D" id="floor_shape"]
+size = Vector3(20, 0.2, 20)
+
+[sub_resource type="StandardMaterial3D" id="floor_mat"]
+albedo_color = Color(0.55, 0.45, 0.35, 1)
+
+[sub_resource type="BoxMesh" id="wall_long_mesh"]
+size = Vector3(20, 4, 0.3)
+
+[sub_resource type="BoxShape3D" id="wall_long_shape"]
+size = Vector3(20, 4, 0.3)
+
+[sub_resource type="BoxMesh" id="wall_short_mesh"]
+size = Vector3(0.3, 4, 20)
+
+[sub_resource type="BoxShape3D" id="wall_short_shape"]
+size = Vector3(0.3, 4, 20)
+
+[sub_resource type="StandardMaterial3D" id="wall_mat"]
+albedo_color = Color(0.75, 0.7, 0.65, 1)
+
+[sub_resource type="BoxMesh" id="door_mesh"]
+size = Vector3(2, 3, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="door_mat"]
+albedo_color = Color(0.4, 0.25, 0.1, 1)
+
+[sub_resource type="BoxShape3D" id="door_interact_shape"]
+size = Vector3(3, 3, 2)
+
+[sub_resource type="BoxMesh" id="water_mesh"]
+size = Vector3(1.5, 0.6, 1.5)
+
+[sub_resource type="StandardMaterial3D" id="water_mat"]
+albedo_color = Color(0.2, 0.4, 0.9, 1)
+
+[sub_resource type="BoxShape3D" id="water_interact_shape"]
+size = Vector3(3, 2, 3)
+
+[sub_resource type="BoxMesh" id="bed_mesh"]
+size = Vector3(2, 0.8, 3)
+
+[sub_resource type="StandardMaterial3D" id="bed_mat"]
+albedo_color = Color(0.6, 0.3, 0.3, 1)
+
+[node name="RestaurantInterior" type="Node3D"]
+script = ExtResource("1")
+
+; === FLOOR ===
+[node name="Floor" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
+
+[node name="FloorMesh" type="MeshInstance3D" parent="Floor"]
+mesh = SubResource("floor_mesh")
+material_override = SubResource("floor_mat")
+
+[node name="FloorCollision" type="CollisionShape3D" parent="Floor"]
+shape = SubResource("floor_shape")
+
+; === WALLS ===
+[node name="Walls" type="Node3D" parent="."]
+
+[node name="WallNorth" type="StaticBody3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, -10)
+
+[node name="WallMesh" type="MeshInstance3D" parent="Walls/WallNorth"]
+mesh = SubResource("wall_long_mesh")
+material_override = SubResource("wall_mat")
+
+[node name="WallCollision" type="CollisionShape3D" parent="Walls/WallNorth"]
+shape = SubResource("wall_long_shape")
+
+[node name="WallSouth" type="StaticBody3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 10)
+
+[node name="WallMesh" type="MeshInstance3D" parent="Walls/WallSouth"]
+mesh = SubResource("wall_long_mesh")
+material_override = SubResource("wall_mat")
+
+[node name="WallCollision" type="CollisionShape3D" parent="Walls/WallSouth"]
+shape = SubResource("wall_long_shape")
+
+[node name="WallEast" type="StaticBody3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 2, 0)
+
+[node name="WallMesh" type="MeshInstance3D" parent="Walls/WallEast"]
+mesh = SubResource("wall_short_mesh")
+material_override = SubResource("wall_mat")
+
+[node name="WallCollision" type="CollisionShape3D" parent="Walls/WallEast"]
+shape = SubResource("wall_short_shape")
+
+[node name="WallWest" type="StaticBody3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 2, 0)
+
+[node name="WallMesh" type="MeshInstance3D" parent="Walls/WallWest"]
+mesh = SubResource("wall_short_mesh")
+material_override = SubResource("wall_mat")
+
+[node name="WallCollision" type="CollisionShape3D" parent="Walls/WallWest"]
+shape = SubResource("wall_short_shape")
+
+; === EXIT DOOR (south wall center) ===
+[node name="ExitDoor" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 9.5)
+script = ExtResource("3")
+collision_layer = 0
+collision_mask = 3
+
+[node name="DoorMesh" type="MeshInstance3D" parent="ExitDoor"]
+mesh = SubResource("door_mesh")
+material_override = SubResource("door_mat")
+
+[node name="DoorCollision" type="CollisionShape3D" parent="ExitDoor"]
+shape = SubResource("door_interact_shape")
+
+[node name="DoorLabel" type="Label3D" parent="ExitDoor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0.5)
+text = "Exit"
+font_size = 64
+outline_size = 8
+modulate = Color(1, 0.3, 0.3, 1)
+
+; === FARM AREA (left side of restaurant) ===
+[node name="FarmArea" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, -3)
+
+[node name="FarmManager" type="Node3D" parent="FarmArea"]
+script = ExtResource("2")
+grid_size = 3
+
+; === WATER SOURCE (near farm area) ===
+[node name="WaterSource" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7, 0.3, -7)
+
+[node name="WaterMesh" type="MeshInstance3D" parent="WaterSource"]
+mesh = SubResource("water_mesh")
+material_override = SubResource("water_mat")
+
+[node name="WaterArea" type="Area3D" parent="WaterSource" groups=["water_source"]]
+
+[node name="WaterShape" type="CollisionShape3D" parent="WaterSource/WaterArea"]
+shape = SubResource("water_interact_shape")
+
+[node name="WaterLabel" type="Label3D" parent="WaterSource"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
+text = "Water"
+font_size = 36
+outline_size = 6
+modulate = Color(0.3, 0.6, 1, 1)
+
+; === KITCHEN AREA (right side, Phase 2 appliances) ===
+[node name="KitchenArea" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0, -3)
+
+; === BEDROOM (back area) ===
+[node name="Bedroom" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0, -7)
+
+[node name="BedMesh" type="MeshInstance3D" parent="Bedroom"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
+mesh = SubResource("bed_mesh")
+material_override = SubResource("bed_mat")
+
+; === OWNER LABEL (floating above center) ===
+[node name="OwnerLabel" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.5, 0)
+text = "Player's Restaurant"
+font_size = 64
+outline_size = 8
+billboard = 1
+modulate = Color(1, 0.9, 0.5, 1)

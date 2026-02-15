@@ -126,9 +126,47 @@ The server Docker image requires matching the Mechanical Turk engine (Godot 4.7 
 
 ## NPC Trainers
 - 7 trainers placed along world paths under `Zones/Trainers` in game_world.tscn
-- Area3D proximity detection triggers battle; re-trigger after leaving and re-entering
 - Color-coded by difficulty: green=easy, yellow=medium, red=hard
 - Trainers: Sous Chef Pepper, Farmer Green, Pastry Chef Dulce, Brinemaster Vlad, Chef Umami, Head Chef Roux, Grand Chef Michelin
+
+### Optional vs Gatekeeper Trainers
+- **Optional trainers** (`is_gatekeeper=false`): Sous Chef Pepper, Farmer Green, Pastry Chef Dulce, Brinemaster Vlad, Grand Chef Michelin
+  - Walking near shows "Press E to challenge [Name]!" on HUD via `_show_trainer_prompt` RPC
+  - E-key triggers `request_challenge` RPC → server validates proximity + not-in-battle → starts trainer battle
+  - Walking away hides prompt via `_hide_trainer_prompt` RPC (body_exited signal)
+  - Rematch cooldown per trainer (`trainer.rematch_cooldown_sec`)
+- **Gatekeeper trainers** (`is_gatekeeper=true`): Chef Umami, Head Chef Roux
+  - Walking near triggers forced pushback + TrainerDialogueUI with Accept/Decline
+  - Accept → `request_challenge` RPC → trainer battle
+  - Decline → `_respond_gatekeeper_decline` RPC → teleports player south (gate_z + 6)
+  - Defeating a gatekeeper: records `defeated_trainers[trainer_id] = timestamp` in player_data_store, calls `update_gate_for_peer()` → `_notify_gate_opened` RPC hides gate mesh/label on that client only
+  - **Per-player gates**: Each player sees gates independently based on their own `defeated_trainers` dict. Bob sees a gate, Alice doesn't if she defeated it.
+  - Gate visual: red translucent BoxMesh (8x2.5x0.5) + "Defeat X to Pass!" Label3D
+  - Detection radius: 4.0 for gatekeepers, 3.0 for optional
+
+### Trainer Authority Model
+| Action | Authority | Sync |
+|--------|-----------|------|
+| Proximity detection | Server (Area3D body_entered/exited) | `_show/_hide_trainer_prompt` RPC to client |
+| Challenge request | Client sends `request_challenge` RPC | Server validates, starts battle |
+| Gatekeeper pushback | Server (velocity + teleport) | Position syncs via StateSync |
+| Gatekeeper dialogue | Server triggers | `_show_gatekeeper_challenge` RPC to client |
+| Gate open state | Server (defeated_trainers in player_data_store) | `_notify_gate_opened` RPC per-client |
+| Decline pushback | Server (teleport to safe_pos) | Position syncs via StateSync |
+
+## Restaurant System
+- **Architecture**: Server-authoritative, per-player restaurant instances. Each player gets a unique restaurant with its own interior scene, farm plots, and kitchen crafting station.
+- **Instance positioning**: Restaurants instanced at `Vector3(1000 + idx*200, 0, 1000)` — far from overworld to prevent collision. Index allocated via `allocate_restaurant_index()` and persisted in player save data.
+- **Unique instance names**: `Restaurant_<owner_name>` set before `add_child()` on both server and client to prevent Godot auto-rename when multiple restaurants are loaded simultaneously.
+- **Entry/exit flow**: Walk-over overworld door (Area3D) or E-key interaction → server saves overworld position → teleports player to restaurant interior → `_notify_location_change` RPC → client instantiates scene locally. Exit via ExitDoor `body_entered` → server restores overworld position (offset if too close to door row to prevent re-entry).
+- **Exit cooldown**: 1s debounce (`_exit_cooldown` dict) prevents immediate re-entry after exit teleport.
+- **Farm routing**: `get_farm_manager_for_peer(peer_id)` checks `player_location` dict — returns restaurant's FarmManager if player is inside one, otherwise returns overworld FarmManager.
+- **Bulk farm sync**: `_receive_restaurant_farm_data` RPC sends all plot states at once (not per-plot RPCs) to avoid node path mismatch when client hasn't finished instantiating.
+- **Persistence**: Restaurant index map saved in world data. Individual restaurant farm plots saved to owner's `player_data_store["restaurant"]` on unload and auto-save. RestaurantManager data restored from world save on server start.
+- **Door replication**: Server creates Area3D doors with collision (for walk-over detection). `_spawn_door_client` RPC creates visual-only doors (mesh + label, no collision) on all clients. `_remove_door_client` RPC removes on disconnect. Late-joiners receive all existing doors via `sync_doors_to_client()`.
+- **Auto-save position fix**: `save_manager.gd` and `network_manager.gd` both check `RestaurantManager.overworld_positions[peer_id]` before falling back to `player_node.position` — prevents saving interior coordinates (~1000+) as the player's overworld position.
+- **Unloading**: When all players leave a restaurant, `_try_unload_restaurant()` saves farm data and `queue_free()`s the instance. Re-entering creates a fresh instance from saved data.
+- **Files**: `scripts/world/restaurant_manager.gd`, `scripts/world/restaurant_interior.gd`, `scripts/world/restaurant_door.gd`, `scenes/world/restaurant_interior.tscn`
 
 ## Networking Rules (IMPORTANT)
 
@@ -158,6 +196,8 @@ This is a server-authoritative multiplayer game. **Every gameplay change — new
 | Recipe unlocks | Server (`request_use_recipe_scroll`) | `_sync_known_recipes` + `_notify_recipe_unlocked` RPCs |
 | Selling | Server (`request_sell_item`) | Inventory + money sync RPCs |
 | World item spawn/pickup | Server (WorldItemManager) | `_spawn/_despawn_world_item_client` RPCs to all |
+| Restaurant entry/exit | Server (RestaurantManager) | `_notify_location_change` RPC + client-side scene instantiation |
+| Restaurant doors | Server (collision) + Client (visual) | `_spawn/_remove_door_client` RPCs to all |
 | Save/load | Server only (SaveManager) | Data sent to client via `_receive_player_data` |
 
 ### Never do this
@@ -238,7 +278,7 @@ This is a server-authoritative multiplayer game. **Every gameplay change — new
 - `scripts/autoload/` — NetworkManager, GameManager, PlayerData, SaveManager
 - `scripts/data/` — 13 Resource class definitions (+ food_def, tool_def, recipe_scroll_def)
 - `scripts/battle/` — BattleManager, BattleCalculator, StatusEffects, FieldEffects, AbilityEffects, HeldItemEffects, BattleAI
-- `scripts/world/` — FarmPlot, FarmManager, SeasonManager, TallGrass, EncounterManager, GameWorld, TrainerNPC, CraftingStation, RecipePickup, WorldItem, WorldItemManager
+- `scripts/world/` — FarmPlot, FarmManager, SeasonManager, TallGrass, EncounterManager, GameWorld, TrainerNPC, CraftingStation, RecipePickup, WorldItem, WorldItemManager, RestaurantManager, RestaurantInterior, RestaurantDoor
 - `scripts/crafting/` — CraftingSystem
 - `scripts/player/` — PlayerController, PlayerInteraction
 - `scripts/ui/` — ConnectUI, HUD, BattleUI, CraftingUI (station-filtered), InventoryUI (tabbed), PartyUI (networked equip), PvPChallengeUI, TrainerDialogueUI

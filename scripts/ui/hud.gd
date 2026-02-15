@@ -10,6 +10,8 @@ extends CanvasLayer
 
 var money_label: Label = null
 var buff_label: Label = null
+var location_label: Label = null
+var trainer_prompt_label: Label = null
 
 func _ready() -> void:
 	PlayerData.tool_changed.connect(_on_tool_changed)
@@ -27,6 +29,28 @@ func _ready() -> void:
 	buff_label.add_theme_color_override("font_color", Color(0.3, 0.9, 0.3))
 	if top_bar:
 		top_bar.add_child(buff_label)
+	# Create location indicator label
+	location_label = Label.new()
+	location_label.text = "Overworld"
+	location_label.add_theme_font_size_override("font_size", 14)
+	location_label.add_theme_color_override("font_color", Color(1.0, 0.9, 0.5))
+	if top_bar:
+		top_bar.add_child(location_label)
+	# Create trainer interaction prompt
+	trainer_prompt_label = Label.new()
+	trainer_prompt_label.text = ""
+	trainer_prompt_label.visible = false
+	trainer_prompt_label.add_theme_font_size_override("font_size", 20)
+	trainer_prompt_label.add_theme_color_override("font_color", Color(1.0, 0.9, 0.3))
+	trainer_prompt_label.add_theme_constant_override("shadow_offset_x", 1)
+	trainer_prompt_label.add_theme_constant_override("shadow_offset_y", 1)
+	trainer_prompt_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.7))
+	trainer_prompt_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	trainer_prompt_label.anchor_left = 0.25
+	trainer_prompt_label.anchor_right = 0.75
+	trainer_prompt_label.anchor_top = 0.82
+	trainer_prompt_label.anchor_bottom = 0.88
+	add_child(trainer_prompt_label)
 
 func _process(_delta: float) -> void:
 	water_label.text = "Water: %d/%d" % [PlayerData.watering_can_current, PlayerData.get_watering_can_capacity()]
@@ -55,6 +79,12 @@ func _process(_delta: float) -> void:
 					"encounter_rate":
 						buff_text += "ENC x%.1f %d:%02d  " % [bval, mins, secs]
 		buff_label.text = buff_text
+	# Update location display
+	if location_label:
+		if PlayerData.current_zone == "restaurant":
+			location_label.text = PlayerData.current_restaurant_owner + "'s Restaurant"
+		else:
+			location_label.text = "Overworld"
 
 func _on_tool_changed(tool_slot: String) -> void:
 	if tool_slot == "" or tool_slot == "seeds":
@@ -83,6 +113,15 @@ func show_pickup_notification(item_name: String, amount: int) -> void:
 	var tween = create_tween()
 	tween.tween_property(pickup_label, "modulate:a", 0.0, 2.0).set_delay(0.5)
 	tween.tween_callback(pickup_label.queue_free)
+
+func show_trainer_prompt(trainer_name: String) -> void:
+	if trainer_prompt_label:
+		trainer_prompt_label.text = "Press E to challenge %s!" % trainer_name
+		trainer_prompt_label.visible = true
+
+func hide_trainer_prompt() -> void:
+	if trainer_prompt_label:
+		trainer_prompt_label.visible = false
 
 func show_grass_indicator(visible_state: bool) -> void:
 	grass_indicator.visible = visible_state

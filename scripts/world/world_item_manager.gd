@@ -12,16 +12,16 @@ var random_spawn_interval: float = 120.0 # seconds between spawn attempts
 var max_random_items: int = 10
 
 var random_spawn_points: Array[Vector3] = [
-	Vector3(0, 0.5, 8),       # near restaurant
-	Vector3(15, 0.5, 5),      # between farm and restaurant
-	Vector3(25, 0.5, -3),     # near farm
-	Vector3(-15, 0.5, 5),     # path to wild zone
-	Vector3(-20, 0.5, -5),    # wild zone center area
-	Vector3(-12, 0.5, -10),   # near herb garden
-	Vector3(-28, 0.5, 10),    # near frost pantry
-	Vector3(-12, 0.5, 15),    # near flame kitchen
-	Vector3(-36, 0.5, -16),   # near sour springs
-	Vector3(-36, 0.5, 16),    # near fusion kitchen
+	Vector3(0, 0.5, 5),        # near spawn hub
+	Vector3(15, 0.5, 0),       # path to farm
+	Vector3(25, 0.5, -3),      # near farm
+	Vector3(0, 0.5, -10),      # starter path
+	Vector3(-12, 0.5, -15),    # near herb garden
+	Vector3(12, 0.5, -15),     # near flame kitchen
+	Vector3(-18, 0.5, -35),    # near frost pantry
+	Vector3(18, 0.5, -35),     # near harvest field
+	Vector3(-18, 0.5, -48),    # near fusion kitchen
+	Vector3(18, 0.5, -48),     # near sour springs
 ]
 
 var random_spawn_table: Array = [

@@ -237,15 +237,7 @@ func server_start_trainer_battle(peer_id: int, trainer_id: String) -> void:
 	var trainer = DataRegistry.get_trainer(trainer_id)
 	if trainer == null:
 		return
-	# Check rematch cooldown
-	if peer_id in NetworkManager.player_data_store:
-		var pdata = NetworkManager.player_data_store[peer_id]
-		var defeated = pdata.get("defeated_trainers", {})
-		if trainer_id in defeated:
-			var last_time = int(defeated[trainer_id])
-			var now = int(Time.get_unix_time_from_system())
-			if now - last_time < trainer.rematch_cooldown_sec:
-				return # Still on cooldown
+	# Cooldown is now checked by trainer_npc.gd request_challenge()
 	var battle_id = _create_battle(BattleMode.TRAINER, peer_id, 0, trainer_id)
 	var battle = battles[battle_id]
 	# Build trainer party from species+level
@@ -872,6 +864,10 @@ func _check_battle_outcome(battle: Dictionary, turn_log: Array) -> void:
 					if not pdata.has("defeated_trainers"):
 						pdata["defeated_trainers"] = {}
 					pdata["defeated_trainers"][battle.trainer_id] = int(Time.get_unix_time_from_system())
+				# Notify gatekeeper NPCs that gate is now open
+				for npc in get_tree().get_nodes_in_group("trainer_npc"):
+					if npc.trainer_id == battle.trainer_id and npc.is_gatekeeper:
+						npc.update_gate_for_peer(peer_id)
 				# Send post-battle dialogue
 				_trainer_dialogue_client.rpc_id(peer_id, trainer.display_name, trainer.dialogue_after, false)
 
@@ -1632,3 +1628,22 @@ func send_pvp_challenge(target_peer: int) -> void:
 
 func respond_to_pvp_challenge(challenger_peer: int, accepted: bool) -> void:
 	respond_pvp_challenge.rpc_id(1, challenger_peer, accepted)
+
+# === Gatekeeper Decline ===
+
+@rpc("any_peer", "reliable")
+func _respond_gatekeeper_decline(trainer_id: String) -> void:
+	if not multiplayer.is_server():
+		return
+	var peer_id = multiplayer.get_remote_sender_id()
+	# Push player back to safe position (south of gate)
+	for npc in get_tree().get_nodes_in_group("trainer_npc"):
+		if npc.trainer_id == trainer_id and npc.is_gatekeeper:
+			var gate_pos = npc.global_position
+			var safe_pos = Vector3(gate_pos.x, 1.0, gate_pos.z + 6.0)
+			var player_node = NetworkManager._get_player_node(peer_id)
+			if player_node:
+				player_node.position = safe_pos
+			# Explicitly hide trainer prompt since body_exited may not fire from teleport
+			npc._hide_trainer_prompt.rpc_id(peer_id)
+			break

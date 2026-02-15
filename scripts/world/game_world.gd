@@ -18,6 +18,12 @@ func _ready() -> void:
 	# Initialize DataRegistry
 	DataRegistry.ensure_loaded()
 
+	# Generate world decorations (paths, signposts, trees, zone overlays) on all peers
+	_generate_paths()
+	_generate_signposts()
+	_generate_trees()
+	_generate_zone_overlays()
+
 	if not multiplayer.is_server():
 		_setup_ui()
 		_ensure_fallback_camera()
@@ -69,6 +75,10 @@ func _load_world_state() -> void:
 	var item_mgr = get_node_or_null("WorldItemManager")
 	if item_mgr and world_data.has("world_items"):
 		item_mgr.load_save_data(world_data.get("world_items", []))
+	# Load restaurant manager data
+	var rest_mgr = get_node_or_null("RestaurantManager")
+	if rest_mgr and world_data.has("restaurant_manager"):
+		rest_mgr.load_save_data(world_data.get("restaurant_manager", {}))
 
 func get_save_data() -> Dictionary:
 	var data = {}
@@ -92,6 +102,11 @@ func get_save_data() -> Dictionary:
 	var item_mgr = get_node_or_null("WorldItemManager")
 	if item_mgr:
 		data["world_items"] = item_mgr.get_save_data()
+	# Save restaurant manager data (index allocations)
+	var rest_mgr = get_node_or_null("RestaurantManager")
+	if rest_mgr:
+		rest_mgr.update_all_restaurant_save_data()
+		data["restaurant_manager"] = rest_mgr.get_save_data()
 	return data
 
 func _ensure_fallback_camera() -> void:
@@ -135,12 +150,222 @@ func _setup_ui() -> void:
 	var storage_ui = storage_ui_scene.instantiate()
 	ui_node.add_child(storage_ui)
 
+# === WORLD DECORATION GENERATION ===
+
+func _generate_paths() -> void:
+	var paths_node = Node3D.new()
+	paths_node.name = "Paths"
+	add_child(paths_node)
+
+	var path_mat = StandardMaterial3D.new()
+	path_mat.albedo_color = Color(0.55, 0.45, 0.3)
+
+	# Path segments: {pos, size} — each is a BoxMesh strip
+	var segments = [
+		# Spawn hub to restaurant row (south)
+		{"pos": Vector3(0, 0.03, 7.5), "size": Vector3(3.5, 0.05, 9)},
+		# Spawn hub to starter fork (north)
+		{"pos": Vector3(0, 0.03, -2), "size": Vector3(3.5, 0.05, 10)},
+		# Spawn hub to farm zone (east)
+		{"pos": Vector3(12.5, 0.03, 3), "size": Vector3(25, 0.05, 3.5)},
+		# Starter fork to Herb Garden (west branch)
+		{"pos": Vector3(-6, 0.03, -12), "size": Vector3(12, 0.05, 3.5)},
+		# Starter fork to Flame Kitchen (east branch)
+		{"pos": Vector3(6, 0.03, -12), "size": Vector3(12, 0.05, 3.5)},
+		# Main path: starter fork to Chef Umami gate
+		{"pos": Vector3(0, 0.03, -14), "size": Vector3(3.5, 0.05, 14)},
+		# Past Chef Umami to junction
+		{"pos": Vector3(0, 0.03, -25), "size": Vector3(3.5, 0.05, 10)},
+		# Junction to Frost Pantry (west)
+		{"pos": Vector3(-9, 0.03, -32), "size": Vector3(18, 0.05, 3.5)},
+		# Junction to Harvest Field (east)
+		{"pos": Vector3(9, 0.03, -32), "size": Vector3(18, 0.05, 3.5)},
+		# Main path: junction to Head Chef Roux gate
+		{"pos": Vector3(0, 0.03, -35), "size": Vector3(3.5, 0.05, 10)},
+		# Past Head Chef Roux to deep zone
+		{"pos": Vector3(0, 0.03, -47), "size": Vector3(3.5, 0.05, 14)},
+		# Deep zone to Fusion Kitchen (west)
+		{"pos": Vector3(-9, 0.03, -48), "size": Vector3(18, 0.05, 3.5)},
+		# Deep zone to Sour Springs (east)
+		{"pos": Vector3(9, 0.03, -48), "size": Vector3(18, 0.05, 3.5)},
+		# Deep path to Cauldron
+		{"pos": Vector3(0, 0.03, -52), "size": Vector3(3.5, 0.05, 6)},
+		# Side path to Pastry Dulce (-18, -28)
+		{"pos": Vector3(-18, 0.03, -31), "size": Vector3(3.5, 0.05, 6)},
+		# Side path to Brinemaster Vlad (18, -28)
+		{"pos": Vector3(18, 0.03, -31), "size": Vector3(3.5, 0.05, 6)},
+		# Side path to Grand Chef Michelin (-25, -55)
+		{"pos": Vector3(-12, 0.03, -55), "size": Vector3(26, 0.05, 3.5)},
+	]
+
+	for seg in segments:
+		var mesh_inst = MeshInstance3D.new()
+		var box = BoxMesh.new()
+		box.size = seg.size
+		mesh_inst.mesh = box
+		mesh_inst.set_surface_override_material(0, path_mat)
+		mesh_inst.position = seg.pos
+		paths_node.add_child(mesh_inst)
+
+func _generate_signposts() -> void:
+	var signs_node = Node3D.new()
+	signs_node.name = "Signposts"
+	add_child(signs_node)
+
+	var post_mat = StandardMaterial3D.new()
+	post_mat.albedo_color = Color(0.4, 0.25, 0.1)
+
+	var signposts = [
+		{"pos": Vector3(3, 0, 3), "text": "N: Wild Zones\nE: Farm\nS: Restaurants"},
+		{"pos": Vector3(0, 0, -8), "text": "W: Herb Garden\nE: Flame Kitchen\nN: Deeper Wilds"},
+		{"pos": Vector3(0, 0, -25), "text": "W: Frost Pantry\nE: Harvest Field\nN: Danger Ahead!"},
+		{"pos": Vector3(0, 0, -42), "text": "N: Cauldron\nW: Fusion Kitchen\nE: Sour Springs"},
+		{"pos": Vector3(18, 0, 0), "text": "E: Community Farm"},
+		{"pos": Vector3(0, 0, 10), "text": "S: Restaurant Row"},
+	]
+
+	for sp in signposts:
+		# Post
+		var post = MeshInstance3D.new()
+		var post_mesh = BoxMesh.new()
+		post_mesh.size = Vector3(0.2, 2.0, 0.2)
+		post.mesh = post_mesh
+		post.set_surface_override_material(0, post_mat)
+		post.position = Vector3(sp.pos.x, 1.0, sp.pos.z)
+		signs_node.add_child(post)
+
+		# Sign text
+		var label = Label3D.new()
+		label.text = sp.text
+		label.font_size = 18
+		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		label.modulate = Color(0.95, 0.85, 0.6)
+		label.outline_size = 4
+		label.position = Vector3(sp.pos.x, 2.3, sp.pos.z)
+		signs_node.add_child(label)
+
+func _generate_trees() -> void:
+	var trees_node = Node3D.new()
+	trees_node.name = "Trees"
+	add_child(trees_node)
+
+	var trunk_mat = StandardMaterial3D.new()
+	trunk_mat.albedo_color = Color(0.35, 0.2, 0.1)
+	var canopy_mat = StandardMaterial3D.new()
+	canopy_mat.albedo_color = Color(0.15, 0.45, 0.15)
+
+	var tree_positions = [
+		# Along spawn-to-wild path edges
+		Vector3(-3, 0, -5), Vector3(3, 0, -5),
+		Vector3(-3, 0, -10), Vector3(3, 0, -10),
+		# Near starter fork
+		Vector3(-5, 0, -8), Vector3(5, 0, -8),
+		# Along mid zone path
+		Vector3(-3, 0, -22), Vector3(3, 0, -22),
+		Vector3(-3, 0, -28), Vector3(3, 0, -28),
+		# Along deep path
+		Vector3(-3, 0, -45), Vector3(3, 0, -45),
+		# Near farm entrance
+		Vector3(15, 0, -2), Vector3(15, 0, 5),
+		# Near restaurant row
+		Vector3(-4, 0, 10), Vector3(4, 0, 10),
+		# Decorative clusters near zones
+		Vector3(-18, 0, -42), Vector3(-22, 0, -40),
+		Vector3(22, 0, -40), Vector3(18, 0, -42),
+	]
+
+	for pos in tree_positions:
+		# Trunk
+		var trunk = MeshInstance3D.new()
+		var trunk_mesh = CylinderMesh.new()
+		trunk_mesh.top_radius = 0.15
+		trunk_mesh.bottom_radius = 0.2
+		trunk_mesh.height = 2.5
+		trunk.mesh = trunk_mesh
+		trunk.set_surface_override_material(0, trunk_mat)
+		trunk.position = Vector3(pos.x, 1.25, pos.z)
+		trees_node.add_child(trunk)
+
+		# Canopy
+		var canopy = MeshInstance3D.new()
+		var canopy_mesh = SphereMesh.new()
+		canopy_mesh.radius = 1.2
+		canopy_mesh.height = 2.0
+		canopy.mesh = canopy_mesh
+		canopy.set_surface_override_material(0, canopy_mat)
+		canopy.position = Vector3(pos.x, 3.0, pos.z)
+		trees_node.add_child(canopy)
+
+func _generate_zone_overlays() -> void:
+	var overlays_node = Node3D.new()
+	overlays_node.name = "ZoneOverlays"
+	add_child(overlays_node)
+
+	var zones = [
+		{"pos": Vector3(-12, 0.02, -15), "color": Color(0.2, 0.5, 0.2, 0.3), "label": "Herb Garden"},
+		{"pos": Vector3(12, 0.02, -15), "color": Color(0.5, 0.25, 0.15, 0.3), "label": "Flame Kitchen"},
+		{"pos": Vector3(-18, 0.02, -35), "color": Color(0.25, 0.35, 0.6, 0.3), "label": "Frost Pantry"},
+		{"pos": Vector3(18, 0.02, -35), "color": Color(0.5, 0.45, 0.15, 0.3), "label": "Harvest Field"},
+		{"pos": Vector3(18, 0.02, -48), "color": Color(0.6, 0.7, 0.15, 0.3), "label": "Sour Springs"},
+		{"pos": Vector3(-18, 0.02, -48), "color": Color(0.5, 0.25, 0.5, 0.3), "label": "Fusion Kitchen"},
+	]
+
+	for z in zones:
+		# Ground overlay
+		var overlay = MeshInstance3D.new()
+		var box = BoxMesh.new()
+		box.size = Vector3(14, 0.02, 14)
+		overlay.mesh = box
+		var mat = StandardMaterial3D.new()
+		mat.albedo_color = z.color
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		overlay.set_surface_override_material(0, mat)
+		overlay.position = z.pos
+		overlays_node.add_child(overlay)
+
+		# Zone label (floating above)
+		var label = Label3D.new()
+		label.text = z.label
+		label.font_size = 36
+		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		label.modulate = Color(1, 1, 1, 0.9)
+		label.outline_size = 6
+		label.position = Vector3(z.pos.x, 3.5, z.pos.z)
+		overlays_node.add_child(label)
+
+	# Add some rocks/boulders at zone borders for visual separation
+	var rock_mat = StandardMaterial3D.new()
+	rock_mat.albedo_color = Color(0.5, 0.48, 0.45)
+	var rock_positions = [
+		Vector3(-5, 0.4, -18), Vector3(5, 0.3, -18),
+		Vector3(-8, 0.35, -30), Vector3(8, 0.35, -30),
+		Vector3(-8, 0.4, -44), Vector3(8, 0.4, -44),
+		Vector3(-10, 0.3, -20), Vector3(10, 0.3, -20),
+	]
+	for rpos in rock_positions:
+		var rock = MeshInstance3D.new()
+		var rbox = BoxMesh.new()
+		var rsize = randf_range(0.6, 1.2)
+		rbox.size = Vector3(rsize, rsize * 0.6, rsize * 0.8)
+		rock.mesh = rbox
+		rock.set_surface_override_material(0, rock_mat)
+		rock.position = rpos
+		overlays_node.add_child(rock)
+
 func _on_player_connected(peer_id: int, _info: Dictionary) -> void:
 	_spawn_player(peer_id)
+	# Register with restaurant manager (spawns overworld door, tracks location)
+	var rest_mgr = get_node_or_null("RestaurantManager")
+	if rest_mgr:
+		rest_mgr.handle_player_connected(peer_id)
 	# Sync world state to late joiner (deferred so player node exists)
 	_sync_world_to_client.call_deferred(peer_id)
 
 func _on_player_disconnected(peer_id: int) -> void:
+	# Clean up restaurant state (save data, remove door, eject from restaurant)
+	var rest_mgr = get_node_or_null("RestaurantManager")
+	if rest_mgr:
+		rest_mgr.handle_player_disconnect(peer_id)
 	# Clean up battle/encounter state for this peer
 	var battle_mgr = get_node_or_null("BattleManager")
 	if battle_mgr:
@@ -159,7 +384,13 @@ func _spawn_player(peer_id: int) -> void:
 	if peer_id in NetworkManager.player_data_store:
 		var pos_data = NetworkManager.player_data_store[peer_id].get("position", {})
 		if not pos_data.is_empty():
-			player.position = Vector3(pos_data.get("x", 0.0), pos_data.get("y", 1.0), pos_data.get("z", 3.0))
+			var saved_pos = Vector3(pos_data.get("x", 0.0), pos_data.get("y", 1.0), pos_data.get("z", 3.0))
+			# Migration: reset players at old layout positions to spawn
+			if _is_old_layout_position(saved_pos):
+				print("[GameWorld] Migrating player ", peer_id, " from old position ", saved_pos, " to spawn")
+				player.position = _get_spread_spawn_position()
+			else:
+				player.position = saved_pos
 		else:
 			player.position = _get_spread_spawn_position()
 	else:
@@ -182,6 +413,19 @@ func _despawn_player(peer_id: int) -> void:
 	if player_node:
 		player_node.queue_free()
 		print("Despawned player: ", peer_id)
+
+func _is_old_layout_position(pos: Vector3) -> bool:
+	# Old layout had WildZone at (-20,0,0) with zones at offsets like (-28,-12), (-36,16), etc.
+	# New layout has everything along Z axis (north-south). Old positions had x < -15.
+	# Also old farm was at (20,0,0), new is (25,0,0).
+	# Old restaurant row was at (0,0,-15), now at (0,0,12).
+	# Check if position is in old wild zone area (x < -15)
+	if pos.x < -15.0:
+		return true
+	# Check if near old farm position (20,0,0) but not new (25,0,0)
+	if abs(pos.x - 20.0) < 3.0 and abs(pos.z) < 10.0:
+		return true
+	return false
 
 func _get_spread_spawn_position() -> Vector3:
 	# Spread new players in a circle using golden angle to avoid overlap/stacking
@@ -206,3 +450,11 @@ func _sync_world_to_client(peer_id: int) -> void:
 	var item_mgr = get_node_or_null("WorldItemManager")
 	if item_mgr:
 		item_mgr.sync_all_to_client(peer_id)
+	# Sync restaurant doors to late joiner
+	var rest_mgr = get_node_or_null("RestaurantManager")
+	if rest_mgr:
+		rest_mgr.sync_doors_to_client(peer_id)
+	# Sync gatekeeper states (open gates for defeated trainers)
+	for npc in get_tree().get_nodes_in_group("trainer_npc"):
+		if npc.is_gatekeeper:
+			npc.update_gate_for_peer(peer_id)

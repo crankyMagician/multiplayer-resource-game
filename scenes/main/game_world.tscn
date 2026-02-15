@@ -1,4 +1,4 @@
-[gd_scene load_steps=43 format=3]
+[gd_scene load_steps=44 format=3]
 
 [ext_resource type="Script" path="res://scripts/world/game_world.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/world/season_manager.gd" id="2"]
@@ -15,6 +15,7 @@
 [ext_resource type="Script" path="res://scripts/world/storage_station.gd" id="14"]
 [ext_resource type="Script" path="res://scripts/world/recipe_pickup.gd" id="13"]
 [ext_resource type="Script" path="res://scripts/world/world_item_manager.gd" id="15"]
+[ext_resource type="Script" path="res://scripts/world/restaurant_manager.gd" id="16"]
 
 [sub_resource type="BoxShape3D" id="ground_shape"]
 size = Vector3(200, 0.2, 200)
@@ -160,11 +161,11 @@ spawn_path = NodePath("..")
 
 [node name="Zones" type="Node3D" parent="."]
 
-; === RESTAURANT ZONE (0, 0, 0) ===
+; === RESTAURANT ZONE (hub area around spawn) ===
 [node name="RestaurantZone" type="Node3D" parent="Zones"]
 
 [node name="Building" type="StaticBody3D" parent="Zones/RestaurantZone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, -5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, -2)
 
 [node name="BuildingMesh" type="MeshInstance3D" parent="Zones/RestaurantZone/Building"]
 mesh = SubResource("building_mesh")
@@ -174,7 +175,7 @@ material_override = SubResource("building_mat")
 shape = SubResource("building_shape")
 
 [node name="CraftingTable" type="StaticBody3D" parent="Zones/RestaurantZone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0.5, 1)
 
 [node name="TableMesh" type="MeshInstance3D" parent="Zones/RestaurantZone/CraftingTable"]
 mesh = SubResource("table_mesh")
@@ -194,9 +195,9 @@ font_size = 48
 outline_size = 8
 modulate = Color(1, 0.8, 0.3, 1)
 
-; === PANTRY (creature storage station, near kitchen) ===
+; === PANTRY (creature storage station) ===
 [node name="Pantry" type="StaticBody3D" parent="Zones/RestaurantZone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0.9, -3)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0.9, -1)
 
 [node name="PantryMesh" type="MeshInstance3D" parent="Zones/RestaurantZone/Pantry"]
 mesh = SubResource("storage_mesh")
@@ -218,9 +219,9 @@ modulate = Color(0.5, 0.7, 0.9, 1)
 [node name="SpawnPoint" type="Marker3D" parent="Zones/RestaurantZone"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
 
-; === FARM ZONE (20, 0, 0) ===
+; === FARM ZONE (25, 0, 0) — east of hub ===
 [node name="FarmZone" type="Node3D" parent="Zones"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25, 0, 0)
 
 [node name="FarmManager" type="Node3D" parent="Zones/FarmZone"]
 script = ExtResource("6")
@@ -257,9 +258,9 @@ material_override = SubResource("water_mat")
 [node name="WaterShape" type="CollisionShape3D" parent="Zones/FarmZone/WaterSource/WaterArea"]
 shape = SubResource("water_interact_shape")
 
-; === WORKBENCH (near spawn, between restaurant and farm) ===
+; === WORKBENCH (near spawn) ===
 [node name="Workbench" type="StaticBody3D" parent="Zones/RestaurantZone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0.6, 5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0.6, 5)
 
 [node name="WorkbenchMesh" type="MeshInstance3D" parent="Zones/RestaurantZone/Workbench"]
 mesh = SubResource("workbench_mesh")
@@ -279,39 +280,12 @@ font_size = 48
 outline_size = 8
 modulate = Color(0.8, 0.5, 0.2, 1)
 
-; === WILD ZONE (-20, 0, 0) ===
+; === WILD ZONE (at origin — all encounter zones use absolute positions) ===
 [node name="WildZone" type="Node3D" parent="Zones"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 0, 0)
 
-; Paths
-[node name="PathCenter" type="MeshInstance3D" parent="Zones/WildZone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, 0)
-mesh = SubResource("path_mesh")
-material_override = SubResource("path_mat")
-
-[node name="PathNorth" type="MeshInstance3D" parent="Zones/WildZone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, -8)
-mesh = SubResource("path_mesh")
-material_override = SubResource("path_mat")
-
-[node name="PathSouth" type="MeshInstance3D" parent="Zones/WildZone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, 8)
-mesh = SubResource("path_mesh")
-material_override = SubResource("path_mat")
-
-[node name="PathEast" type="MeshInstance3D" parent="Zones/WildZone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0.03, 0)
-mesh = SubResource("path_mesh")
-material_override = SubResource("path_mat")
-
-[node name="PathWest" type="MeshInstance3D" parent="Zones/WildZone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0.03, 0)
-mesh = SubResource("path_mesh")
-material_override = SubResource("path_mat")
-
-; Herb Garden Grass Patch (NE)
+; Herb Garden (-12, 0, -15) — easy, west branch
 [node name="HerbGarden" type="Area3D" parent="Zones/WildZone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, -8)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0, -15)
 script = ExtResource("7")
 encounter_table_id = "herb_garden"
 grass_color = Color(0.2, 0.6, 0.2, 0.7)
@@ -344,9 +318,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0.55, 0)
 mesh = SubResource("grass_blade_mesh")
 material_override = SubResource("grass_green_mat")
 
-; Flame Kitchen Grass Patch (SE)
+; Flame Kitchen (12, 0, -15) — easy, east branch
 [node name="FlameKitchen" type="Area3D" parent="Zones/WildZone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, 8)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0, -15)
 script = ExtResource("7")
 encounter_table_id = "flame_kitchen"
 grass_color = Color(0.6, 0.3, 0.2, 0.7)
@@ -374,39 +348,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0.65, -1)
 mesh = SubResource("grass_blade_mesh")
 material_override = SubResource("grass_red_mat")
 
-; Harvest Field Grass Patch (NW)
-[node name="HarvestField" type="Area3D" parent="Zones/WildZone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, -8)
-script = ExtResource("7")
-encounter_table_id = "harvest_field"
-grass_color = Color(0.6, 0.55, 0.2, 0.7)
-
-[node name="GrassShape" type="CollisionShape3D" parent="Zones/WildZone/HarvestField"]
-shape = SubResource("grass_area_shape")
-
-[node name="Grass1" type="MeshInstance3D" parent="Zones/WildZone/HarvestField"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0.6, -1)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_gold_mat")
-
-[node name="Grass2" type="MeshInstance3D" parent="Zones/WildZone/HarvestField"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0.7, 1.5)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_gold_mat")
-
-[node name="Grass3" type="MeshInstance3D" parent="Zones/WildZone/HarvestField"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_gold_mat")
-
-[node name="Grass4" type="MeshInstance3D" parent="Zones/WildZone/HarvestField"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.65, 2)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_gold_mat")
-
-; Frost Pantry Grass Patch (SW)
+; Frost Pantry (-18, 0, -35) — medium, west
 [node name="FrostPantry" type="Area3D" parent="Zones/WildZone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, 8)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18, 0, -35)
 script = ExtResource("7")
 encounter_table_id = "frost_pantry"
 grass_color = Color(0.3, 0.4, 0.7, 0.7)
@@ -434,9 +378,39 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.65, -2)
 mesh = SubResource("grass_blade_mesh")
 material_override = SubResource("grass_blue_mat")
 
-; === SOUR SPRINGS (far NE of wild zone) ===
+; Harvest Field (18, 0, -35) — medium, east
+[node name="HarvestField" type="Area3D" parent="Zones/WildZone"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 0, -35)
+script = ExtResource("7")
+encounter_table_id = "harvest_field"
+grass_color = Color(0.6, 0.55, 0.2, 0.7)
+
+[node name="GrassShape" type="CollisionShape3D" parent="Zones/WildZone/HarvestField"]
+shape = SubResource("grass_area_shape")
+
+[node name="Grass1" type="MeshInstance3D" parent="Zones/WildZone/HarvestField"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0.6, -1)
+mesh = SubResource("grass_blade_mesh")
+material_override = SubResource("grass_gold_mat")
+
+[node name="Grass2" type="MeshInstance3D" parent="Zones/WildZone/HarvestField"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0.7, 1.5)
+mesh = SubResource("grass_blade_mesh")
+material_override = SubResource("grass_gold_mat")
+
+[node name="Grass3" type="MeshInstance3D" parent="Zones/WildZone/HarvestField"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+mesh = SubResource("grass_blade_mesh")
+material_override = SubResource("grass_gold_mat")
+
+[node name="Grass4" type="MeshInstance3D" parent="Zones/WildZone/HarvestField"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.65, 2)
+mesh = SubResource("grass_blade_mesh")
+material_override = SubResource("grass_gold_mat")
+
+; Sour Springs (18, 0, -48) — hard, east
 [node name="SourSprings" type="Area3D" parent="Zones/WildZone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0, -16)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 0, -48)
 script = ExtResource("7")
 encounter_table_id = "sour_springs"
 grass_color = Color(0.7, 0.8, 0.2, 0.7)
@@ -464,9 +438,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0.65, -2)
 mesh = SubResource("grass_blade_mesh")
 material_override = SubResource("grass_yellow_mat")
 
-; === FUSION KITCHEN (far SW of wild zone) ===
+; Fusion Kitchen (-18, 0, -48) — hard, west
 [node name="FusionKitchen" type="Area3D" parent="Zones/WildZone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0, 16)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18, 0, -48)
 script = ExtResource("7")
 encounter_table_id = "fusion_kitchen"
 grass_color = Color(0.6, 0.3, 0.6, 0.7)
@@ -494,9 +468,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.65, 2)
 mesh = SubResource("grass_blade_mesh")
 material_override = SubResource("grass_purple_mat")
 
-; === CAULDRON (deep in wild zone, between encounter areas) ===
+; === CAULDRON (0, 0, -55) — deepest point ===
 [node name="Cauldron" type="StaticBody3D" parent="Zones/WildZone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, -55)
 
 [node name="CauldronMesh" type="MeshInstance3D" parent="Zones/WildZone/Cauldron"]
 mesh = SubResource("cauldron_mesh")
@@ -516,12 +490,12 @@ font_size = 48
 outline_size = 8
 modulate = Color(0.6, 0.3, 0.8, 1)
 
-; === RECIPE PICKUPS (hidden throughout the world) ===
+; === RECIPE PICKUPS ===
 [node name="RecipePickups" type="Node3D" parent="Zones/WildZone"]
 
-; Hidden behind Herb Garden
+; Near Herb Garden
 [node name="PickupHerbGarden" type="Area3D" parent="Zones/WildZone/RecipePickups"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0, -12)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0, -15)
 script = ExtResource("13")
 scroll_id = "scroll_basil_sprite"
 pickup_id = "pickup_herb_garden_1"
@@ -529,9 +503,9 @@ pickup_id = "pickup_herb_garden_1"
 [node name="PickupShape" type="CollisionShape3D" parent="Zones/WildZone/RecipePickups/PickupHerbGarden"]
 shape = SubResource("pickup_shape")
 
-; Hidden near Frost Pantry
+; Near Frost Pantry
 [node name="PickupFrostPantry" type="Area3D" parent="Zones/WildZone/RecipePickups"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0, 12)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 0, -35)
 script = ExtResource("13")
 scroll_id = "scroll_frost_berry"
 pickup_id = "pickup_frost_pantry_1"
@@ -539,9 +513,9 @@ pickup_id = "pickup_frost_pantry_1"
 [node name="PickupShape" type="CollisionShape3D" parent="Zones/WildZone/RecipePickups/PickupFrostPantry"]
 shape = SubResource("pickup_shape")
 
-; Hidden deep in Sour Springs area
+; Near Sour Springs
 [node name="PickupSourSprings" type="Area3D" parent="Zones/WildZone/RecipePickups"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 0, -20)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22, 0, -48)
 script = ExtResource("13")
 scroll_id = "scroll_lemon_imp"
 pickup_id = "pickup_sour_springs_1"
@@ -549,9 +523,9 @@ pickup_id = "pickup_sour_springs_1"
 [node name="PickupShape" type="CollisionShape3D" parent="Zones/WildZone/RecipePickups/PickupSourSprings"]
 shape = SubResource("pickup_shape")
 
-; Hidden near Fusion Kitchen
+; Near Fusion Kitchen
 [node name="PickupFusionKitchen" type="Area3D" parent="Zones/WildZone/RecipePickups"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 0, 20)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 0, -48)
 script = ExtResource("13")
 scroll_id = "scroll_pickle_toad"
 pickup_id = "pickup_fusion_kitchen_1"
@@ -562,47 +536,65 @@ shape = SubResource("pickup_shape")
 ; === TRAINER NPCs ===
 [node name="Trainers" type="Node3D" parent="Zones"]
 
-; Sous Chef Pepper — near Flame Kitchen
+; Sous Chef Pepper — optional, near Herb Garden
 [node name="SousChefPepper" type="Area3D" parent="Zones/Trainers"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0, 12)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0, -10)
 script = ExtResource("9")
 trainer_id = "sous_chef_pepper"
 
-; Farmer Green — near Harvest Field
+; Farmer Green — optional, near Flame Kitchen
 [node name="FarmerGreen" type="Area3D" parent="Zones/Trainers"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -28, 0, -12)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0, -10)
 script = ExtResource("9")
 trainer_id = "farmer_green"
 
-; Pastry Chef Dulce — near Frost Pantry
+; Chef Umami — GATEKEEPER #1, guards mid zones
+[node name="ChefUmami" type="Area3D" parent="Zones/Trainers"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -20)
+script = ExtResource("9")
+trainer_id = "chef_umami"
+is_gatekeeper = true
+
+; Pastry Chef Dulce — optional, near Frost Pantry
 [node name="PastryChefDulce" type="Area3D" parent="Zones/Trainers"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -28, 0, 12)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18, 0, -28)
 script = ExtResource("9")
 trainer_id = "pastry_chef_dulce"
 
-; Brinemaster Vlad — near Sour Springs
+; Brinemaster Vlad — optional, near Harvest Field
 [node name="BrinemasterVlad" type="Area3D" parent="Zones/Trainers"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, -20)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 0, -28)
 script = ExtResource("9")
 trainer_id = "brinemaster_vlad"
 
-; Chef Umami — between wild zone and farm
-[node name="ChefUmami" type="Area3D" parent="Zones/Trainers"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0, 0)
-script = ExtResource("9")
-trainer_id = "chef_umami"
-
-; Head Chef Roux — near Fusion Kitchen
+; Head Chef Roux — GATEKEEPER #2, guards hard zones
 [node name="HeadChefRoux" type="Area3D" parent="Zones/Trainers"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -36, 0, 20)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -40)
 script = ExtResource("9")
 trainer_id = "head_chef_roux"
+is_gatekeeper = true
 
-; Grand Chef Michelin — far end, boss area
+; Grand Chef Michelin — optional final boss, near Cauldron
 [node name="GrandChefMichelin" type="Area3D" parent="Zones/Trainers"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -40, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -25, 0, -55)
 script = ExtResource("9")
 trainer_id = "grand_chef_michelin"
+
+; === RESTAURANT ROW (south of spawn, z=12) ===
+[node name="RestaurantRow" type="Node3D" parent="Zones"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 12)
+
+[node name="SignLabel" type="Label3D" parent="Zones/RestaurantRow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 3, -1)
+text = "Restaurant Row"
+font_size = 56
+outline_size = 8
+modulate = Color(1, 0.85, 0.4, 1)
+billboard = 1
+
+; === Restaurant Manager ===
+[node name="RestaurantManager" type="Node" parent="."]
+script = ExtResource("16")
 
 ; === World Item Manager + Container ===
 [node name="WorldItemManager" type="Node" parent="."]

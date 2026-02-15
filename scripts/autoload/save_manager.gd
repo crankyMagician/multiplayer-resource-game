@@ -33,10 +33,15 @@ func auto_save_all() -> void:
 	if nm and nm.get("player_data_store"):
 		for peer_id in nm.player_data_store:
 			var data: Dictionary = nm.player_data_store[peer_id]
-			# Update position from player node
-			var player_node = _get_player_node(peer_id)
-			if player_node:
-				data["position"] = {"x": player_node.position.x, "y": player_node.position.y, "z": player_node.position.z}
+			# Update position from player node (use overworld position if in restaurant)
+			var rest_mgr = get_node_or_null("/root/Main/GameWorld/RestaurantManager")
+			if rest_mgr and peer_id in rest_mgr.overworld_positions:
+				var ow_pos = rest_mgr.overworld_positions[peer_id]
+				data["position"] = {"x": ow_pos.x, "y": ow_pos.y, "z": ow_pos.z}
+			else:
+				var player_node = _get_player_node(peer_id)
+				if player_node:
+					data["position"] = {"x": player_node.position.x, "y": player_node.position.y, "z": player_node.position.z}
 			var player_name = data.get("player_name", "")
 			if player_name != "" and player_name != "Server":
 				save_player(player_name, data)

@@ -44,6 +44,20 @@ func _try_interact() -> void:
 	if parent_body == null:
 		return
 	var pos = parent_body.global_position
+	# Check for trainer NPC proximity (E key to challenge)
+	var trainer = _find_nearest_area("trainer_npc", pos, 4.0)
+	if trainer and trainer.has_method("request_challenge"):
+		trainer.request_challenge.rpc_id(1)
+		return
+	# Check for restaurant door proximity (interact key as alternative to walk-over)
+	var door = _find_nearest_area("restaurant_door", pos, 3.0)
+	if door:
+		var door_owner = door.get_meta("owner_name", "") if door.has_meta("owner_name") else ""
+		if door_owner != "":
+			var rm = get_node_or_null("/root/Main/GameWorld/RestaurantManager")
+			if rm:
+				rm.request_enter_restaurant.rpc_id(1, door_owner)
+			return
 	# Check for storage station proximity
 	var storage = _find_nearest_area("storage_station", pos, 3.0)
 	if storage:
@@ -54,19 +68,19 @@ func _try_interact() -> void:
 	if station:
 		_open_crafting_ui(station)
 		return
-	# Check for water source
+	# Check for water source — find nearest FarmManager (works for both community and restaurant farms)
 	var water_source = _find_nearest_area("water_source", pos, 3.0)
 	if water_source:
-		var water_farm_mgr = get_node_or_null("/root/Main/GameWorld/Zones/FarmZone/FarmManager")
-		if water_farm_mgr:
-			water_farm_mgr._request_refill.rpc_id(1)
+		var nearest_fm = _find_nearest_farm_manager(pos)
+		if nearest_fm:
+			nearest_fm._request_refill.rpc_id(1)
 		return
-	# Check for farm plots
-	var farm_mgr = get_node_or_null("/root/Main/GameWorld/Zones/FarmZone/FarmManager")
-	if farm_mgr:
-		var plot_idx = farm_mgr.get_nearest_plot(pos, 3.0)
+	# Check for farm plots — find nearest FarmManager
+	var nearest_fm = _find_nearest_farm_manager(pos)
+	if nearest_fm:
+		var plot_idx = nearest_fm.get_nearest_plot(pos, 3.0)
 		if plot_idx >= 0:
-			_interact_with_plot(farm_mgr, plot_idx)
+			_interact_with_plot(nearest_fm, plot_idx)
 			return
 
 func _interact_with_plot(farm_mgr: Node, plot_idx: int) -> void:
@@ -125,6 +139,18 @@ func _find_nearest_area(meta_tag: String, pos: Vector3, max_dist: float) -> Area
 			if dist < closest_dist:
 				closest_dist = dist
 				closest = area
+	return closest
+
+func _find_nearest_farm_manager(pos: Vector3) -> Node:
+	var farm_managers = get_tree().get_nodes_in_group("farm_manager")
+	var closest: Node = null
+	var closest_dist: float = INF
+	for fm in farm_managers:
+		if fm is Node3D:
+			var dist = fm.global_position.distance_to(pos)
+			if dist < closest_dist:
+				closest_dist = dist
+				closest = fm
 	return closest
 
 func _find_nearest_crafting_station(pos: Vector3, max_dist: float) -> Area3D:
