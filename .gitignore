@@ -24,6 +24,10 @@ Thumbs.db
 *.swp
 *.swo
 
+# Node / API
+node_modules/
+api/dist/
+
 # Docker
 docker-compose.override.yml
 server_data/
