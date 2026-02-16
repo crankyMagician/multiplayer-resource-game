@@ -21,7 +21,7 @@ spec:
         - name: ghcr-secret
       containers:
         - name: creature-crafting-server
-          image: ghcr.io/crankymagician/mt-creature-crafting-server:latest
+          image: ghcr.io/crankymagician/mt-creature-crafting:63b880c
           imagePullPolicy: Always
           ports:
             - containerPort: 7777
