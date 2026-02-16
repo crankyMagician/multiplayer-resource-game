@@ -85,164 +85,63 @@ See `docs/docker-build.md` for full build instructions (two-phase engine + game 
 - **StateSync properties** (6 total): `position`, `velocity` (always), `player_color`, `player_name_display` (spawn-only), `mesh_rotation_y` (always), `is_busy` (always).
 
 ## Battle System
-- **3 battle modes**: Wild, Trainer (7 NPCs), PvP (V key challenge within 5 units of another player)
-- **21 creatures** (9 original + 9 gen2 + 3 evolutions), 7 evolution chains, MAX_PARTY_SIZE = 3
-- **Starter creature**: All new players spawn with Rice Ball (Grain, Lv 5, 45 HP) with moves: grain_bash, quick_bite, bread_wall, syrup_trap
-- **57 moves** including weather setters, hazards, protection, charging, multi-hit, recoil, drain, crit-boosters, taunt, trick room, substitutes
-- **20 abilities** with trigger-based dispatch (on_enter/on_attack/on_defend/on_status/end_of_turn/on_weather)
-- **18 held items** (6 type boosters, 6 utility, 3 choice items, 3 specialist) — all craftable from ingredients
-- **XP/Leveling**: XP from battles, level-up stat recalc, learnset moves, evolution. Full XP to participants, 50% to bench.
+- **3 battle modes**: Wild, Trainer (7 NPCs), PvP (V key challenge within 5 units)
+- **21 creatures**, 57 moves, 20 abilities, 18 held items, 6 battle items. MAX_PARTY_SIZE = 3
+- **Starter**: Rice Ball (Grain, Lv 5, 45 HP) with grain_bash, quick_bite, bread_wall, syrup_trap
 - **AI**: 3 tiers (easy=random, medium=type-aware, hard=damage-calc + prediction)
-- **PvP**: Both-submit simultaneous turns, 30s timeout, disconnect = forfeit. Loser forfeits 25% of each ingredient stack to winner.
-- **6 battle items**: herb_poultice (30 HP), spicy_tonic (60 HP), full_feast (full HP), mint_extract (cure status), flavor_essence (5 PP), revival_soup (revive 50% HP). Used via "Items" button in battle UI. Item use consumes a turn. Blocked in PvP battles. Server processes via `_process_item_use()`.
+- **PvP**: Both-submit simultaneous turns, 30s timeout, disconnect = forfeit. Loser forfeits 25% ingredients.
 - **Defeat penalty**: 50% money loss, teleport to spawn point, all creatures healed
+- **Server-authoritative**: `_build_party_from_store(peer_id)` reads from `player_data_store`, NOT client. Party deep-copy via `.duplicate(true)`.
+- **Move validation**: `request_battle_action()` verifies move_id in creature's moveset. Switch targets bounds-checked.
+- **Rewards RPCs**: `_grant_battle_rewards`, `_send_xp_results`, `_grant_trainer_rewards_client`, `_battle_defeat_penalty`
 
-### IVs, Bond, and Crit Stages
-- **IVs**: 6 stats (hp/atk/def/spa/spd/spe), 0-31 range, rolled on creation via `CreatureInstance.create_from_species()`. Formula: `stat = int(base_stat * level_mult) + iv`. Old saves auto-backfilled. `CreatureInstance.IV_STATS` constant.
-- **Bond**: Points earned via battles (+10 active, +1 bench) and feeding (+15). Levels 0-5, thresholds: 50/150/300/500/750 (`CreatureInstance.compute_bond_level()`). Modifiers: Lv2 +5% accuracy, Lv3 1.2x XP, Lv4 endure (survive lethal hit at 1 HP once), Lv5 +10% all stats. Battle affinities tracked for future expansion.
-- **Crit stages**: Per-creature 0-3, rates: 6.25%/12.5%/25%/50% (`BattleCalculator.get_crit_stage()`). Moves modify via `self_crit_stage_change`. Resets each battle.
-- **Taunt**: `taunt_turns` (3 turns), prevents status moves. Validated in `request_battle_action()`.
-- **Trick Room**: `trick_room_turns` on battle dict, reverses speed priority.
-- **Substitutes**: `substitute_hp` per creature, absorbs damage before real HP. Sound moves bypass.
+See `docs/battle-system.md` for full details: IVs (formula, 0-31 range), bond levels (thresholds, modifiers), crit stages, taunt/trick room/substitutes, MoveDef properties, battle UI layout, battle items (HP values), XP/leveling.
 
-### New Move Properties (MoveDef)
-- `self_crit_stage_change: int` — crit stage modifier on use
-- `is_sound: bool` — bypasses substitutes
-- `taunts_target: bool` — applies taunt on hit
-- `knock_off: bool` — removes defender's held item
-- `sets_trick_room: bool` — toggles trick room
+## Crafting & Item System
+- **58 recipes**: 13 creature (cauldron), 18 held item (workbench), 12 food (kitchen), 9 tool upgrade (workbench), 6 battle item (kitchen)
+- **6 item types**: ingredients (16), held items (18), foods (12), tools (12), recipe scrolls (13), battle items (6) — single inventory namespace
+- **3 crafting stations**: Kitchen (restaurant), Workbench (near spawn), Cauldron (deep wild) — filtered by `station` field
+- **Crafting security**: Single-phase server-authoritative — `request_craft(recipe_id)` validates server-side, deducts, produces, syncs. No client-side deduction.
+- **Tool upgrades**: 3 types (hoe, axe, watering_can) x 4 tiers (basic→bronze→iron→gold)
+- **Food buffs**: 4 buff types (speed_boost, xp_multiplier, encounter_rate, creature_heal), timed, server-side expiry every 5s
+- **Farming**: `request_farm_action(plot_idx, action, seed_id)` RPC. Server deducts seeds, rolls back on failure.
 
-### Battle UI
-- **Enemy panel**: name, level, types, HP bar, status, stat stages, crit stage
-- **Player panel**: name, level, types, HP bar, XP bar, ability, held item
-- **Move buttons**: 3-line format — Name / Type|Category|Power / Accuracy|PP
-- **Field effects bar**: trick room, taunt turns, substitute HP, crit stage
-- **Weather bar**: weather name + remaining turns
-- **Flee/Switch/Items**: Flee in wild only, Switch always available, Items button opens battle item list (hidden in PvP)
-- **Turn log**: scrolling RichTextLabel. Ability messages in `[color=purple]`, item in `[color=cyan]`, effectiveness in green/yellow.
-- **Summary screen**: Victory/Defeat, XP per creature (level-up highlights), item drops, trainer money + bonus ingredients. Continue button returns to world.
-- **PvP-specific**: no Flee, "Waiting for opponent..." label, perspectives actor-swapped. PvP challenge UI auto-hides when battle starts.
-- **Trainer prompt cleanup**: `_on_battle_started()` calls `hud.hide_trainer_prompt()`.
+See `docs/crafting-items.md` for full details: buff application points, PlayerData tool system, selling, recipe unlocks, ingredient details.
 
-### Battle Manager Server-Side
-- Battle state keyed by `battle_id` (auto-increment), `player_battle_map[peer_id] → battle_id`
-- **Server-authoritative party data**: `_build_party_from_store(peer_id)` reads party from `NetworkManager.player_data_store`, NOT from client. No `_receive_party_data` RPC exists.
-- **Move validation**: `request_battle_action()` verifies move_id exists in creature's actual moveset. Switch targets bounds-checked.
-- Wild/Trainer: server picks AI action, resolves turn, sends `_send_turn_result` RPC
-- PvP: both sides submit via `request_battle_action` RPC, server resolves when both received. `_swap_actor()` flips perspective for each player's log.
-- Rewards via separate RPCs: `_grant_battle_rewards`, `_send_xp_results`, `_grant_trainer_rewards_client`, `_battle_defeat_penalty`
-- **Party deep-copy**: `server_update_party()` uses `.duplicate(true)` to prevent cross-player state corruption.
+## World Systems
+- **Hub area**: Spawn near (0,1,3). Farm zone at (25,0,0). Restaurant doors at z=12.
+- **6 encounter zones**: Herb Garden, Flame Kitchen, Frost Pantry, Harvest Field, Sour Springs, Fusion Kitchen
+- **7 trainers**: 5 optional (Pepper, Green, Dulce, Vlad, Michelin), 2 gatekeepers (Umami, Roux). E-key prompt, `request_challenge` RPC.
+- **WorldItemManager**: Server-authoritative pickup via Area3D `body_entered`. Node naming: `"WorldItem_" + str(uid)`.
+- **Restaurant**: Per-player instances at `Vector3(1000+idx*200,0,1000)`. Auto-save position fix checks `RestaurantManager.overworld_positions`. Farm routing via `get_farm_manager_for_peer(peer_id)`.
+- **3 shops**: General Store, Battle Supplies, Rare Goods. `request_buy/sell_item` RPCs. Sets busy state.
+- **Trading**: T key, 5-unit range. Atomic swap via `_execute_trade()`. Sets busy state.
+- **Busy state**: `is_busy: bool` on player, StateSync always mode. Guards encounters, PvP, trainers, shop, trade.
 
-## Crafting & Item System (Unified Overhaul)
-- **58 recipes**: 13 creature (cauldron, unlockable), 18 held item (workbench), 12 food (kitchen), 9 tool upgrade (workbench), 6 battle item (kitchen)
-- **6 item types**: ingredients (16), held items (18), foods (12), tools (12), recipe scrolls (13), battle items (6) — all share single inventory namespace
-- **3 crafting stations**: Kitchen (restaurant zone), Workbench (near spawn), Cauldron (deep wild zone) — each filters recipes by `station` field
-- **Recipe unlock system**: Creature recipes require recipe scrolls to unlock. Scrolls come from trainer first-defeat rewards, world pickups, or fragment collection (3-5 fragments auto-combine)
-- **Food & buffs**: 4 buff foods (speed_boost, xp_multiplier, encounter_rate, creature_heal) + 8 trade goods for selling. Buffs are timed, server-side expiry checked every 5s
-- **Tool upgrades**: 3 tool types (hoe, axe, watering_can) x 4 tiers (basic→bronze→iron→gold). Upgrade recipes consume old tool + ingredients. Dynamic stats from ToolDef
-- **Crafting security**: Single-phase server-authoritative — `request_craft(recipe_id)` RPC validates everything server-side, deducts, produces result, syncs to client. No client-side deduction.
-- **Selling**: `request_sell_item(item_id, qty)` RPC. Universal `DataRegistry.get_sell_price(item_id)` checks BattleItemDef, FoodDef, IngredientDef for sell prices
-- **16 ingredients**: farm crops (season-locked) + battle drops. New plantable crops: lemon (summer), pickle_brine (autumn)
-- **Planting flow** (server-authoritative): Client sends `request_farm_action(plot_idx, "plant", seed_id)` RPC. Server removes seed from `player_data_store`, attempts plant, rolls back on failure. No client-side deduction.
-- **Watering flow** (server-authoritative): Client sends `request_farm_action(plot_idx, "water", "")` RPC. Server decrements, syncs via `_sync_watering_can` RPC. Refill via `_request_refill` RPC.
+See `docs/world-systems.md` for full details: trainer difficulty colors, gatekeeper mechanics, world item lifecycle, restaurant architecture, shop/trade RPCs.
 
-### Buff Application Points
-- **Speed boost**: `player_controller.gd` `_physics_process()` — multiplies move speed
-- **XP multiplier**: `battle_manager.gd` `_grant_xp_for_defeat()` — multiplies XP
-- **Encounter rate**: `encounter_manager.gd` `get_encounter_rate_multiplier()` — multiplies probability
+## NPC Social System
+- **Friendship**: -100 to +100 per NPC, 5 tiers (hate/dislike/neutral/like/love)
+- **Talk**: +2 daily bonus (once/NPC/day), branching dialogue with choices
+- **Gifts**: 1/NPC/day. loved(+15), liked(+8), neutral(+3), disliked(-8), hated(-15). 3x birthday.
+- **Daily decay**: -1/day (floor 0). NPC gift thresholds at 20/50/80.
+- **5 NPCs**: Baker Brioche, Sage Herbalist, Old Salt, Ember Smith, Professor Umami
+- **Architecture**: SocialManager (no `class_name`). Key RPCs: `request_talk` → `_send_dialogue`, `request_give_gift` → `_gift_response`.
 
-### PlayerData Tool System
-- **No Tool enum** — replaced with string-based `current_tool_slot` ("", "hoe", "axe", "watering_can", "seeds")
-- `equipped_tools: Dictionary` maps tool_type → tool_id (e.g. `{"hoe": "tool_hoe_basic", ...}`)
-- `get_watering_can_capacity()` reads from equipped ToolDef's effectiveness dict
-- `known_recipes: Array` tracks unlocked recipe IDs
-- `active_buffs: Array` of `{buff_type, buff_value, expires_at}` dicts
-
-## World Item Drop & Pickup System
-- **WorldItemManager** (`scripts/world/world_item_manager.gd`): Server-authoritative manager in `game_world.tscn`
-- **WorldItem** (`scripts/world/world_item.gd`): Area3D pickup node with colored BoxMesh, billboard Label3D, bobbing animation, walk-over auto-pickup
-- **Pickup flow**: Area3D `body_entered` (server-only) → `WorldItemManager.try_pickup()` → `server_add_inventory()` + `_sync_inventory_full` RPC → `_notify_pickup` RPC (HUD toast) → `_remove_world_item()` (despawn RPC to all)
-- **Drop sources**: Random world forage spawns (every 120s, 10 spawn points), farm plot clearing
-- **Late-joiner sync**: `sync_all_to_client(peer_id)` sends bulk `_spawn_world_item_client` RPCs
-- **Persistence**: `get_save_data()` / `load_save_data()` integrated into `game_world.gd` save/load flow
-- **Node naming**: `"WorldItem_" + str(uid)` with monotonic auto-increment UIDs to avoid duplicate name trap
-
-## World Layout
-- **Hub area**: Players spawn near (0, 1, 3). Farm zone at (25, 0, 0). Restaurant doors at z=12.
-- **Decorative nodes** in `game_world.tscn` under GameWorld: `Paths`, `Signposts`, `Trees`, `ZoneOverlays`
-- **Trainer progression**: Optional trainers flank the main path south; gatekeepers block advancement to deeper zones
-
-## Wild Encounter Zones
-- 6 zones total: Herb Garden, Flame Kitchen, Frost Pantry, Harvest Field, Sour Springs, Fusion Kitchen
-- Represented by glowing colored grass patches with floating in-world labels
-- HUD provides persistent legend + contextual hint when inside encounter grass
-
-## NPC Trainers
-- 7 trainers placed along world paths under `Zones/Trainers` in game_world.tscn
-- Color-coded by difficulty: green=easy, yellow=medium, red=hard
-- Trainers: Sous Chef Pepper, Farmer Green, Pastry Chef Dulce, Brinemaster Vlad, Chef Umami, Head Chef Roux, Grand Chef Michelin
-- **Optional** (`is_gatekeeper=false`): Pepper, Green, Dulce, Vlad, Michelin — E-key prompt via `_show_trainer_prompt` RPC, `request_challenge` RPC to start. Rematch cooldown per trainer.
-- **Gatekeeper** (`is_gatekeeper=true`): Umami, Roux — forced pushback + TrainerDialogueUI (Accept/Decline). Defeating records `defeated_trainers[trainer_id]` in player_data_store, `_notify_gate_opened` RPC hides gate per-client. Detection radius: 4.0 gatekeepers, 3.0 optional.
-
-## Restaurant System
-- **Architecture**: Server-authoritative, per-player restaurant instances with own interior scene, farm plots, kitchen crafting station.
-- **Instance positioning**: `Vector3(1000 + idx*200, 0, 1000)` — far from overworld. Index persisted in player save data.
-- **Unique instance names**: `Restaurant_<owner_name>` set before `add_child()` to prevent Godot auto-rename.
-- **Entry/exit flow**: Walk-over door (Area3D) → server saves overworld position → teleports to interior → `_notify_location_change` RPC → client instantiates scene. Exit via ExitDoor restores overworld position.
-- **Farm routing**: `get_farm_manager_for_peer(peer_id)` checks `player_location` dict — returns restaurant's or overworld FarmManager.
-- **Persistence**: Restaurant index map in world data. Farm plots saved to `player_data_store["restaurant"]` on unload/auto-save.
-- **Auto-save position fix**: Both `save_manager.gd` and `network_manager.gd` check `RestaurantManager.overworld_positions[peer_id]` before falling back to `player_node.position` — prevents saving interior coordinates as overworld position.
-- **Unloading**: When all players leave, saves farm data and `queue_free()`s the instance.
-- **Files**: `scripts/world/restaurant_manager.gd`, `restaurant_interior.gd`, `restaurant_door.gd`, `scenes/world/restaurant_interior.tscn`
-
-## Shop System
-- **ShopDef** (`scripts/data/shop_def.gd`): Resource with `shop_id`, `display_name`, `items_for_sale` (Array of `{item_id, buy_price}` dicts)
-- **3 shops**: General Store (ingredients), Battle Supplies (battle items), Rare Goods (premium items)
-- **ShopNPC** (`scripts/world/shop_npc.gd`): Area3D with 3.0-unit detection radius. E-key prompt via HUD's trainer prompt system. Guards: rejects if player `is_busy` or in battle.
-- **ShopUI** (`scripts/ui/shop_ui.gd`): CanvasLayer with Buy/Sell tabs. Buy shows catalog with prices (disabled if insufficient money). Sell lists player inventory with sell prices.
-- **RPCs**: `request_open_shop()` → server validates → `_open_shop_client(shop_id, name, catalog)`. `request_buy_item(item_id, qty, shop_id)` / `request_sell_item(item_id, qty)` for transactions. Sets player busy state on open/close.
-
-## Player Trading
-- **T key** initiates trade with nearest player (within 5 units). Server validates both players not busy/in battle.
-- **TradeUI** (`scripts/ui/trade_ui.gd`): Two phases — request panel (Accept/Decline) and trade panel (3-column: Your Offer | Their Offer | Your Inventory with +/- buttons).
-- **Atomic swap**: Both players must confirm. Server re-validates all items exist before executing swap. `_execute_trade()` transfers items atomically.
-- **RPCs**: `request_trade(target_peer)` → `_trade_request_received(name, peer)` → `respond_trade(peer, accepted)` → `update_trade_offer(item_id, count_change)` → `confirm_trade()` / `cancel_trade()`. Sets busy state during trade.
-
-## Player Busy State
-- **`is_busy: bool`** on player node, synced via StateSync (always mode). Visible to all clients.
-- **BusyIndicator**: Label3D above player showing "[Busy]" when `is_busy = true`.
-- **Guards**: Wild encounters, PvP challenges, trainer interactions, shop/trade all check `is_busy` before proceeding.
-- **RPC**: `request_set_busy(busy: bool)` — client requests busy toggle, server sets on player node. Auto-cleared when closing shop/trade UI.
-
-## NPC Social System (Stardew Valley-style)
-- **Friendship**: -100 to +100 points per NPC, 5 tiers (hate < -60, dislike < -20, neutral < 20, like < 60, love >= 60)
-- **Talk**: +2 daily bonus (once/NPC/day), branching dialogue with player choices (+/- points per choice)
-- **Gifts**: 1 gift/NPC/day. Tiers: loved (+15), liked (+8), neutral (+3), disliked (-8), hated (-15). 3x birthday multiplier.
-- **Daily decay**: -1/day if not interacted (floor at 0, no negative spiral). Flags reset on day_changed.
-- **NPC gifts**: One-time threshold rewards at 20/50/80 friendship points.
-- **5 NPCs**: Baker Brioche, Sage Herbalist, Old Salt, Ember Smith, Professor Umami — each with branching dialogues, gift prefs, schedule.
-- **Architecture**: Server-authoritative. SocialManager (no class_name — references autoloads) handles all friendship logic. SocialNPC (Area3D) handles proximity + RPCs. DialogueUI (CanvasLayer) is client-only.
-- **Key RPCs**: `request_talk` → `_send_dialogue(npc_id, text, choices, points, tier)` → `request_dialogue_choice(idx)` → `_dialogue_choice_result(response, points, tier)`. Gift: `request_give_gift(item_id)` → `_gift_response(msg, pts)`.
-- **No class_name on SocialManager** — inlined static methods in dialogue_ui.gd and test files to avoid autoload reference issues.
-- **Files**: `scripts/data/npc_def.gd`, `scripts/world/social_npc.gd`, `scripts/world/social_manager.gd`, `scripts/ui/dialogue_ui.gd`, `scenes/ui/dialogue_ui.tscn`, `resources/npcs/*.tres` (5), `test/unit/world/test_social_system.gd`, `test/integration/test_social_flow.gd`
+See `docs/social-quests.md` for full details.
 
 ## Quest System
-- **Data-driven**: QuestDef Resource (`scripts/data/quest_def.gd`, `class_name QuestDef`) with quest_id, objectives array, prereqs, rewards, NPC dialogue, chain/story fields
-- **6 quest .tres resources**: 3 main story (ms_01_meet_baker, ms_02_first_harvest, ms_03_first_battle), 1 side (side_herbalist_remedy), 1 daily (daily_creature_patrol), 1 weekly (weekly_forager)
-- **Categories**: `main_story`, `side`, `daily`, `weekly`. Daily/weekly auto-reset via SeasonManager day_changed signal.
-- **QuestManager** (`scripts/world/quest_manager.gd`): Server-authoritative, no `class_name` (follows SocialManager pattern). Handles accept, progress, completion, abandonment, daily/weekly resets.
-- **Objective types**: Cumulative (defeat_trainer, defeat_creature, defeat_pvp, discover_location, talk_to, craft, collect without consumes_items) tracked via `notify_progress()`. Inventory-check (deliver, collect with consumes_items=true) validated at turn-in.
-- **Integration hooks**: `notify_progress()` called from NetworkManager (collect), BattleManager (defeat_trainer/creature/pvp), CraftingSystem (craft), LocationManager (discover_location), SocialManager (talk_to)
-- **Prerequisites**: prereq_quest_ids, prereq_friendship, prereq_locations, prereq_season, prereq_weather, prereq_main_story_quest_id — all checked in `check_prereqs()`
-- **Rewards**: money, items, friendship points, recipe scrolls, unlock flags. Granted atomically in `handle_complete_quest()`. Delivery items consumed at turn-in.
-- **Quest chains**: `next_quest_id` auto-offers next quest on completion. `chapter` + `sort_order` for main story grouping.
-- **NPC quest indicators**: SocialNPC shows "!" (available quests) or "?" (completable quests) Label3D above head. Updated client-side in `_process()`.
-- **QuestLogUI** (`scripts/ui/quest_log_ui.gd`): CanvasLayer (layer 10), J key toggle. Tabs: Active/Completed/Main Story. Shows objectives, rewards, action buttons (Track/Abandon/Complete). Also handles NPC quest offer/turn-in via `show_npc_quests()`. Sets busy state.
-- **HUD quest tracker**: Bottom-right VBoxContainer showing tracked quest name + objective progress. Connected to `PlayerData.quests_changed`.
-- **Player state**: `player_data_store[peer_id]["quests"]` = `{active: {}, completed: {}, daily_reset_day, weekly_reset_day, unlock_flags: []}`. Backfilled in `_finalize_join()`. Client mirror in PlayerData: `active_quests`, `completed_quests`, `unlock_flags`, signal `quests_changed`.
-- **RPCs**: Client→Server: `request_available_quests`, `request_accept_quest`, `request_complete_quest`, `request_abandon_quest`. Server→Client: `_send_available_quests`, `_sync_quest_state`, `_notify_quest_progress`, `_notify_quest_complete`, `_offer_next_quest`.
-- **Exploit prevention**: Server-only progress, atomic rewards, duplicate completion check, delivery re-validation at turn-in, main_story cannot be abandoned.
-- **Files**: `scripts/data/quest_def.gd`, `scripts/world/quest_manager.gd`, `scripts/ui/quest_log_ui.gd`, `scenes/ui/quest_log_ui.tscn`, `resources/quests/*.tres` (6), `test/unit/world/test_quest_system.gd`, `test/integration/test_quest_flow.gd`
+- **Data-driven**: QuestDef Resource (`class_name QuestDef`), 6 quests (3 main story, 1 side, 1 daily, 1 weekly)
+- **QuestManager**: Server-authoritative, no `class_name`. Daily/weekly auto-reset via SeasonManager.
+- **Objectives**: Cumulative (defeat_trainer/creature/pvp, discover_location, talk_to, craft, collect) via `notify_progress()`. Inventory-check (deliver) at turn-in.
+- **Integration hooks**: BattleManager, CraftingSystem, LocationManager, SocialManager, NetworkManager
+- **Rewards**: money, items, friendship, recipe scrolls, unlock flags. Atomic. Delivery items consumed.
+- **Quest chains**: `next_quest_id` auto-offers. `chapter` + `sort_order` for main story.
+- **QuestLogUI**: J key, layer 10. Tabs: Active/Completed/Main Story. Sets busy.
+- **Player state**: `player_data_store[peer_id]["quests"]` = `{active, completed, daily_reset_day, weekly_reset_day, unlock_flags}`
+- **RPCs**: Client→Server: `request_available/accept/complete/abandon_quest`. Server→Client: `_send_available_quests`, `_sync_quest_state`, `_notify_quest_progress/complete`, `_offer_next_quest`.
+
+See `docs/social-quests.md` for full details (prereq types, NPC indicators, exploit prevention).
 
 ## Networking Rules (IMPORTANT)
 
@@ -277,6 +176,7 @@ This is a server-authoritative multiplayer game. **Every gameplay change — new
 | Quest system | Server (QuestManager) | RPCs: `_sync_quest_state`, `_notify_quest_progress`, `_notify_quest_complete` |
 | Location discovery | Server (LocationManager) | `_notify_location_discovered` RPC to client |
 | Compass/minimap rendering | Client only | Reads local camera_yaw + cached LocationDef positions |
+| Stats/compendium | Server (StatTracker static calls) | On-demand `_sync_compendium_client` RPC when UI opens |
 | Save/load | Server only (SaveManager → Express API → MongoDB) | Data sent to client via `_receive_player_data` |
 
 ### Never do this
@@ -284,41 +184,33 @@ This is a server-authoritative multiplayer game. **Every gameplay change — new
 - **Never assume a gameplay feature is local-only** unless explicitly told so. Even "cosmetic" things like player color need syncing in multiplayer.
 - **Never modify `PlayerData` (the autoload) on the server.** `PlayerData` is the client's local mirror. The server uses `NetworkManager.player_data_store[peer_id]`. Sync changes from server store to client PlayerData via RPC.
 
-## Location System, Compass & Minimap
-- **28 LocationDefs** (`resources/locations/*.tres`): Static world landmarks with `location_id`, `display_name`, `world_position`, `discovery_radius`, `category`, `icon_color`
-- **DataRegistry integration**: `DataRegistry.locations` dict, `get_location(id)` accessor
-- **LocationManager** (`scripts/world/location_manager.gd`): Server-side, no `class_name`. Checks player proximity to undiscovered locations every 10 physics frames. Skips players in restaurants.
-- **Discovery flow**: Server detects proximity → appends to `player_data_store[peer_id]["discovered_locations"]` → `_notify_location_discovered` RPC → client updates `PlayerData.discovered_locations` + HUD toast
-- **Persistence**: `discovered_locations` array saved in player_data_store → MongoDB. Backfilled to `[]` for old saves.
-- **Compass UI** (`scripts/ui/compass_ui.gd`): CanvasLayer (layer 5), always-visible horizontal strip at top-center. Cardinal markers scroll based on `camera_yaw`. Target dropdown lists discovered locations by category. Hides when in restaurant.
-- **Compass math**: North = -Z (toward wild zones) = `camera_yaw` at PI. Target bearing: `atan2(dx, dz)` matches `forward = Vector3(sin(yaw), 0, cos(yaw))`.
-- **Minimap** (`scripts/ui/minimap_ui.gd`): `Control._draw()` based, renders discovered locations as colored circles, player triangle at center. Scroll wheel zoom. Click to set compass target.
-- **Pause Overlay** (`scripts/ui/pause_overlay.gd`): CanvasLayer (layer 15), toggled by Escape or M key (`open_map` action). Shows minimap, sets busy state. Won't open if other UIs are active.
-- **PlayerData additions**: `discovered_locations: Array`, `compass_target_id: String`, signals `discovered_locations_changed`, `compass_target_changed`
-- **RPCs**: `_notify_location_discovered(location_id, display_name)`, `_sync_discovered_locations(location_ids)` — both server→client
-- **Files**: `scripts/data/location_def.gd`, `scripts/world/location_manager.gd`, `scripts/ui/compass_ui.gd`, `scripts/ui/minimap_ui.gd`, `scripts/ui/pause_overlay.gd`, `scenes/ui/compass_ui.tscn`, `scenes/ui/pause_overlay.tscn`, `resources/locations/*.tres` (28)
+## Location, Compass & Calendar
+- **28 LocationDefs** (`resources/locations/*.tres`): landmarks with position, discovery_radius, category, icon_color
+- **LocationManager** (no `class_name`): Server-side, checks proximity every 10 physics frames. Skips restaurant players.
+- **Discovery flow**: Server detects → appends to `player_data_store` → `_notify_location_discovered` RPC → client HUD toast
+- **Compass**: North=-Z, bearing via `atan2(dx,dz)`. CanvasLayer (layer 5), target dropdown by category.
+- **Minimap**: `Control._draw()`, scroll wheel zoom, click-to-target. Pause Overlay: Esc/M key, layer 15.
+- **Calendar**: 12 months (Jan-Dec), 28 days/month, 336 days/year, start March. `DAY_DURATION = 600.0` (10 min).
+- **Seasons**: Mar-May=spring, Jun-Aug=summer, Sep-Nov=autumn, Dec-Feb=winter
+- **Weather**: Sunny(50%), Rainy(25%), Windy(15%), Stormy(10%). Rain auto-waters farms.
+- **Sync**: `_broadcast_time(year, month, day, total_days, weather)` RPC. Late-joiners: `request_season_sync`.
+- **CalendarBoard**: Area3D at `Vector3(5,0,5)`. CalendarUI: 28-day grid. CalendarEvents: 10 holidays + birthdays.
 
-## Calendar & Weather System (12-Month)
-- **SeasonManager** (`scripts/world/season_manager.gd`): Server-authoritative 12-month calendar. Seasons derived from month.
-- **Day cycle**: 10 real minutes per in-game day (`DAY_DURATION = 600.0`)
-- **Months**: 12 months (Jan–Dec), 28 days/month, 336 days/year. Game starts March (spring).
-- **Seasons**: Derived from `MONTH_TO_SEASON` — Mar-May=spring, Jun-Aug=summer, Sep-Nov=autumn, Dec-Feb=winter.
-- **Weather**: 4 types — Sunny (50%), Rainy (25%), Windy (15%), Stormy (10%). Rolled each day.
-- **Rain auto-waters**: On rainy/stormy days, `_rain_water_all_farms()` waters all FarmManagers
-- **HUD display**: `season_label` shows "Year N, MonthName D", `day_label` shows weather name
-- **Crop seasons**: `is_crop_in_season(crop_season)` checks against month-derived season
-- **Sync**: `_broadcast_time(year, month, day, total_days, weather)` RPC. Late-joiners use `request_season_sync`.
-- **Persistence**: `current_month`, `day_in_month`, `current_year`, `day_timer`, `total_day_count`, `current_weather`. Old saves auto-convert from season enum.
-- **NPC birthdays**: `{month: int, day: int}` format. Old `{season, day}` format supported via backward compat.
+See `docs/location-calendar.md` for full details.
 
-## Calendar Board & Calendar UI
-- **CalendarBoard** (`scripts/world/calendar_board.gd`): Area3D at `Vector3(5, 0, 5)`. E-key opens CalendarUI. `calendar_board` group.
-- **CalendarUI** (`scripts/ui/calendar_ui.gd`): 28-day grid, month arrows, event markers. Sets busy state.
-- **CalendarEvents** (`scripts/data/calendar_events.gd`): 10 holidays + NPC birthday lookup. `get_events_for_month/day()`.
-- **Event types**: festival (gold), holiday (cyan), birthday (pink)
+## Compendium & Stat Tracking
+- **StatTracker** (`class_name`, static `_store` via `init(player_data_store)` in NetworkManager._ready())
+- **Data**: `"stats"` (flat counters + per-species dicts) and `"compendium"` (items, creatures_seen, creatures_owned)
+- **~30 stats**: battles, XP, money, crafting, farming, social, quests, locations, days
+- **Compendium unlocks**: Items on first obtain, creatures "seen" in battle / "owned" on craft
+- **Hook integration**: StatTracker calls in battle_manager, network_manager, crafting_system, farm_manager, social_manager, quest_manager, location_manager, season_manager
+- **Sync**: `request_compendium_sync.rpc_id(1)` → `_sync_compendium_client(stats, compendium)`
+- **CompendiumUI**: K key, layer 10. 3 tabs: Items (7 sub-filters), Creatures (seen/owned), Stats.
+
+See `docs/compendium-stats.md` for full tracked stat list and hook locations.
 
 ## GDScript Conventions
-- Use `class_name` for static utility classes (BattleCalculator, StatusEffects, FieldEffects, AbilityEffects, HeldItemEffects, BattleAI)
+- Use `class_name` for static utility classes (BattleCalculator, StatusEffects, FieldEffects, AbilityEffects, HeldItemEffects, BattleAI, StatTracker)
 - Do NOT preload scripts that already have `class_name` — causes "constant has same name as global class" warning
 - Prefix unused parameters/variables with `_` to suppress warnings
 - Use `4.0` instead of `4` in division to avoid integer division warnings
@@ -336,60 +228,27 @@ This is a server-authoritative multiplayer game. **Every gameplay change — new
 See `docs/k8s-deployment.md` for full K8s deployment details (3 deployments, SSH access, deploy workflow, manifests).
 
 ## Automated Testing
+See `docs/testing-guide.md` for full test suite details, file listings, and file structure overview.
 
 ### Run Commands
 ```bash
-# GDScript tests (GUT) — 512 tests
+# GDScript tests (GUT)
 '/Applications/Mechanical Turk.app/Contents/MacOS/Mechanical Turk' --path . --headless -s addons/gut/gut_cmdln.gd -gexit
 
-# Express API tests (Vitest) — 21 tests
+# Express API tests (Vitest)
 cd api && npx vitest run
 ```
 
-### GDScript Test Suite (GUT 9.5.0)
-- **Config**: `.gutconfig.json` — dirs `res://test/`, prefix `test_`, include subdirs
-- **Helpers** (`test/helpers/`): `mock_move.gd` (MoveDef factory), `battle_factory.gd` (creature/battle dict factory), `registry_seeder.gd` (DataRegistry populator), `battle_test_scene.gd` (integration helper)
-- **Unit tests** (`test/unit/`): battle/ (calculator, status, field effects, abilities, held items, AI, calculator RNG, battle items), data/ (creature instance, creature creation, battle item def), world/ (season manager, shop system), crafting/ (validation)
-- **Integration tests** (`test/integration/`): battle turn pipeline, PvP mechanics, player trading
-
 ### Test Patterns
-- **RegistrySeeder**: Populates DataRegistry directly (sets `_loaded = true`). Call `seed_all()` in `before_each()`, `clear_all()` in `after_each()`.
-- **BattleFactory**: `creature(overrides)` and `battle(overrides)` create dicts with all expected battle keys + sensible defaults.
-- **MockMove**: `physical()`, `special()`, `status()`, `with_props(overrides)` create MoveDef Resources without DataRegistry.
-- **Deterministic RNG**: Use `seed(N)` for reproducible randf/randi results in tests.
-- **No preloading**: Reference `class_name` utilities directly (BattleCalculator, StatusEffects, etc.) — never preload in tests.
-- **SeasonManager testing**: Load script onto standalone Node, set state directly, don't add to tree (avoids multiplayer _ready).
-
-### API Tests (Vitest + Supertest + MongoMemoryServer)
-- **App extraction**: `api/src/app.ts` exports `createApp(db)` for Supertest without real listener.
-- **Setup**: `api/test/setup.ts` — `setupTestDb()` / `teardownTestDb()` / `clearCollections()`
-- **Test files**: `players.test.ts` (14 tests), `world.test.ts` (6 tests), `health.test.ts` (1 test)
-
-### When Adding New Features
-- **New battle mechanic** (move effect, ability, held item): Add tests to the relevant `test/unit/battle/` file. Update `registry_seeder.gd` if new data entries are needed.
-- **New data type or resource**: Add serialization round-trip tests in `test/unit/data/`.
-- **New API endpoint**: Add tests in `api/test/`. Use the existing `setupTestDb()` pattern.
-- **Run tests before committing**: All 512 tests must pass.
+- **RegistrySeeder**: `seed_all()` in `before_each()`, `clear_all()` in `after_each()`
+- **BattleFactory**: `creature(overrides)` and `battle(overrides)` with sensible defaults
+- **MockMove**: `physical()`, `special()`, `status()`, `with_props(overrides)`
+- **Deterministic RNG**: Use `seed(N)` for reproducible results
+- **No preloading**: Reference `class_name` utilities directly — never preload in tests
+- **SeasonManager testing**: Load script onto standalone Node, set state directly, don't add to tree
+- **New battle mechanic**: Add tests to `test/unit/battle/`. Update `registry_seeder.gd` if needed.
+- **New data type**: Add round-trip tests in `test/unit/data/`.
+- **Run tests before committing**: All tests must pass.
 
 ## MCP Testing Workflow
 See `docs/mcp-testing.md` for full MCP testing guide (editor bridge, runtime bridge sessions, caveats, port conflicts).
-
-## File Structure Overview
-- `api/` — Express API service (TypeScript): `src/index.ts`, `src/routes/players.ts`, `src/routes/world.ts`, `Dockerfile`
-- `k8s/` — Kubernetes manifests: `mongodb.yaml`, `api-service.yaml`, `deployment.yaml`, `service.yaml`
-- `scripts/autoload/` — NetworkManager, GameManager, PlayerData, SaveManager
-- `scripts/data/` — 19 Resource class definitions (+ food_def, tool_def, recipe_scroll_def, battle_item_def, shop_def, npc_def, location_def, calendar_events, quest_def)
-- `scripts/battle/` — BattleManager, BattleCalculator, StatusEffects, FieldEffects, AbilityEffects, HeldItemEffects, BattleAI
-- `scripts/world/` — FarmPlot, FarmManager, SeasonManager, TallGrass, EncounterManager, GameWorld, TrainerNPC, CraftingStation, RecipePickup, WorldItem, WorldItemManager, RestaurantManager, RestaurantInterior, RestaurantDoor, ShopNPC, SocialNPC, SocialManager, LocationManager, CalendarBoard, QuestManager
-- `scripts/crafting/` — CraftingSystem
-- `scripts/player/` — PlayerController, PlayerInteraction
-- `scripts/ui/` — ConnectUI, HUD (calendar + weather + trainer prompt + discovery toast), BattleUI, CraftingUI (station-filtered), InventoryUI (tabbed), PartyUI (networked equip), PvPChallengeUI, TrainerDialogueUI (gatekeeper accept/decline + post-battle dialogue), ShopUI (buy/sell tabs), TradeUI (offer/confirm panels), DialogueUI (NPC social dialogue + gift panel), CompassUI (directional compass strip), MinimapUI (2D top-down map), PauseOverlay (Esc/M key map overlay), CalendarUI (12-month event calendar), QuestLogUI (J key quest log + NPC quest offers)
-- `test/helpers/` — MockMove, BattleFactory, RegistrySeeder, BattleTestScene
-- `test/unit/battle/` — test_battle_calculator, test_battle_calculator_rng, test_status_effects, test_field_effects, test_ability_effects, test_held_item_effects, test_battle_ai, test_battle_items
-- `test/unit/data/` — test_creature_instance, test_creature_instance_creation, test_battle_item_def
-- `test/unit/world/` — test_season_manager, test_shop_system, test_social_system, test_location_system, test_calendar_events, test_quest_system
-- `test/unit/ui/` — test_compass_math
-- `test/unit/crafting/` — test_crafting_validation
-- `test/integration/` — test_battle_turn, test_battle_pvp, test_player_trading, test_social_flow, test_quest_flow
-- `api/test/` — players.test.ts, world.test.ts, health.test.ts
-- `resources/` — ingredients/ (16), creatures/ (21), moves/ (57), encounters/ (6), recipes/ (58), abilities/ (20), held_items/ (18), trainers/ (7), foods/ (12), tools/ (12), recipe_scrolls/ (13), battle_items/ (6), shops/ (3), npcs/ (5), locations/ (28), quests/ (6)
