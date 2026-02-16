@@ -6,6 +6,13 @@
 - **3 crafting stations**: Kitchen (restaurant zone), Workbench (near spawn), Cauldron (deep wild zone) — each filters recipes by `station` field
 - **Recipe unlock system**: Creature recipes require recipe scrolls to unlock. Scrolls come from trainer first-defeat rewards, world pickups, or fragment collection (3-5 fragments auto-combine)
 
+## Creature Crafting & Destination
+- **Creature recipes**: 13 recipes at cauldron station. Unlocked via recipe scrolls.
+- **Creation flow**: `CraftingSystem.request_craft(recipe_id)` → server validates recipe + ingredients → deducts → `CreatureInstance.create_from_species(species, level)` → generates UUID → `NetworkManager.server_give_creature(peer_id, creature_data, "craft", recipe_id)`
+- **Party has space (< 3)**: Creature added directly to party, `_notify_creature_received` RPC sent.
+- **Party full (= 3)**: `server_give_creature` stores pending choice, sends `_show_creature_destination_chooser` RPC. Client sees CreatureDestinationUI modal with options: Send to Storage, Swap with party member, or Release.
+- **Destination RPC**: `request_creature_destination(choice, swap_party_idx)` — server validates and places creature accordingly.
+
 ## Food & Buffs
 - 4 buff foods (speed_boost, xp_multiplier, encounter_rate, creature_heal) + 8 trade goods for selling
 - Buffs are timed, server-side expiry checked every 5s

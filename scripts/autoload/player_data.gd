@@ -86,6 +86,7 @@ var group_party_leader_id: String = ""
 var group_party_members: Array = [] # [{player_id, player_name, online}]
 
 # Player state
+var player_id: String = "" # UUID from server
 var player_name: String = "Player"
 var player_color: Color = Color(0.2, 0.5, 0.9)
 
@@ -155,6 +156,7 @@ func get_buff_value(buff_type: String) -> float:
 	return 0.0
 
 func load_from_server(data: Dictionary) -> void:
+	player_id = str(data.get("player_id", ""))
 	player_name = data.get("player_name", "Player")
 	# Load inventory
 	inventory.clear()
@@ -258,6 +260,7 @@ func reset() -> void:
 		"watering_can": "tool_watering_can_basic",
 	}
 	watering_can_current = 10
+	player_id = ""
 	player_name = "Player"
 	player_color = Color(0.2, 0.5, 0.9)
 	money = 0

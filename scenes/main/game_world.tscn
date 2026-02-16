@@ -1,4 +1,4 @@
-[gd_scene load_steps=47 format=3]
+[gd_scene load_steps=48 format=3]
 
 [ext_resource type="Script" path="res://scripts/world/game_world.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/world/season_manager.gd" id="2"]
@@ -21,6 +21,7 @@
 [ext_resource type="Script" path="res://scripts/world/social_manager.gd" id="19"]
 [ext_resource type="Script" path="res://scripts/world/location_manager.gd" id="20"]
 [ext_resource type="Script" path="res://scripts/world/quest_manager.gd" id="21"]
+[ext_resource type="Script" path="res://scripts/world/friend_manager.gd" id="22"]
 
 [sub_resource type="BoxShape3D" id="ground_shape"]
 size = Vector3(200, 0.2, 200)
@@ -666,6 +667,10 @@ script = ExtResource("20")
 ; === Quest Manager ===
 [node name="QuestManager" type="Node" parent="."]
 script = ExtResource("21")
+
+; === Friend Manager ===
+[node name="FriendManager" type="Node" parent="."]
+script = ExtResource("22")
 
 ; === World Item Manager + Container ===
 [node name="WorldItemManager" type="Node" parent="."]

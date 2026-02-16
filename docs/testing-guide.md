@@ -32,6 +32,10 @@ cd api && npx vitest run
 - **New battle mechanic** (move effect, ability, held item): Add tests to the relevant `test/unit/battle/` file. Update `registry_seeder.gd` if new data entries are needed.
 - **New data type or resource**: Add serialization round-trip tests in `test/unit/data/`.
 - **New API endpoint**: Add tests in `api/test/`. Use the existing `setupTestDb()` pattern.
+- **New creature receipt source** (e.g., quests, events): Call `NetworkManager.server_give_creature(peer_id, creature_data, "source_type", "source_id")`. Handles party-full auto-prompting via CreatureDestinationUI.
+- **P2P creature trade**: Test offer/pref/confirmation/execution flow. Validate min-party guard, storage capacity, creature UUID resolution in `_resolve_trade_creature`.
+- **NPC creature trade**: Test prerequisite checks (friendship, season, one-time) via `_get_available_creature_trade`. Test cost deduction and creature creation in `_handle_creature_trade_accept`.
+- **Friend/party feature**: Test both online and offline players. Use SaveManager signal-based async patterns for offline lookups. Guard against race conditions with pair-locks.
 - **Run tests before committing**: All tests must pass.
 
 ## File Structure Overview
@@ -40,10 +44,10 @@ cd api && npx vitest run
 - `scripts/autoload/` — NetworkManager, GameManager, PlayerData, SaveManager
 - `scripts/data/` — 20 Resource/utility class definitions (+ food_def, tool_def, recipe_scroll_def, battle_item_def, shop_def, npc_def, location_def, calendar_events, quest_def, stat_tracker)
 - `scripts/battle/` — BattleManager, BattleCalculator, StatusEffects, FieldEffects, AbilityEffects, HeldItemEffects, BattleAI
-- `scripts/world/` — FarmPlot, FarmManager, SeasonManager, TallGrass, EncounterManager, GameWorld, TrainerNPC, CraftingStation, RecipePickup, WorldItem, WorldItemManager, RestaurantManager, RestaurantInterior, RestaurantDoor, ShopNPC, SocialNPC, SocialManager, LocationManager, CalendarBoard, QuestManager
+- `scripts/world/` — FarmPlot, FarmManager, SeasonManager, TallGrass, EncounterManager, GameWorld, TrainerNPC, CraftingStation, RecipePickup, WorldItem, WorldItemManager, RestaurantManager, RestaurantInterior, RestaurantDoor, ShopNPC, SocialNPC, SocialManager, LocationManager, CalendarBoard, QuestManager, FriendManager
 - `scripts/crafting/` — CraftingSystem
 - `scripts/player/` — PlayerController, PlayerInteraction
-- `scripts/ui/` — ConnectUI, HUD, BattleUI, CraftingUI, InventoryUI, PartyUI, PvPChallengeUI, TrainerDialogueUI, ShopUI, TradeUI, DialogueUI, CompassUI, MinimapUI, PauseOverlay, CalendarUI, QuestLogUI, CompendiumUI
+- `scripts/ui/` — ConnectUI, HUD, BattleUI, CraftingUI, InventoryUI, PartyUI, PvPChallengeUI, TrainerDialogueUI, ShopUI, TradeUI, DialogueUI, CompassUI, MinimapUI, PauseOverlay, CalendarUI, QuestLogUI, CompendiumUI, CreatureDestinationUI
 - `test/helpers/` — MockMove, BattleFactory, RegistrySeeder, BattleTestScene
 - `test/unit/` — battle/, data/, world/, ui/, crafting/
 - `test/integration/` — battle_turn, battle_pvp, player_trading, social_flow, quest_flow

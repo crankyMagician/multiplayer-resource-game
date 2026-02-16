@@ -25,6 +25,42 @@
 
 ---
 
+## NPC Creature Trades
+
+### Data Model
+- **`npc_def.creature_trades`**: Array of trade dicts per NPC. Each trade: `creature_species_id`, `creature_level`, `creature_nickname`, `cost_items` (dict of item_id → qty), `cost_money`, `required_friendship` (tier name), `required_season`, `required_quest_id`, `dialogue_text`, `dialogue_accept_label`, `dialogue_decline_label`, `one_time: bool`.
+- **Trade keys**: One-time trades tracked as `"npc_creature_trade_" + npc_id + "_" + species_id` in `npc_friendships[npc_id]["gifts_received"]`.
+
+### Available Trades
+| NPC | Creature | Level | Cost | Friendship | Season | One-time |
+|-----|----------|-------|------|------------|--------|----------|
+| Baker Brioche | Wheat Golem | 8 | 20 grain_wheat + 3 sweet_crystal + 500g | like | spring | yes |
+| Sage Herbalist | Basil Sprite | 10 | 15 herb_basil + 5 herbal_dew + 600g | love | — | yes |
+| Ember Smith | Sear Slug | 12 | 10 chili_pepper + 5 spicy_essence + 800g | love | — | yes |
+
+### Availability Check
+`_get_available_creature_trade(peer_id, npc_id, npc_def)` filters by:
+1. One-time flag (skip if trade_key in gifts_received)
+2. Friendship tier (`_tier_meets_requirement` checks tier order: hate < dislike < neutral < like < love)
+3. Season (must match current season if specified)
+4. Quest (must be in completed_quests if specified)
+
+### Acceptance Flow
+1. `handle_talk_request()` appends creature trade accept/decline choices to dialogue
+2. Client selects accept choice → `handle_dialogue_choice()` → `_handle_creature_trade_accept()`
+3. Server re-validates all conditions (prevents replay attacks)
+4. Server validates + deducts cost_items and cost_money
+5. Creates creature: `CreatureInstance.create_from_species()` → dict with UUID + nickname
+6. Routes through `NetworkManager.server_give_creature()` (universal handler)
+7. If party full → triggers CreatureDestinationUI (storage or swap)
+8. Marks trade as received (one-time flag in gifts_received)
+9. Syncs inventory + money to client
+
+### Files
+`scripts/world/social_manager.gd` (`_get_available_creature_trade`, `_handle_creature_trade_accept`), `scripts/data/npc_def.gd` (`creature_trades` property), `resources/npcs/*.tres`
+
+---
+
 ## Quest System
 
 ### Data Model

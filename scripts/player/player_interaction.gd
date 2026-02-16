@@ -32,6 +32,9 @@ func _process(_delta: float) -> void:
 	# Compendium (K key)
 	if Input.is_action_just_pressed("compendium"):
 		_toggle_compendium()
+	# Friend list (F key)
+	if Input.is_action_just_pressed("friend_list"):
+		_toggle_friend_list()
 	# Number keys for tool select
 	if Input.is_action_just_pressed("tool_1"):
 		PlayerData.set_tool("")
@@ -243,3 +246,8 @@ func _toggle_compendium() -> void:
 	var compendium = get_node_or_null("/root/Main/GameWorld/UI/CompendiumUI")
 	if compendium and compendium.has_method("toggle"):
 		compendium.toggle()
+
+func _toggle_friend_list() -> void:
+	var friend_ui = get_node_or_null("/root/Main/GameWorld/UI/FriendListUI")
+	if friend_ui and friend_ui.has_method("toggle"):
+		friend_ui.toggle()

@@ -50,8 +50,55 @@
 - **Atomic swap**: Both players must confirm. Server re-validates all items exist before executing swap. `_execute_trade()` transfers items atomically.
 - **RPCs**: `request_trade(target_peer)` -> `_trade_request_received(name, peer)` -> `respond_trade(peer, accepted)` -> `update_trade_offer(item_id, count_change)` -> `confirm_trade()` / `cancel_trade()`. Sets busy state during trade.
 
+### Creature Trading (P2P)
+- **Creature offers**: Each player can offer 0 or 1 creature from party (min 1 retained) or storage. Server tracks as `{source, index, creature_id}`. UUID-based resolution prevents stale index bugs.
+- **Receive preferences**: Each player sets where to receive the other's creature — `"party"` (with optional `swap_party_idx` for full party) or `"storage"`. Validated server-side for space availability.
+- **Atomic execution in `_execute_trade()`**:
+  1. Re-validate all items + creatures exist (`_resolve_trade_creature` by UUID)
+  2. Validate receive prefs (`_validate_trade_receive_pref` checks party/storage capacity)
+  3. Remove offered creatures (`_remove_creature_from_pool`)
+  4. Swap items (both directions)
+  5. Place received creatures by pref (`_place_creature_by_pref` — party append, swap, or storage fallback)
+  6. Sync party/storage/inventory to both clients
+- **Min-party guard**: Cannot offer last creature in party (pool.size() <= 1 check in `_resolve_trade_creature`).
+- **Stat tracking**: `creatures_traded`, `trades_completed`, creature ownership unlock via StatTracker.
+- **RPCs**: `update_trade_creature_offer(source, index, offered)`, `set_trade_receive_preference(destination, swap_idx)`. Server sync: `_sync_trade_creatures()`.
+
+## Creature Destination Chooser
+- **Universal handler**: `NetworkManager.server_give_creature(peer_id, creature_data, source_type, source_id)` — single entry point for ALL creature receipts (crafting, NPC trade, P2P trade, catches).
+- **Party has space**: Creature appended to party, `_sync_party_full` + `_notify_creature_received` RPCs sent.
+- **Party full**: Stored in `pending_creature_choices[peer_id]`, `_show_creature_destination_chooser` RPC sent with creature data, party snapshot, storage size/capacity.
+- **CreatureDestinationUI** (`scripts/ui/creature_destination_ui.gd`): CanvasLayer modal with 3 options:
+  - **Send to Storage** (disabled if storage full)
+  - **Swap with party member** (select slot, disabled if storage full or party size = 1)
+  - **Release** (creature lost permanently)
+- **RPC**: `request_creature_destination(choice, swap_party_idx)` — server validates bounds, min-party, storage capacity. Choices: `"storage"`, `"swap"`, `"release"`.
+- **Files**: `scripts/ui/creature_destination_ui.gd`, `scenes/ui/creature_destination_ui.tscn`
+
+## Friend & Party System
+- **FriendManager** (`scripts/world/friend_manager.gd`): No `class_name` (follows SocialManager pattern). Server-authoritative, child of GameWorld.
+- **Social data**: `player_data_store[peer_id]["social"]` = `{friends: [player_id...], blocked: [player_id...], incoming_requests: [{from_id, from_name, sent_at}], outgoing_requests: [{to_id, to_name, sent_at}]}`
+
+### Friend Requests
+- Send by player name. Server validates: not self, not already friends, not blocked (either direction), no duplicate pending request.
+- **Online targets**: Direct RPC notification + data store update.
+- **Offline targets**: `SaveManager.update_player_social_async()` → `PATCH /api/players/:id/social` for atomic MongoDB mutations (`$addToSet`/`$pull`).
+- Accept/decline/cancel all handle both online + offline cleanup. Pair-locks prevent race conditions.
+
+### Blocking
+- Block removes existing friendship + all pending requests (both directions).
+- Blocked players cannot send friend requests, party invites, or gift items.
+- Unblock only removes block; does not restore friendship.
+
+### Party System
+- 4-player max, leader-based. Only leaders can invite. Only friends can be invited.
+- 60-second invite TTL with auto-expiry timer.
+- Disconnect: leadership transfers to oldest member. Empty party auto-disbands.
+- Party state is runtime-only (not persisted to save data).
+- **RPCs**: `request_create_party`, `request_invite_to_party(target_id)`, `request_accept_party_invite(party_id)`, `request_leave_party`, `request_kick_from_party(target_id)`. Syncs: `_sync_friends_list`, `_sync_party_state`, `_notify_party_invite`.
+
 ## Player Busy State
 - **`is_busy: bool`** on player node, synced via StateSync (always mode). Visible to all clients.
 - **BusyIndicator**: Label3D above player showing "[Busy]" when `is_busy = true`.
-- **Guards**: Wild encounters, PvP challenges, trainer interactions, shop/trade all check `is_busy` before proceeding.
-- **RPC**: `request_set_busy(busy: bool)` — client requests busy toggle, server sets on player node. Auto-cleared when closing shop/trade UI.
+- **Guards**: Wild encounters, PvP challenges, trainer interactions, shop/trade, creature destination chooser all check `is_busy` before proceeding.
+- **RPC**: `request_set_busy(busy: bool)` — client requests busy toggle, server sets on player node. Auto-cleared when closing shop/trade/destination UI.
