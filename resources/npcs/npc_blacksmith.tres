@@ -8,7 +8,7 @@ npc_id = "npc_blacksmith"
 display_name = "Ember the Smith"
 visual_color = Color(0.8, 0.35, 0.15, 1)
 birthday = {
-"season": "autumn",
+"month": 10,
 "day": 8
 }
 schedule = [{

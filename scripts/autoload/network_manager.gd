@@ -358,6 +358,9 @@ func _finalize_join(sender_id: int, player_name: String, data: Dictionary) -> vo
 	# Backfill NPC friendships
 	if not data.has("npc_friendships"):
 		data["npc_friendships"] = {}
+	# Backfill discovered locations
+	if not data.has("discovered_locations"):
+		data["discovered_locations"] = []
 	# Backfill basic tools in inventory
 	var inv = data.get("inventory", {})
 	for tool_id in ["tool_hoe_basic", "tool_axe_basic", "tool_watering_can_basic"]:
@@ -718,6 +721,21 @@ func _sync_party_full(party_array: Array) -> void:
 func _sync_npc_friendships(friendships: Dictionary) -> void:
 	PlayerData.npc_friendships = friendships.duplicate(true)
 	PlayerData.friendships_changed.emit()
+
+@rpc("authority", "reliable")
+func _notify_location_discovered(location_id: String, display_name: String) -> void:
+	if location_id not in PlayerData.discovered_locations:
+		PlayerData.discovered_locations.append(location_id)
+		PlayerData.discovered_locations_changed.emit()
+	# Show HUD toast
+	var hud = get_node_or_null("/root/Main/GameWorld/UI/HUD")
+	if hud and hud.has_method("show_discovery_toast"):
+		hud.show_discovery_toast(display_name)
+
+@rpc("authority", "reliable")
+func _sync_discovered_locations(location_ids: Array) -> void:
+	PlayerData.discovered_locations = location_ids.duplicate()
+	PlayerData.discovered_locations_changed.emit()
 
 # === Client->Server RPCs ===
 

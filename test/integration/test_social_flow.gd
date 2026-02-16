@@ -62,7 +62,7 @@ func _seed_npcs() -> void:
 	npc.npc_id = "test_npc"
 	npc.display_name = "Test NPC"
 	npc.visual_color = Color(0.5, 0.5, 0.5)
-	npc.birthday = {"season": "spring", "day": 5}
+	npc.birthday = {"month": 3, "day": 5}
 	npc.gift_preferences = {
 		"loved": ["grain_wheat"],
 		"liked": ["herb_leaf"],

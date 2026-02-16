@@ -4,7 +4,7 @@ extends Resource
 @export var npc_id: String = ""
 @export var display_name: String = ""
 @export var visual_color: Color = Color(0.7, 0.5, 0.8)
-@export var birthday: Dictionary = {} # {season: "spring", day: 7}
+@export var birthday: Dictionary = {} # {month: 3, day: 5}
 
 # Schedule: array of {time_start: float, time_end: float, position: {x,y,z}, seasons: []}
 # time_start/time_end are 0.0-1.0 fraction of day; seasons=[] means all seasons

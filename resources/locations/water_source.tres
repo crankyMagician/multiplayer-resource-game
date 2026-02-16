@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="LocationDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/location_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+location_id = "water_source"
+display_name = "Water Source"
+world_position = Vector3(31, 0.4, 6)
+discovery_radius = 5.0
+icon_type = "landmark"
+category = "landmark"
+icon_color = Color(0.3, 0.5, 1, 1)

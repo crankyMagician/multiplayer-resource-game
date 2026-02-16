@@ -8,7 +8,7 @@ npc_id = "npc_baker"
 display_name = "Baker Brioche"
 visual_color = Color(0.6, 0.4, 0.2, 1)
 birthday = {
-"season": "spring",
+"month": 3,
 "day": 5
 }
 schedule = [{

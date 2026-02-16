@@ -47,6 +47,11 @@ func _try_interact() -> void:
 	if parent_body == null:
 		return
 	var pos = parent_body.global_position
+	# Check for calendar board proximity (E key to view)
+	var calendar = _find_nearest_area("calendar_board", pos, 3.0)
+	if calendar and calendar.has_method("request_open_calendar"):
+		calendar.request_open_calendar.rpc_id(1)
+		return
 	# Check for social NPC proximity (E key to talk)
 	var social_npc = _find_nearest_area("social_npc", pos, 3.0)
 	if social_npc and social_npc.has_method("request_talk"):

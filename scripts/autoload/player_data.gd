@@ -8,6 +8,8 @@ signal buffs_changed()
 signal storage_changed()
 signal location_changed(zone: String, owner_name: String)
 signal friendships_changed()
+signal discovered_locations_changed()
+signal compass_target_changed(target_id: String)
 
 # Location tracking (client-side mirror of server state)
 var current_zone: String = "overworld"
@@ -53,6 +55,10 @@ var storage_capacity: int = 10 # Current max storage slots
 
 # NPC friendships: npc_id -> {points, talked_today, gifted_today, ...}
 var npc_friendships: Dictionary = {}
+
+# Location discovery
+var discovered_locations: Array = []
+var compass_target_id: String = ""
 
 # Player state
 var player_name: String = "Player"
@@ -159,15 +165,19 @@ func load_from_server(data: Dictionary) -> void:
 	restaurant_data = data.get("restaurant", {}).duplicate(true)
 	# Load NPC friendships
 	npc_friendships = data.get("npc_friendships", {}).duplicate(true)
+	# Load discovered locations
+	discovered_locations = data.get("discovered_locations", []).duplicate()
 	# Reset tool
 	current_tool_slot = ""
 	selected_seed_id = ""
+	compass_target_id = ""
 	inventory_changed.emit()
 	party_changed.emit()
 	known_recipes_changed.emit()
 	buffs_changed.emit()
 	storage_changed.emit()
 	friendships_changed.emit()
+	discovered_locations_changed.emit()
 
 func to_dict() -> Dictionary:
 	return {
@@ -185,6 +195,7 @@ func to_dict() -> Dictionary:
 		"storage_capacity": storage_capacity,
 		"restaurant": restaurant_data.duplicate(true),
 		"npc_friendships": npc_friendships.duplicate(true),
+		"discovered_locations": discovered_locations.duplicate(),
 	}
 
 func reset() -> void:
@@ -207,6 +218,8 @@ func reset() -> void:
 	creature_storage.clear()
 	storage_capacity = 10
 	npc_friendships.clear()
+	discovered_locations.clear()
+	compass_target_id = ""
 	current_zone = "overworld"
 	current_restaurant_owner = ""
 	restaurant_data.clear()
@@ -216,6 +229,7 @@ func reset() -> void:
 	buffs_changed.emit()
 	storage_changed.emit()
 	friendships_changed.emit()
+	discovered_locations_changed.emit()
 
 func add_to_inventory(item_id: String, amount: int = 1) -> void:
 	if item_id in inventory:
@@ -275,3 +289,7 @@ func use_watering_can() -> bool:
 		watering_can_current -= 1
 		return true
 	return false
+
+func set_compass_target(id: String) -> void:
+	compass_target_id = id
+	compass_target_changed.emit(id)

@@ -16,6 +16,9 @@ var storage_ui_scene = preload("res://scenes/ui/storage_ui.tscn")
 var shop_ui_scene = preload("res://scenes/ui/shop_ui.tscn")
 var trade_ui_scene = preload("res://scenes/ui/trade_ui.tscn")
 var dialogue_ui_scene = preload("res://scenes/ui/dialogue_ui.tscn")
+var calendar_ui_scene = preload("res://scenes/ui/calendar_ui.tscn")
+var compass_ui_scene = preload("res://scenes/ui/compass_ui.tscn")
+var pause_overlay_scene = preload("res://scenes/ui/pause_overlay.tscn")
 
 func _ready() -> void:
 	# Initialize DataRegistry
@@ -26,6 +29,7 @@ func _ready() -> void:
 	_generate_signposts()
 	_generate_trees()
 	_generate_zone_overlays()
+	_spawn_calendar_board()
 
 	if not multiplayer.is_server():
 		_setup_ui()
@@ -64,16 +68,22 @@ func _on_world_loaded(world_data: Dictionary) -> void:
 	# Load season/calendar data
 	var season_mgr = $SeasonManager
 	if season_mgr:
-		season_mgr.load_save_data({
-			"current_season": world_data.get("season", 0),
-			"season_timer": world_data.get("season_timer", 0.0),
-			"day_count": world_data.get("day_count", 1),
+		var season_data: Dictionary = {
 			"current_year": world_data.get("current_year", 1),
-			"day_in_season": world_data.get("day_in_season", 1),
 			"day_timer": world_data.get("day_timer", 0.0),
 			"total_day_count": world_data.get("total_day_count", 1),
 			"current_weather": world_data.get("current_weather", 0),
-		})
+			# Backward compat keys (used if current_month is missing)
+			"season_timer": world_data.get("season_timer", 0.0),
+			"day_count": world_data.get("day_count", 1),
+			"current_season": world_data.get("season", 0),
+			"day_in_season": world_data.get("day_in_season", 1),
+		}
+		# Pass new-format keys if present
+		if world_data.has("current_month"):
+			season_data["current_month"] = world_data.get("current_month", 3)
+			season_data["day_in_month"] = world_data.get("day_in_month", 1)
+		season_mgr.load_save_data(season_data)
 	# Load farm plot data
 	var farm_mgr = get_node_or_null(FARM_MANAGER_PATH)
 	if farm_mgr and world_data.has("farm_plots"):
@@ -97,14 +107,17 @@ func get_save_data() -> Dictionary:
 	var season_mgr = $SeasonManager
 	if season_mgr:
 		var sd = season_mgr.get_save_data()
-		data["season"] = sd.get("current_season", 0)
-		data["season_timer"] = sd.get("season_timer", 0.0)
-		data["day_count"] = sd.get("day_count", 1)
+		data["current_month"] = sd.get("current_month", 3)
+		data["day_in_month"] = sd.get("day_in_month", 1)
 		data["current_year"] = sd.get("current_year", 1)
-		data["day_in_season"] = sd.get("day_in_season", 1)
 		data["day_timer"] = sd.get("day_timer", 0.0)
 		data["total_day_count"] = sd.get("total_day_count", 1)
 		data["current_weather"] = sd.get("current_weather", 0)
+		# Backward compat keys
+		data["season"] = sd.get("current_season", 0)
+		data["season_timer"] = sd.get("season_timer", 0.0)
+		data["day_count"] = sd.get("day_count", 1)
+		data["day_in_season"] = sd.get("day_in_season", 1)
 	var farm_mgr = get_node_or_null(FARM_MANAGER_PATH)
 	if farm_mgr:
 		data["farm_plots"] = farm_mgr.get_save_data()
@@ -175,6 +188,23 @@ func _setup_ui() -> void:
 
 	var dialogue_ui = dialogue_ui_scene.instantiate()
 	ui_node.add_child(dialogue_ui)
+
+	var calendar_ui = calendar_ui_scene.instantiate()
+	ui_node.add_child(calendar_ui)
+
+	var compass_ui = compass_ui_scene.instantiate()
+	ui_node.add_child(compass_ui)
+
+	var pause_overlay = pause_overlay_scene.instantiate()
+	ui_node.add_child(pause_overlay)
+
+func _spawn_calendar_board() -> void:
+	var board_script = load("res://scripts/world/calendar_board.gd")
+	var board = Area3D.new()
+	board.set_script(board_script)
+	board.name = "CalendarBoard"
+	board.position = Vector3(5, 0, 5)
+	add_child(board)
 
 # === WORLD DECORATION GENERATION ===
 
@@ -478,7 +508,7 @@ func _sync_world_to_client(peer_id: int) -> void:
 	# Sync season/calendar/weather
 	var season_mgr = $SeasonManager
 	if season_mgr:
-		season_mgr._broadcast_time.rpc_id(peer_id, season_mgr.current_year, season_mgr.current_season, season_mgr.day_in_season, season_mgr.total_day_count, season_mgr.current_weather)
+		season_mgr._broadcast_time.rpc_id(peer_id, season_mgr.current_year, season_mgr.current_month, season_mgr.day_in_month, season_mgr.total_day_count, season_mgr.current_weather)
 	# Sync farm plots
 	var farm_mgr = get_node_or_null(FARM_MANAGER_PATH)
 	if farm_mgr:

@@ -62,7 +62,7 @@ func _process(delta: float) -> void:
 	water_label.text = "Water: %d/%d" % [PlayerData.watering_can_current, PlayerData.get_watering_can_capacity()]
 	var season_mgr = get_node_or_null("/root/Main/GameWorld/SeasonManager")
 	if season_mgr:
-		season_label.text = "Year %d, %s Day %d" % [season_mgr.current_year, season_mgr.get_season_name().capitalize(), season_mgr.day_in_season]
+		season_label.text = "Year %d, %s %d" % [season_mgr.current_year, season_mgr.get_month_name(), season_mgr.day_in_month]
 		day_label.text = "%s" % season_mgr.get_weather_name().capitalize()
 	if money_label:
 		money_label.text = "$%d" % PlayerData.money
@@ -119,6 +119,24 @@ func show_pickup_notification(item_name: String, amount: int) -> void:
 	var tween = create_tween()
 	tween.tween_property(pickup_label, "modulate:a", 0.0, 2.0).set_delay(0.5)
 	tween.tween_callback(pickup_label.queue_free)
+
+func show_discovery_toast(display_name: String) -> void:
+	var toast = Label.new()
+	toast.text = "Discovered: %s" % display_name
+	toast.add_theme_font_size_override("font_size", 20)
+	toast.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
+	toast.add_theme_constant_override("shadow_offset_x", 1)
+	toast.add_theme_constant_override("shadow_offset_y", 1)
+	toast.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.7))
+	toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	toast.anchor_left = 0.25
+	toast.anchor_right = 0.75
+	toast.anchor_top = 0.65
+	toast.anchor_bottom = 0.7
+	add_child(toast)
+	var tween = create_tween()
+	tween.tween_property(toast, "modulate:a", 0.0, 2.0).set_delay(1.0)
+	tween.tween_callback(toast.queue_free)
 
 func show_trainer_prompt(trainer_name: String) -> void:
 	if trainer_prompt_label:

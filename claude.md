@@ -250,11 +250,14 @@ This is a server-authoritative multiplayer game. **Every gameplay change — new
 | Tool/held item equip | Server (`request_equip_*` RPCs) | Sync RPCs to client |
 | World item spawn/pickup | Server (WorldItemManager) | `_spawn/_despawn_world_item_client` RPCs to all |
 | Restaurant entry/exit | Server (RestaurantManager) | `_notify_location_change` RPC |
-| Calendar/weather | Server (SeasonManager) | `_broadcast_time` RPC to all |
+| Calendar/weather | Server (SeasonManager) | `_broadcast_time(year, month, day, total_days, weather)` RPC to all |
+| Calendar board | Server (CalendarBoard) | `_open_calendar_client` RPC to requesting peer |
 | Shop buy/sell | Server (`request_buy/sell_item` RPCs) | Server validates + syncs inventory via RPC |
 | Player trading | Server (atomic swap in `_execute_trade`) | RPCs for offer updates, confirm, cancel |
 | Busy state | Server (`request_set_busy` RPC) | StateSync (always mode) on player node |
 | NPC friendship | Server (SocialManager) | RPCs: `_sync_npc_friendships`, `_send_dialogue`, `_gift_response` |
+| Location discovery | Server (LocationManager) | `_notify_location_discovered` RPC to client |
+| Compass/minimap rendering | Client only | Reads local camera_yaw + cached LocationDef positions |
 | Save/load | Server only (SaveManager → Express API → MongoDB) | Data sent to client via `_receive_player_data` |
 
 ### Never do this
@@ -262,16 +265,38 @@ This is a server-authoritative multiplayer game. **Every gameplay change — new
 - **Never assume a gameplay feature is local-only** unless explicitly told so. Even "cosmetic" things like player color need syncing in multiplayer.
 - **Never modify `PlayerData` (the autoload) on the server.** `PlayerData` is the client's local mirror. The server uses `NetworkManager.player_data_store[peer_id]`. Sync changes from server store to client PlayerData via RPC.
 
-## Calendar & Weather System (Stardew-style)
-- **SeasonManager** (`scripts/world/season_manager.gd`): Server-authoritative time progression
+## Location System, Compass & Minimap
+- **28 LocationDefs** (`resources/locations/*.tres`): Static world landmarks with `location_id`, `display_name`, `world_position`, `discovery_radius`, `category`, `icon_color`
+- **DataRegistry integration**: `DataRegistry.locations` dict, `get_location(id)` accessor
+- **LocationManager** (`scripts/world/location_manager.gd`): Server-side, no `class_name`. Checks player proximity to undiscovered locations every 10 physics frames. Skips players in restaurants.
+- **Discovery flow**: Server detects proximity → appends to `player_data_store[peer_id]["discovered_locations"]` → `_notify_location_discovered` RPC → client updates `PlayerData.discovered_locations` + HUD toast
+- **Persistence**: `discovered_locations` array saved in player_data_store → MongoDB. Backfilled to `[]` for old saves.
+- **Compass UI** (`scripts/ui/compass_ui.gd`): CanvasLayer (layer 5), always-visible horizontal strip at top-center. Cardinal markers scroll based on `camera_yaw`. Target dropdown lists discovered locations by category. Hides when in restaurant.
+- **Compass math**: North = -Z (toward wild zones) = `camera_yaw` at PI. Target bearing: `atan2(dx, dz)` matches `forward = Vector3(sin(yaw), 0, cos(yaw))`.
+- **Minimap** (`scripts/ui/minimap_ui.gd`): `Control._draw()` based, renders discovered locations as colored circles, player triangle at center. Scroll wheel zoom. Click to set compass target.
+- **Pause Overlay** (`scripts/ui/pause_overlay.gd`): CanvasLayer (layer 15), toggled by Escape or M key (`open_map` action). Shows minimap, sets busy state. Won't open if other UIs are active.
+- **PlayerData additions**: `discovered_locations: Array`, `compass_target_id: String`, signals `discovered_locations_changed`, `compass_target_changed`
+- **RPCs**: `_notify_location_discovered(location_id, display_name)`, `_sync_discovered_locations(location_ids)` — both server→client
+- **Files**: `scripts/data/location_def.gd`, `scripts/world/location_manager.gd`, `scripts/ui/compass_ui.gd`, `scripts/ui/minimap_ui.gd`, `scripts/ui/pause_overlay.gd`, `scenes/ui/compass_ui.tscn`, `scenes/ui/pause_overlay.tscn`, `resources/locations/*.tres` (28)
+
+## Calendar & Weather System (12-Month)
+- **SeasonManager** (`scripts/world/season_manager.gd`): Server-authoritative 12-month calendar. Seasons derived from month.
 - **Day cycle**: 10 real minutes per in-game day (`DAY_DURATION = 600.0`)
-- **Seasons**: 14 days per season, 4 seasons per year (Spring → Summer → Autumn → Winter)
+- **Months**: 12 months (Jan–Dec), 28 days/month, 336 days/year. Game starts March (spring).
+- **Seasons**: Derived from `MONTH_TO_SEASON` — Mar-May=spring, Jun-Aug=summer, Sep-Nov=autumn, Dec-Feb=winter.
 - **Weather**: 4 types — Sunny (50%), Rainy (25%), Windy (15%), Stormy (10%). Rolled each day.
 - **Rain auto-waters**: On rainy/stormy days, `_rain_water_all_farms()` waters all FarmManagers
-- **HUD display**: `season_label` shows "Year N, Season Day D", `day_label` shows weather name
-- **Crop seasons**: `is_crop_in_season(crop_season)` validates planting — crops have slash-separated season strings (e.g. `"spring/summer"`)
-- **Sync**: Server broadcasts `_broadcast_time` RPC on day advance. Late-joiners request via `request_season_sync` RPC.
-- **Persistence**: Full state saved/loaded — `current_year`, `day_in_season`, `day_timer`, `total_day_count`, `current_weather`, `current_season`. Backward-compat with old fields.
+- **HUD display**: `season_label` shows "Year N, MonthName D", `day_label` shows weather name
+- **Crop seasons**: `is_crop_in_season(crop_season)` checks against month-derived season
+- **Sync**: `_broadcast_time(year, month, day, total_days, weather)` RPC. Late-joiners use `request_season_sync`.
+- **Persistence**: `current_month`, `day_in_month`, `current_year`, `day_timer`, `total_day_count`, `current_weather`. Old saves auto-convert from season enum.
+- **NPC birthdays**: `{month: int, day: int}` format. Old `{season, day}` format supported via backward compat.
+
+## Calendar Board & Calendar UI
+- **CalendarBoard** (`scripts/world/calendar_board.gd`): Area3D at `Vector3(5, 0, 5)`. E-key opens CalendarUI. `calendar_board` group.
+- **CalendarUI** (`scripts/ui/calendar_ui.gd`): 28-day grid, month arrows, event markers. Sets busy state.
+- **CalendarEvents** (`scripts/data/calendar_events.gd`): 10 holidays + NPC birthday lookup. `get_events_for_month/day()`.
+- **Event types**: festival (gold), holiday (cyan), birthday (pink)
 
 ## GDScript Conventions
 - Use `class_name` for static utility classes (BattleCalculator, StatusEffects, FieldEffects, AbilityEffects, HeldItemEffects, BattleAI)
@@ -295,7 +320,7 @@ See `docs/k8s-deployment.md` for full K8s deployment details (3 deployments, SSH
 
 ### Run Commands
 ```bash
-# GDScript tests (GUT) — 399 tests
+# GDScript tests (GUT) — 459 tests
 '/Applications/Mechanical Turk.app/Contents/MacOS/Mechanical Turk' --path . --headless -s addons/gut/gut_cmdln.gd -gexit
 
 # Express API tests (Vitest) — 21 tests
@@ -325,7 +350,7 @@ cd api && npx vitest run
 - **New battle mechanic** (move effect, ability, held item): Add tests to the relevant `test/unit/battle/` file. Update `registry_seeder.gd` if new data entries are needed.
 - **New data type or resource**: Add serialization round-trip tests in `test/unit/data/`.
 - **New API endpoint**: Add tests in `api/test/`. Use the existing `setupTestDb()` pattern.
-- **Run tests before committing**: All 399 tests must pass.
+- **Run tests before committing**: All 459 tests must pass.
 
 ## MCP Testing Workflow
 See `docs/mcp-testing.md` for full MCP testing guide (editor bridge, runtime bridge sessions, caveats, port conflicts).
@@ -334,17 +359,18 @@ See `docs/mcp-testing.md` for full MCP testing guide (editor bridge, runtime bri
 - `api/` — Express API service (TypeScript): `src/index.ts`, `src/routes/players.ts`, `src/routes/world.ts`, `Dockerfile`
 - `k8s/` — Kubernetes manifests: `mongodb.yaml`, `api-service.yaml`, `deployment.yaml`, `service.yaml`
 - `scripts/autoload/` — NetworkManager, GameManager, PlayerData, SaveManager
-- `scripts/data/` — 16 Resource class definitions (+ food_def, tool_def, recipe_scroll_def, battle_item_def, shop_def, npc_def)
+- `scripts/data/` — 18 Resource class definitions (+ food_def, tool_def, recipe_scroll_def, battle_item_def, shop_def, npc_def, location_def, calendar_events)
 - `scripts/battle/` — BattleManager, BattleCalculator, StatusEffects, FieldEffects, AbilityEffects, HeldItemEffects, BattleAI
-- `scripts/world/` — FarmPlot, FarmManager, SeasonManager, TallGrass, EncounterManager, GameWorld, TrainerNPC, CraftingStation, RecipePickup, WorldItem, WorldItemManager, RestaurantManager, RestaurantInterior, RestaurantDoor, ShopNPC, SocialNPC, SocialManager
+- `scripts/world/` — FarmPlot, FarmManager, SeasonManager, TallGrass, EncounterManager, GameWorld, TrainerNPC, CraftingStation, RecipePickup, WorldItem, WorldItemManager, RestaurantManager, RestaurantInterior, RestaurantDoor, ShopNPC, SocialNPC, SocialManager, LocationManager, CalendarBoard
 - `scripts/crafting/` — CraftingSystem
 - `scripts/player/` — PlayerController, PlayerInteraction
-- `scripts/ui/` — ConnectUI, HUD (calendar + weather + trainer prompt), BattleUI, CraftingUI (station-filtered), InventoryUI (tabbed), PartyUI (networked equip), PvPChallengeUI, TrainerDialogueUI (gatekeeper accept/decline + post-battle dialogue), ShopUI (buy/sell tabs), TradeUI (offer/confirm panels), DialogueUI (NPC social dialogue + gift panel)
+- `scripts/ui/` — ConnectUI, HUD (calendar + weather + trainer prompt + discovery toast), BattleUI, CraftingUI (station-filtered), InventoryUI (tabbed), PartyUI (networked equip), PvPChallengeUI, TrainerDialogueUI (gatekeeper accept/decline + post-battle dialogue), ShopUI (buy/sell tabs), TradeUI (offer/confirm panels), DialogueUI (NPC social dialogue + gift panel), CompassUI (directional compass strip), MinimapUI (2D top-down map), PauseOverlay (Esc/M key map overlay), CalendarUI (12-month event calendar)
 - `test/helpers/` — MockMove, BattleFactory, RegistrySeeder, BattleTestScene
 - `test/unit/battle/` — test_battle_calculator, test_battle_calculator_rng, test_status_effects, test_field_effects, test_ability_effects, test_held_item_effects, test_battle_ai, test_battle_items
 - `test/unit/data/` — test_creature_instance, test_creature_instance_creation, test_battle_item_def
-- `test/unit/world/` — test_season_manager, test_shop_system, test_social_system
+- `test/unit/world/` — test_season_manager, test_shop_system, test_social_system, test_location_system, test_calendar_events
+- `test/unit/ui/` — test_compass_math
 - `test/unit/crafting/` — test_crafting_validation
 - `test/integration/` — test_battle_turn, test_battle_pvp, test_player_trading, test_social_flow
 - `api/test/` — players.test.ts, world.test.ts, health.test.ts
-- `resources/` — ingredients/ (16), creatures/ (21), moves/ (57), encounters/ (6), recipes/ (58), abilities/ (20), held_items/ (18), trainers/ (7), foods/ (12), tools/ (12), recipe_scrolls/ (13), battle_items/ (6), shops/ (3), npcs/ (5)
+- `resources/` — ingredients/ (16), creatures/ (21), moves/ (57), encounters/ (6), recipes/ (58), abilities/ (20), held_items/ (18), trainers/ (7), foods/ (12), tools/ (12), recipe_scrolls/ (13), battle_items/ (6), shops/ (3), npcs/ (5), locations/ (28)

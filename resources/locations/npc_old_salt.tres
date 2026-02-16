@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="LocationDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/location_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+location_id = "npc_old_salt"
+display_name = "Old Salt"
+world_position = Vector3(-18, 0, -33)
+discovery_radius = 5.0
+icon_type = "social_npc"
+category = "social_npc"
+icon_color = Color(0, 0.8, 1, 1)

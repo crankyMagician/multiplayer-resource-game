@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="LocationDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/location_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+location_id = "npc_brioche"
+display_name = "Baker Brioche"
+world_position = Vector3(3, 0, 5)
+discovery_radius = 5.0
+icon_type = "social_npc"
+category = "social_npc"
+icon_color = Color(0.6, 0.2, 0.8, 1)

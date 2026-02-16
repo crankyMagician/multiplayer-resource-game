@@ -8,7 +8,7 @@ npc_id = "npc_fisherman"
 display_name = "Old Salt"
 visual_color = Color(0.3, 0.45, 0.7, 1)
 birthday = {
-"season": "winter",
+"month": 1,
 "day": 3
 }
 schedule = [{

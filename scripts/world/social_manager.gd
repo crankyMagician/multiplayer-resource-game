@@ -272,10 +272,7 @@ func _update_all_npc_schedules() -> void:
 		return
 
 	var time_fraction: float = season_mgr.day_timer / season_mgr.DAY_DURATION if season_mgr.DAY_DURATION > 0 else 0.0
-	var current_season: int = season_mgr.current_season
-
-	var season_names = ["spring", "summer", "autumn", "winter"]
-	var season_str: String = season_names[current_season] if current_season < season_names.size() else "spring"
+	var season_str: String = season_mgr.get_current_season()
 
 	DataRegistry.ensure_loaded()
 	for npc_node in get_tree().get_nodes_in_group("social_npc"):
@@ -373,9 +370,14 @@ func _is_npc_birthday(npc_def: Resource, season_mgr: Node) -> bool:
 	var birthday: Dictionary = npc_def.birthday
 	if birthday.is_empty():
 		return false
-	var season_names = ["spring", "summer", "autumn", "winter"]
-	var current_season_str: String = season_names[season_mgr.current_season] if season_mgr.current_season < season_names.size() else ""
-	return birthday.get("season", "") == current_season_str and int(birthday.get("day", 0)) == season_mgr.day_in_season
+	# New format: {month: int, day: int}
+	if birthday.has("month"):
+		return int(birthday.get("month", 0)) == season_mgr.current_month and int(birthday.get("day", 0)) == season_mgr.day_in_month
+	# Old format backward compat: {season: "spring", day: int}
+	var old_season_to_months = {"spring": [3, 4, 5], "summer": [6, 7, 8], "autumn": [9, 10, 11], "winter": [12, 1, 2]}
+	var season_str: String = str(birthday.get("season", ""))
+	var months: Array = old_season_to_months.get(season_str, [])
+	return season_mgr.current_month in months and int(birthday.get("day", 0)) == season_mgr.day_in_month
 
 # === RPCs ===
 

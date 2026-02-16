@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="LocationDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/location_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+location_id = "spawn_hub"
+display_name = "Spawn Hub"
+world_position = Vector3(0, 0, 0)
+discovery_radius = 10.0
+icon_type = "zone"
+category = "zone"
+icon_color = Color(1, 1, 1, 1)

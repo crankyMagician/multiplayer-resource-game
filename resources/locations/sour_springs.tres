@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="LocationDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/location_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+location_id = "sour_springs"
+display_name = "Sour Springs"
+world_position = Vector3(18, 0, -48)
+discovery_radius = 10.0
+icon_type = "wild_zone"
+category = "wild_zone"
+icon_color = Color(0.9, 0.9, 0.2, 1)

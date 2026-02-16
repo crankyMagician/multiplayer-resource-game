@@ -8,7 +8,7 @@ npc_id = "npc_herbalist"
 display_name = "Sage the Herbalist"
 visual_color = Color(0.2, 0.55, 0.2, 1)
 birthday = {
-"season": "summer",
+"month": 7,
 "day": 10
 }
 schedule = [{

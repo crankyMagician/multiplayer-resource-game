@@ -19,6 +19,7 @@
 [ext_resource type="Script" path="res://scripts/world/shop_npc.gd" id="17"]
 [ext_resource type="Script" path="res://scripts/world/social_npc.gd" id="18"]
 [ext_resource type="Script" path="res://scripts/world/social_manager.gd" id="19"]
+[ext_resource type="Script" path="res://scripts/world/location_manager.gd" id="20"]
 
 [sub_resource type="BoxShape3D" id="ground_shape"]
 size = Vector3(200, 0.2, 200)
@@ -656,6 +657,10 @@ script = ExtResource("16")
 ; === Social Manager ===
 [node name="SocialManager" type="Node" parent="."]
 script = ExtResource("19")
+
+; === Location Manager ===
+[node name="LocationManager" type="Node" parent="."]
+script = ExtResource("20")
 
 ; === World Item Manager + Container ===
 [node name="WorldItemManager" type="Node" parent="."]

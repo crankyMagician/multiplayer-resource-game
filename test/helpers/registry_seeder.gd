@@ -13,6 +13,7 @@ static func seed_all() -> void:
 	_seed_battle_items()
 	_seed_shops()
 	_seed_npcs()
+	_seed_locations()
 
 static func clear_all() -> void:
 	DataRegistry.moves.clear()
@@ -29,6 +30,7 @@ static func clear_all() -> void:
 	DataRegistry.shops.clear()
 	DataRegistry.battle_items.clear()
 	DataRegistry.npcs.clear()
+	DataRegistry.locations.clear()
 	DataRegistry._loaded = false
 
 static func _seed_moves() -> void:
@@ -203,7 +205,7 @@ static func _seed_npcs() -> void:
 	npc.npc_id = "test_npc"
 	npc.display_name = "Test NPC"
 	npc.visual_color = Color(0.5, 0.5, 0.5)
-	npc.birthday = {"season": "spring", "day": 5}
+	npc.birthday = {"month": 3, "day": 5}
 	npc.gift_preferences = {
 		"loved": ["grain_wheat"],
 		"liked": ["herb_leaf"],
@@ -227,3 +229,31 @@ static func _seed_npcs() -> void:
 		{"time_start": 0.5, "time_end": 1.0, "position": {"x": 10, "y": 1, "z": 10}, "seasons": []},
 	]
 	DataRegistry.npcs["test_npc"] = npc
+
+static func _seed_locations() -> void:
+	var loc1 = LocationDef.new()
+	loc1.location_id = "test_hub"
+	loc1.display_name = "Test Hub"
+	loc1.world_position = Vector3(0, 0, 0)
+	loc1.discovery_radius = 10.0
+	loc1.category = "zone"
+	loc1.icon_color = Color.WHITE
+	DataRegistry.locations["test_hub"] = loc1
+
+	var loc2 = LocationDef.new()
+	loc2.location_id = "test_shop"
+	loc2.display_name = "Test Shop"
+	loc2.world_position = Vector3(20, 0, 0)
+	loc2.discovery_radius = 5.0
+	loc2.category = "shop"
+	loc2.icon_color = Color.TEAL
+	DataRegistry.locations["test_shop"] = loc2
+
+	var loc3 = LocationDef.new()
+	loc3.location_id = "test_wild"
+	loc3.display_name = "Test Wild Zone"
+	loc3.world_position = Vector3(0, 0, -30)
+	loc3.discovery_radius = 8.0
+	loc3.category = "wild_zone"
+	loc3.icon_color = Color.GREEN
+	DataRegistry.locations["test_wild"] = loc3

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="LocationDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/location_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+location_id = "frost_pantry"
+display_name = "Frost Pantry"
+world_position = Vector3(-18, 0, -35)
+discovery_radius = 10.0
+icon_type = "wild_zone"
+category = "wild_zone"
+icon_color = Color(0.3, 0.5, 1, 1)
