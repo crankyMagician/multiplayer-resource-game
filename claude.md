@@ -31,8 +31,8 @@
 
 **Rules for UUIDs:**
 - **New entities** (players, creatures, future items): ALWAYS generate a UUID on creation. Never rely on array index or display name as an identifier.
-- **Existing entities without UUIDs**: Auto-backfilled on load via `_backfill_creature_ids()`. Old JSON saves get UUIDs added transparently. Same function also backfills IVs, bond_points, bond_level, and battle_affinities via `_backfill_creature_stats()`.
-- **Cross-reference by UUID**: Held item equip/unequip, storage deposit/withdraw, battle creature references should use `creature_id` (not party index) for robustness.
+- **Existing entities without UUIDs**: Auto-backfilled on load via `_backfill_creature_ids()`. Same function also backfills IVs, bond data via `_backfill_creature_stats()`.
+- **Cross-reference by UUID**: Held item equip/unequip, storage deposit/withdraw, battle creature references should use `creature_id` (not party index).
 - **Player names are unique** (MongoDB unique index + `active_player_names` runtime check) but names are for display/lookup, NOT identity. The `player_id` UUID is the stable key.
 - **If you add a new persistent entity type** (e.g. guilds, mail, auction listings), it MUST get a UUID field generated server-side.
 
@@ -44,19 +44,16 @@
 
 ### SaveManager (`scripts/autoload/save_manager.gd`)
 - **Startup**: checks `SAVE_API_URL` env var → `GET /health` → sets `use_api: bool`. Falls back to file I/O if unreachable.
-- **Async HTTP**: HTTPRequest pool (5 nodes), signal-based: `player_loaded`, `player_created`, `world_loaded`, `name_check_complete`
 - **Save flow**: `save_player(data)` → `PUT /api/players/:player_id` (fire-and-forget, auto-save every 60s)
 - **Load flow**: `load_player_async(name)` → `GET /api/players/by-name/:name` → emits `player_loaded(name, data)`
 - **Create flow**: `create_player_async(data)` → `POST /api/players` → API generates UUID → emits `player_created(name, data)`
-- **File fallback**: `load_player()` / `save_player()` synchronous methods still work in editor (no Docker)
 
 ### Join Flow (Async, UUID-Aware)
 1. Client sends `request_join(player_name)` RPC
-2. Server validates name (2-16 chars, alphanumeric + underscores + spaces)
-3. Server checks `active_player_names` — rejects if name already online
-4. Server calls `SaveManager.load_player_async(player_name)` → signal
-5. `_on_player_loaded`: if empty → `create_player_async()` (new player with UUID); if found → `_finalize_join()`
-6. `_finalize_join()`: backfills creature UUIDs + IVs + bond data, stores in `player_data_store`, tracks `active_player_names`, sends `_receive_player_data` RPC
+2. Server validates name (2-16 chars, alphanumeric + underscores + spaces), checks `active_player_names`
+3. Server calls `SaveManager.load_player_async(player_name)` → signal
+4. If empty → `create_player_async()` (new player with UUID); if found → `_finalize_join()`
+5. `_finalize_join()`: backfills creature UUIDs + IVs + bond data, stores in `player_data_store`, sends `_receive_player_data` RPC
 
 ### Docker Compose (Local Dev)
 ```yaml
@@ -69,44 +66,22 @@ services:
 - Verify MongoDB: `docker exec mongodb mongosh creature_crafting --eval "db.players.find()"`
 
 ## Docker Server Build
-
-### Two-Phase Build (Engine + Game)
-The server Docker image requires matching the Mechanical Turk engine (Godot 4.7 fork) — stock Godot will cause RPC checksum mismatches and clients won't connect. The build is split into two phases:
-
-1. **Engine build** (`Dockerfile.engine` + `scripts/build-engine-templates.sh`): Compiles MT engine from C++ source for Linux x86_64, producing `engine-builds/linux/godot-editor` (149MB) and `engine-builds/linux/godot-template` (82MB). Results are cached — subsequent runs are instant unless `--force` is passed. Requires the `mechanical-turk` engine repo at `../mechanical-turk/`.
-2. **Game build** (`Dockerfile`): Uses the pre-built MT engine binaries to export the server. Templates go in `/root/.local/share/mechanical_turk/export_templates/4.7.dev/` (MT uses `mechanical_turk` as its data dir, NOT `godot`).
-
-### Engine Build Details
-- SCons flags: `platform=linuxbsd target=editor arch=x86_64 module_mono_enabled=no accesskit=no dev_mode=no lto=none`
-- **LTO is disabled** (`lto=none`) because Docker's memory limit (~8GB) is insufficient for LTO linking (requires 16+ GB)
-- Both `editor` (for `--export-release`) and `template_release` (embedded in exported binary) targets are built
-- Build script: `./scripts/build-engine-templates.sh` (or `--force` to rebuild)
-
-### Local Dev
-- Use `./scripts/start-docker-server.sh` to rebuild and start the dedicated server locally.
-- The script runs `docker compose up --build -d` from the project root and prints service status.
-- Docker mapping is `7777:7777/udp`.
-- Docker logs work in real-time via `docker logs -f multiplayer-resource-game-game-server-1` (uses `stdbuf -oL` for line-buffered output).
-- Godot's internal log file is also available: `docker exec <container> cat "/root/.local/share/mechanical_turk/app_userdata/Creature Crafting Demo/logs/godot.log"`
+See `docs/docker-build.md` for full build instructions (two-phase engine + game build, SCons flags, local dev).
 
 ## Multiplayer Join/Spawn Stabilization
-- **Client pre-loads GameWorld on connect**: `_on_connected_to_server()` calls `GameManager.start_game()` BEFORE `request_join`. This ensures the MultiplayerSpawner exists in the client's scene tree before any spawn replication RPCs arrive from the server. Without this, late-joining clients get cascading errors when the server tries to replicate already-spawned players.
-- **Async join flow**: `request_join` → server validates name → async load from API/file → signal-based completion → `_finalize_join()` → spawn. See "Join Flow" above for full sequence.
+- **Client pre-loads GameWorld on connect**: `_on_connected_to_server()` calls `GameManager.start_game()` BEFORE `request_join`. This ensures the MultiplayerSpawner exists before spawn replication RPCs arrive.
 - **Name uniqueness**: `active_player_names` dict (name → peer_id) rejects duplicate online names. `_join_rejected` RPC tells client why.
-- **Name validation**: 2-16 chars, alphanumeric + underscores + spaces only (regex sanitized server-side).
 - Spawn waits for client world path readiness (`/root/Main/GameWorld/Players/MultiplayerSpawner`).
 - Server tracks temporary join state and times out peers that never become ready.
-- **New player spread spawn**: Players with no saved position spawn in a golden-angle circle (radius 2, center 0,0,3) to avoid overlap. Default player data has empty position `{}` so the spread logic triggers.
+- **New player spread spawn**: Players with no saved position spawn in a golden-angle circle (radius 2, center 0,0,3) to avoid overlap.
 
 ## Player/Camera Notes
 - Player movement uses server authority with replicated input.
-- Camera defaults to over-the-shoulder and captures mouse during world control.
-- Mouse is explicitly made visible during battle UI and recaptured after battle ends.
-- **Server has no camera or UI** — `game_world.gd` `_ready()` skips `_setup_ui()` and `_ensure_fallback_camera()` on the server. Only clients get HUD, BattleUI, etc.
-- **Player collision layers**: Players use `collision_layer=2`, `collision_mask=1` (collide with ground/buildings on layer 1, but NOT with each other). TallGrass and TrainerNPC Area3Ds set `collision_mask=3` (bits 1+2) to detect players on layer 2.
-- **UI node sharing**: `_setup_ui()` adds HUD, BattleUI, CraftingUI, InventoryUI, PartyUI to the **existing** `$UI` node from `game_world.tscn` (which already contains PvPChallengeUI, TrainerDialogueUI). Do NOT create a new "UI" node — Godot will rename it (e.g. `@Node@38`), breaking all path-based lookups.
-- **Player visuals** (color, nameplate): set on the player node server-side **before** `add_child()` in `_spawn_player()`, synced via StateSync spawn-only mode (replication_mode=0). `_apply_visuals()` runs on all peers to apply color to mesh material and set nameplate text.
-- **Mesh rotation**: `mesh_rotation_y` computed server-side in `_physics_process`, synced via StateSync always-mode. All clients apply it in `_process()` to `mesh.rotation.y`.
+- Camera defaults to over-the-shoulder and captures mouse during world control. Mouse made visible during battle UI and recaptured after.
+- **Server has no camera or UI** — `game_world.gd` `_ready()` skips `_setup_ui()` and `_ensure_fallback_camera()` on the server.
+- **Player collision layers**: Players use `collision_layer=2`, `collision_mask=1`. TallGrass and TrainerNPC Area3Ds set `collision_mask=3` (bits 1+2) to detect players.
+- **UI node sharing**: `_setup_ui()` adds HUD, BattleUI, CraftingUI, InventoryUI, PartyUI to the **existing** `$UI` node from `game_world.tscn`. Do NOT create a new "UI" node — Godot will rename it, breaking path lookups.
+- **Player visuals** (color, nameplate): set on the player node server-side **before** `add_child()` in `_spawn_player()`, synced via StateSync spawn-only mode.
 - **StateSync properties** (5 total): `position`, `velocity` (always), `player_color`, `player_name_display` (spawn-only), `mesh_rotation_y` (always).
 
 ## Battle System
@@ -121,37 +96,13 @@ The server Docker image requires matching the Mechanical Turk engine (Godot 4.7 
 - **PvP**: Both-submit simultaneous turns, 30s timeout, disconnect = forfeit. Loser forfeits 25% of each ingredient stack to winner.
 - **Defeat penalty**: 50% money loss, teleport to spawn point, all creatures healed
 
-### IV System (Individual Values)
-- Each creature has 6 IVs (hp, attack, defense, sp_attack, sp_defense, speed) ranging 0-31
-- IVs are rolled randomly on creature creation via `CreatureInstance.create_from_species()`
-- IVs are added directly to stat calculation: `stat = int(base_stat * level_mult) + iv`
-- Old saves without IVs are auto-backfilled via `_backfill_creature_stats()` in NetworkManager on join
-- IVs are displayed in PartyUI creature details
-- `CreatureInstance.IV_STATS` constant: `["hp", "attack", "defense", "sp_attack", "sp_defense", "speed"]`
-
-### Bond System
-- **Bond points**: Earned through battles (+10 active participant, +1 bench) and feeding (+15 per food)
-- **Bond levels**: 0-5, thresholds at 50/150/300/500/750 points (`CreatureInstance.compute_bond_level()`)
-- **Bond modifiers** (applied in BattleCalculator):
-  - Level 2: +5% accuracy bonus
-  - Level 3: 1.2x XP multiplier
-  - Level 4: Endure — survive one lethal hit at 1 HP per battle (`bond_endure_used` flag)
-  - Level 5: +10% stat boost to all stats
-- **Battle affinities**: Tracks type matchup experience (future expansion)
-- **Server-side**: `server_grant_bond_points_battle(peer_id)` called on victory, `request_feed_creature` RPC for food
-- **Persistence**: `bond_points`, `bond_level`, `battle_affinities` stored per creature in player_data_store, round-tripped via to_dict()/from_dict()
-
-### Crit Stage System
-- Per-creature `crit_stage` (0-3) tracked in battle state, initialized to 0 in `_build_party_from_store()`
-- Crit rates by stage: 0→6.25%, 1→12.5%, 2→25%, 3→50% (`BattleCalculator.get_crit_stage()`)
-- Moves can modify crit stage via `self_crit_stage_change` property (e.g. sharpen_knife: +2)
-- Crit stage resets each battle (not persistent)
-
-### Taunt, Trick Room, Substitutes
-- **Taunt**: `taunt_turns` per creature (3 turns), prevents status moves. Checked in `request_battle_action()` validation
-- **Trick Room**: `trick_room_turns` on battle dict, reverses speed priority for turn order
-- **Substitutes**: `substitute_hp` per creature, absorbs damage before real HP
-- All three displayed in Battle UI field effects section
+### IVs, Bond, and Crit Stages
+- **IVs**: 6 stats (hp/atk/def/spa/spd/spe), 0-31 range, rolled on creation via `CreatureInstance.create_from_species()`. Formula: `stat = int(base_stat * level_mult) + iv`. Old saves auto-backfilled. `CreatureInstance.IV_STATS` constant.
+- **Bond**: Points earned via battles (+10 active, +1 bench) and feeding (+15). Levels 0-5, thresholds: 50/150/300/500/750 (`CreatureInstance.compute_bond_level()`). Modifiers: Lv2 +5% accuracy, Lv3 1.2x XP, Lv4 endure (survive lethal hit at 1 HP once), Lv5 +10% all stats. Battle affinities tracked for future expansion.
+- **Crit stages**: Per-creature 0-3, rates: 6.25%/12.5%/25%/50% (`BattleCalculator.get_crit_stage()`). Moves modify via `self_crit_stage_change`. Resets each battle.
+- **Taunt**: `taunt_turns` (3 turns), prevents status moves. Validated in `request_battle_action()`.
+- **Trick Room**: `trick_room_turns` on battle dict, reverses speed priority.
+- **Substitutes**: `substitute_hp` per creature, absorbs damage before real HP. Sound moves bypass.
 
 ### New Move Properties (MoveDef)
 - `self_crit_stage_change: int` — crit stage modifier on use
@@ -161,27 +112,25 @@ The server Docker image requires matching the Mechanical Turk engine (Godot 4.7 
 - `sets_trick_room: bool` — toggles trick room
 
 ### Battle UI
-- **Enemy panel**: name, level, types, HP bar, status effect, stat stage labels (e.g. "Stats: DEF+2 SPA+1"), crit stage indicator
-- **Player panel**: name, level, types, HP bar, XP bar, ability name, held item name
-- **Field effects bar**: shows active trick room, taunt turns, substitute HP, crit stage when non-zero
-- **Move buttons**: 3-line format — Name / Type|Category|Power / Accuracy|PP (e.g. "Grain Bash / Grain | Phys | Pwr:65 / Acc:100% | 15/15 PP")
-- **Weather bar**: shown when weather is active, displays weather name + remaining turns
-- **Flee/Switch**: Flee available in wild only, Switch always available (opens creature picker overlay)
-- **Turn log**: scrolling RichTextLabel with staggered entry animation (~0.3s apart). Ability messages in `[color=purple]`, item messages in `[color=cyan]`, effectiveness in green/yellow.
-- **Visual polish**: HP bar tweens (0.5s smooth decrease, green→yellow→red color shift), hit flash on enemy mesh, damage number popups, fade-to-black battle transitions (via HUD CanvasLayer), summary panel slide-in + fade animation, XP bar fill animation (0.8s).
-- **Summary screen**: shown after battle ends — hides all battle panels, shows Victory!/Defeat, XP per creature (with level-up highlights), item drops, trainer money + bonus ingredients. Continue button dismisses and returns to world.
-- **PvP-specific**: no Flee button, "Waiting for opponent..." label after submitting move, both perspectives actor-swapped. PvP challenge UI auto-hides when battle starts.
-- **Trainer prompt cleanup**: `_on_battle_started()` calls `hud.hide_trainer_prompt()` to hide any visible trainer prompt when a battle begins (prevents stale "Press E to challenge" text overlaying battle UI).
+- **Enemy panel**: name, level, types, HP bar, status, stat stages, crit stage
+- **Player panel**: name, level, types, HP bar, XP bar, ability, held item
+- **Move buttons**: 3-line format — Name / Type|Category|Power / Accuracy|PP
+- **Field effects bar**: trick room, taunt turns, substitute HP, crit stage
+- **Weather bar**: weather name + remaining turns
+- **Flee/Switch**: Flee in wild only, Switch always available
+- **Turn log**: scrolling RichTextLabel. Ability messages in `[color=purple]`, item in `[color=cyan]`, effectiveness in green/yellow.
+- **Summary screen**: Victory/Defeat, XP per creature (level-up highlights), item drops, trainer money + bonus ingredients. Continue button returns to world.
+- **PvP-specific**: no Flee, "Waiting for opponent..." label, perspectives actor-swapped. PvP challenge UI auto-hides when battle starts.
+- **Trainer prompt cleanup**: `_on_battle_started()` calls `hud.hide_trainer_prompt()`.
 
 ### Battle Manager Server-Side
 - Battle state keyed by `battle_id` (auto-increment), `player_battle_map[peer_id] → battle_id`
-- **Server-authoritative party data**: `_build_party_from_store(peer_id)` reads party from `NetworkManager.player_data_store`, NOT from client. No `_receive_party_data` RPC exists — it was removed as a security vulnerability.
-- **Move validation**: `request_battle_action()` verifies the submitted move_id exists in the creature's actual moveset (from server-side party). Switch targets are bounds-checked against actual party size.
+- **Server-authoritative party data**: `_build_party_from_store(peer_id)` reads party from `NetworkManager.player_data_store`, NOT from client. No `_receive_party_data` RPC exists.
+- **Move validation**: `request_battle_action()` verifies move_id exists in creature's actual moveset. Switch targets bounds-checked.
 - Wild/Trainer: server picks AI action, resolves turn, sends `_send_turn_result` RPC
-- PvP: both sides submit via `request_battle_action` RPC, server resolves when both received. End-of-turn effects (status, abilities, items, weather) are collected into a temp array and appended to both player logs with perspective-swapped actors.
-- PvP perspective swap: `_swap_actor()` flips top-level `actor` field ("player"↔"enemy"). Ability/item messages are plain strings embedded in the move result — no separate actor field needed.
-- Rewards sent via separate RPCs: `_grant_battle_rewards` (drops), `_send_xp_results` (XP/level-ups), `_grant_trainer_rewards_client` (money+ingredients), `_battle_defeat_penalty` (money loss)
-- Client accumulates reward data in `summary_*` vars, summary screen displays after 0.5s delay
+- PvP: both sides submit via `request_battle_action` RPC, server resolves when both received. `_swap_actor()` flips perspective for each player's log.
+- Rewards via separate RPCs: `_grant_battle_rewards`, `_send_xp_results`, `_grant_trainer_rewards_client`, `_battle_defeat_penalty`
+- **Party deep-copy**: `server_update_party()` uses `.duplicate(true)` to prevent cross-player state corruption.
 
 ## Crafting & Item System (Unified Overhaul)
 - **52 recipes**: 13 creature (cauldron, unlockable), 18 held item (workbench), 12 food (kitchen), 9 tool upgrade (workbench)
@@ -189,13 +138,12 @@ The server Docker image requires matching the Mechanical Turk engine (Godot 4.7 
 - **3 crafting stations**: Kitchen (restaurant zone), Workbench (near spawn), Cauldron (deep wild zone) — each filters recipes by `station` field
 - **Recipe unlock system**: Creature recipes require recipe scrolls to unlock. Scrolls come from trainer first-defeat rewards, world pickups, or fragment collection (3-5 fragments auto-combine)
 - **Food & buffs**: 4 buff foods (speed_boost, xp_multiplier, encounter_rate, creature_heal) + 8 trade goods for selling. Buffs are timed, server-side expiry checked every 5s
-- **Tool upgrades**: 3 tool types (hoe, axe, watering_can) x 4 tiers (basic→bronze→iron→gold). Upgrade recipes consume old tool + ingredients. Dynamic stats from ToolDef (capacity, speed_mult)
+- **Tool upgrades**: 3 tool types (hoe, axe, watering_can) x 4 tiers (basic→bronze→iron→gold). Upgrade recipes consume old tool + ingredients. Dynamic stats from ToolDef
 - **Crafting security**: Single-phase server-authoritative — `request_craft(recipe_id)` RPC validates everything server-side, deducts, produces result, syncs to client. No client-side deduction.
 - **Selling**: `request_sell_item(item_id, qty)` RPC for food trade goods with sell_price
-- **16 ingredients**: farm crops (season-locked) + battle drops
-- New plantable crops: lemon (summer), pickle_brine (autumn)
-- **Planting flow** (server-authoritative): Client sends `request_farm_action(plot_idx, "plant", seed_id)` RPC to server. Server removes seed from `player_data_store` inventory, attempts plant, rolls back on failure. No client-side inventory deduction.
-- **Watering flow** (server-authoritative): Client sends `request_farm_action(plot_idx, "water", "")` RPC. Server calls `server_use_watering_can()` to decrement, then syncs remaining charges to client via `_sync_watering_can` RPC. Refill via `_request_refill` RPC at water sources.
+- **16 ingredients**: farm crops (season-locked) + battle drops. New plantable crops: lemon (summer), pickle_brine (autumn)
+- **Planting flow** (server-authoritative): Client sends `request_farm_action(plot_idx, "plant", seed_id)` RPC. Server removes seed from `player_data_store`, attempts plant, rolls back on failure. No client-side deduction.
+- **Watering flow** (server-authoritative): Client sends `request_farm_action(plot_idx, "water", "")` RPC. Server decrements, syncs via `_sync_watering_can` RPC. Refill via `_request_refill` RPC.
 
 ### Buff Application Points
 - **Speed boost**: `player_controller.gd` `_physics_process()` — multiplies move speed
@@ -210,22 +158,17 @@ The server Docker image requires matching the Mechanical Turk engine (Godot 4.7 
 - `active_buffs: Array` of `{buff_type, buff_value, expires_at}` dicts
 
 ## World Item Drop & Pickup System
-- **WorldItemManager** (`scripts/world/world_item_manager.gd`): Server-authoritative manager node in `game_world.tscn`, sibling of BattleManager/EncounterManager
-- **WorldItem** (`scripts/world/world_item.gd`): Area3D pickup node with colored BoxMesh (0.4³), billboard Label3D, bobbing animation, walk-over auto-pickup
-- **WorldItems** container: Node3D in `game_world.tscn` holds all spawned WorldItem nodes
+- **WorldItemManager** (`scripts/world/world_item_manager.gd`): Server-authoritative manager in `game_world.tscn`
+- **WorldItem** (`scripts/world/world_item.gd`): Area3D pickup node with colored BoxMesh, billboard Label3D, bobbing animation, walk-over auto-pickup
 - **Pickup flow**: Area3D `body_entered` (server-only) → `WorldItemManager.try_pickup()` → `server_add_inventory()` + `_sync_inventory_full` RPC → `_notify_pickup` RPC (HUD toast) → `_remove_world_item()` (despawn RPC to all)
-- **Drop sources**: Random world forage spawns (every 120s, 10 spawn points, weighted table), farm plot clearing (wild plots drop mushroom/herb_basil/grain_core)
-- **Random spawn table**: mushroom (20), herb_basil (20), grain_core (20), herbal_dew (15), sour_essence (15), sweet_crystal (10) — max 10 simultaneous random items
-- **Despawn**: Configurable timeout per item (default 300s for random, 120s for farm drops), checked every physics frame
-- **Late-joiner sync**: `sync_all_to_client(peer_id)` sends bulk `_spawn_world_item_client` RPCs, called from `_sync_world_to_client()`
-- **Persistence**: `get_save_data()` / `load_save_data()` integrated into `game_world.gd` save/load flow. Despawn times recalculated relative to current time on load.
+- **Drop sources**: Random world forage spawns (every 120s, 10 spawn points), farm plot clearing
+- **Late-joiner sync**: `sync_all_to_client(peer_id)` sends bulk `_spawn_world_item_client` RPCs
+- **Persistence**: `get_save_data()` / `load_save_data()` integrated into `game_world.gd` save/load flow
 - **Node naming**: `"WorldItem_" + str(uid)` with monotonic auto-increment UIDs to avoid duplicate name trap
-- **Collision**: Area3D with `collision_layer=0`, `collision_mask=3` (detects players on layer 2). SphereShape3D radius=1.2 for pickup range.
-- **HUD notification**: `hud.gd` `show_pickup_notification()` shows "Picked up [item] x[amount]" toast that fades out after 2.5s
 
 ## World Layout
 - **Hub area**: Players spawn near (0, 1, 3). Farm zone at (25, 0, 0). Restaurant doors at z=12.
-- **Decorative nodes** in `game_world.tscn` under GameWorld: `Paths` (17 ground path meshes), `Signposts` (6 posts with Label3D), `Trees` (40 tree meshes), `ZoneOverlays` (6 zone ground overlays with Label3D)
+- **Decorative nodes** in `game_world.tscn` under GameWorld: `Paths`, `Signposts`, `Trees`, `ZoneOverlays`
 - **Trainer progression**: Optional trainers flank the main path south; gatekeepers block advancement to deeper zones
 
 ## Wild Encounter Zones
@@ -237,45 +180,19 @@ The server Docker image requires matching the Mechanical Turk engine (Godot 4.7 
 - 7 trainers placed along world paths under `Zones/Trainers` in game_world.tscn
 - Color-coded by difficulty: green=easy, yellow=medium, red=hard
 - Trainers: Sous Chef Pepper, Farmer Green, Pastry Chef Dulce, Brinemaster Vlad, Chef Umami, Head Chef Roux, Grand Chef Michelin
-
-### Optional vs Gatekeeper Trainers
-- **Optional trainers** (`is_gatekeeper=false`): Sous Chef Pepper, Farmer Green, Pastry Chef Dulce, Brinemaster Vlad, Grand Chef Michelin
-  - Walking near shows "Press E to challenge [Name]!" on HUD via `_show_trainer_prompt` RPC
-  - E-key triggers `request_challenge` RPC → server validates proximity + not-in-battle → starts trainer battle
-  - Walking away hides prompt via `_hide_trainer_prompt` RPC (body_exited signal)
-  - Rematch cooldown per trainer (`trainer.rematch_cooldown_sec`)
-- **Gatekeeper trainers** (`is_gatekeeper=true`): Chef Umami, Head Chef Roux
-  - Walking near triggers forced pushback + TrainerDialogueUI with Accept/Decline
-  - Accept → `request_challenge` RPC → trainer battle
-  - Decline → `_respond_gatekeeper_decline` RPC → teleports player south (gate_z + 6)
-  - Defeating a gatekeeper: records `defeated_trainers[trainer_id] = timestamp` in player_data_store, calls `update_gate_for_peer()` → `_notify_gate_opened` RPC hides gate mesh/label on that client only
-  - **Per-player gates**: Each player sees gates independently based on their own `defeated_trainers` dict. Bob sees a gate, Alice doesn't if she defeated it.
-  - Gate visual: red translucent BoxMesh (8x2.5x0.5) + "Defeat X to Pass!" Label3D
-  - Detection radius: 4.0 for gatekeepers, 3.0 for optional
-
-### Trainer Authority Model
-| Action | Authority | Sync |
-|--------|-----------|------|
-| Proximity detection | Server (Area3D body_entered/exited) | `_show/_hide_trainer_prompt` RPC to client |
-| Challenge request | Client sends `request_challenge` RPC | Server validates, starts battle |
-| Gatekeeper pushback | Server (velocity + teleport) | Position syncs via StateSync |
-| Gatekeeper dialogue | Server triggers | `_show_gatekeeper_challenge` RPC to client |
-| Gate open state | Server (defeated_trainers in player_data_store) | `_notify_gate_opened` RPC per-client |
-| Decline pushback | Server (teleport to safe_pos) | Position syncs via StateSync |
+- **Optional** (`is_gatekeeper=false`): Pepper, Green, Dulce, Vlad, Michelin — E-key prompt via `_show_trainer_prompt` RPC, `request_challenge` RPC to start. Rematch cooldown per trainer.
+- **Gatekeeper** (`is_gatekeeper=true`): Umami, Roux — forced pushback + TrainerDialogueUI (Accept/Decline). Defeating records `defeated_trainers[trainer_id]` in player_data_store, `_notify_gate_opened` RPC hides gate per-client. Detection radius: 4.0 gatekeepers, 3.0 optional.
 
 ## Restaurant System
-- **Architecture**: Server-authoritative, per-player restaurant instances. Each player gets a unique restaurant with its own interior scene, farm plots, and kitchen crafting station.
-- **Instance positioning**: Restaurants instanced at `Vector3(1000 + idx*200, 0, 1000)` — far from overworld to prevent collision. Index allocated via `allocate_restaurant_index()` and persisted in player save data.
-- **Unique instance names**: `Restaurant_<owner_name>` set before `add_child()` on both server and client to prevent Godot auto-rename when multiple restaurants are loaded simultaneously.
-- **Entry/exit flow**: Walk-over overworld door (Area3D) or E-key interaction → server saves overworld position → teleports player to restaurant interior → `_notify_location_change` RPC → client instantiates scene locally. Exit via ExitDoor `body_entered` → server restores overworld position (offset if too close to door row to prevent re-entry).
-- **Exit cooldown**: 1s debounce (`_exit_cooldown` dict) prevents immediate re-entry after exit teleport.
-- **Farm routing**: `get_farm_manager_for_peer(peer_id)` checks `player_location` dict — returns restaurant's FarmManager if player is inside one, otherwise returns overworld FarmManager.
-- **Bulk farm sync**: `_receive_restaurant_farm_data` RPC sends all plot states at once (not per-plot RPCs) to avoid node path mismatch when client hasn't finished instantiating.
-- **Persistence**: Restaurant index map saved in world data. Individual restaurant farm plots saved to owner's `player_data_store["restaurant"]` on unload and auto-save. RestaurantManager data restored from world save on server start.
-- **Door replication**: Server creates Area3D doors with collision (for walk-over detection). `_spawn_door_client` RPC creates visual-only doors (mesh + label, no collision) on all clients. `_remove_door_client` RPC removes on disconnect. Late-joiners receive all existing doors via `sync_doors_to_client()`.
-- **Auto-save position fix**: `save_manager.gd` and `network_manager.gd` both check `RestaurantManager.overworld_positions[peer_id]` before falling back to `player_node.position` — prevents saving interior coordinates (~1000+) as the player's overworld position.
-- **Unloading**: When all players leave a restaurant, `_try_unload_restaurant()` saves farm data and `queue_free()`s the instance. Re-entering creates a fresh instance from saved data.
-- **Files**: `scripts/world/restaurant_manager.gd`, `scripts/world/restaurant_interior.gd`, `scripts/world/restaurant_door.gd`, `scenes/world/restaurant_interior.tscn`
+- **Architecture**: Server-authoritative, per-player restaurant instances with own interior scene, farm plots, kitchen crafting station.
+- **Instance positioning**: `Vector3(1000 + idx*200, 0, 1000)` — far from overworld. Index persisted in player save data.
+- **Unique instance names**: `Restaurant_<owner_name>` set before `add_child()` to prevent Godot auto-rename.
+- **Entry/exit flow**: Walk-over door (Area3D) → server saves overworld position → teleports to interior → `_notify_location_change` RPC → client instantiates scene. Exit via ExitDoor restores overworld position.
+- **Farm routing**: `get_farm_manager_for_peer(peer_id)` checks `player_location` dict — returns restaurant's or overworld FarmManager.
+- **Persistence**: Restaurant index map in world data. Farm plots saved to `player_data_store["restaurant"]` on unload/auto-save.
+- **Auto-save position fix**: Both `save_manager.gd` and `network_manager.gd` check `RestaurantManager.overworld_positions[peer_id]` before falling back to `player_node.position` — prevents saving interior coordinates as overworld position.
+- **Unloading**: When all players leave, saves farm data and `queue_free()`s the instance.
+- **Files**: `scripts/world/restaurant_manager.gd`, `restaurant_interior.gd`, `restaurant_door.gd`, `scenes/world/restaurant_interior.tscn`
 
 ## Networking Rules (IMPORTANT)
 
@@ -290,28 +207,18 @@ This is a server-authoritative multiplayer game. **Every gameplay change — new
 ### Authority model
 | System | Authority | Sync mechanism |
 |--------|-----------|---------------|
-| Player movement | Server (`_physics_process`) | StateSync (position, velocity) |
-| Player rotation | Server (`_physics_process`) | StateSync (`mesh_rotation_y`) |
+| Player movement/rotation | Server (`_physics_process`) | StateSync (position, velocity, mesh_rotation_y) |
 | Player visuals (color, name) | Server (set before spawn) | StateSync (spawn-only) |
 | Camera / input | Client (InputSync) | InputSync → server reads |
-| Inventory changes | Server (`server_add/remove_inventory`) | RPC to client (`_sync_inventory_remove`, `_grant_harvest`) |
-| Watering can | Server (`server_use/refill_watering_can`) | RPC to client (`_sync_watering_can`, `_receive_refill`) |
+| Inventory changes | Server (`server_add/remove_inventory`) | RPC to client |
 | Farm actions (plant/water/harvest/till) | Server (`request_farm_action` RPC) | Server validates, then RPC result to client |
 | Battle state | Server (BattleManager) | RPCs to involved clients |
 | Crafting | Server (`request_craft` single-phase) | RPC results + inventory sync to client |
 | Food/buffs | Server (`request_use_food`) | `_sync_active_buffs` RPC to client |
-| Tool equip | Server (`request_equip_tool`) | `_sync_equipped_tools` RPC to client |
-| Held item equip | Server (`request_equip/unequip_held_item`) | `_sync_party_full` RPC to client |
-| Recipe unlocks | Server (`request_use_recipe_scroll`) | `_sync_known_recipes` + `_notify_recipe_unlocked` RPCs |
-| Selling | Server (`request_sell_item`) | Inventory + money sync RPCs |
+| Tool/held item equip | Server (`request_equip_*` RPCs) | Sync RPCs to client |
 | World item spawn/pickup | Server (WorldItemManager) | `_spawn/_despawn_world_item_client` RPCs to all |
-| Restaurant entry/exit | Server (RestaurantManager) | `_notify_location_change` RPC + client-side scene instantiation |
-| Restaurant doors | Server (collision) + Client (visual) | `_spawn/_remove_door_client` RPCs to all |
-| Trainer proximity prompt | Server (Area3D detect) | `_show/_hide_trainer_prompt` RPC to client HUD |
-| Gatekeeper challenge | Server (Area3D + pushback) | `_show_gatekeeper_challenge` RPC to client TrainerDialogueUI |
-| Gate open/close | Server (`defeated_trainers` in player_data_store) | `_notify_gate_opened` RPC per-client |
-| Calendar/weather | Server (SeasonManager) | `_broadcast_time` RPC to all clients, `request_season_sync` for late-joiners |
-| Bond points | Server (`server_grant_bond_points_battle`, `request_feed_creature`) | Bond data sync RPC to client |
+| Restaurant entry/exit | Server (RestaurantManager) | `_notify_location_change` RPC |
+| Calendar/weather | Server (SeasonManager) | `_broadcast_time` RPC to all |
 | Save/load | Server only (SaveManager → Express API → MongoDB) | Data sent to client via `_receive_player_data` |
 
 ### Never do this
@@ -323,23 +230,12 @@ This is a server-authoritative multiplayer game. **Every gameplay change — new
 - **SeasonManager** (`scripts/world/season_manager.gd`): Server-authoritative time progression
 - **Day cycle**: 10 real minutes per in-game day (`DAY_DURATION = 600.0`)
 - **Seasons**: 14 days per season, 4 seasons per year (Spring → Summer → Autumn → Winter)
-- **Weather**: 4 types — Sunny (50%), Rainy (25%), Windy (15%), Stormy (10%). Rolled each day via weighted random.
-- **Rain auto-waters**: On rainy/stormy days, `_rain_water_all_farms()` calls `rain_water_all()` on all FarmManagers (overworld + restaurants)
-- **HUD display**: `season_label` shows "Year N, Season Day D", `day_label` shows weather name. Updated every `_process()` frame by reading SeasonManager node.
-- **Season colors**: Ground tint per season (spring=green, summer=bright green, autumn=brown, winter=white/blue)
+- **Weather**: 4 types — Sunny (50%), Rainy (25%), Windy (15%), Stormy (10%). Rolled each day.
+- **Rain auto-waters**: On rainy/stormy days, `_rain_water_all_farms()` waters all FarmManagers
+- **HUD display**: `season_label` shows "Year N, Season Day D", `day_label` shows weather name
 - **Crop seasons**: `is_crop_in_season(crop_season)` validates planting — crops have slash-separated season strings (e.g. `"spring/summer"`)
-- **Sync**: Server broadcasts `_broadcast_time` RPC to all clients on each day advance. Late-joiners request sync via `request_season_sync` RPC.
-- **Persistence**: Full state saved/loaded — `current_year`, `day_in_season`, `day_timer`, `total_day_count`, `current_weather`, `current_season`. Backward-compat with old `season_timer`/`day_count` fields.
-- **Signals**: `season_changed(name)`, `day_changed()`, `weather_changed(name)` — consumed by FarmManager, HUD, and other systems
-
-## Security Hardening
-- **Server-authoritative party data**: `BattleManager._build_party_from_store(peer_id)` reads party from `NetworkManager.player_data_store`, NOT from client. The old `_receive_party_data` RPC was removed — clients cannot inject fake creatures/moves/stats.
-- **Move validation**: `request_battle_action()` verifies the submitted move_id exists in the creature's actual moveset (read from server-side party data). Switch targets are bounds-checked against actual party size.
-- **Rate limiting**: `NetworkManager._check_rate_limit(peer_id)` enforces max 20 RPCs/second per client. Exceeding the limit auto-disconnects the peer. Applied to: `request_join`, `request_farm_action`, `request_craft`, `request_use_food`, `request_equip_tool`, `request_sell_item`, `request_equip_held_item`, `request_unequip_held_item`, `request_use_recipe_scroll`.
-- **Name validation**: Server-side regex check (2-16 chars, `[a-zA-Z0-9_ ]+`), prevents injection via player names
-- **Single-phase crafting**: `request_craft` RPC does all validation + deduction server-side in one atomic operation. No client-side deduction that could desync.
-- **No client trust**: Server never reads game-state data from client RPCs (inventory amounts, creature stats, etc.). All state lives in `player_data_store`.
-- **Party deep-copy**: `server_update_party()` uses `.duplicate(true)` to store a deep copy of the party array. Without this, multiple battles could share references to the same creature dictionaries, causing cross-player state corruption (e.g., one player's battle modifying another's stored HP).
+- **Sync**: Server broadcasts `_broadcast_time` RPC on day advance. Late-joiners request via `request_season_sync` RPC.
+- **Persistence**: Full state saved/loaded — `current_year`, `day_in_season`, `day_timer`, `total_day_count`, `current_weather`, `current_season`. Backward-compat with old fields.
 
 ## GDScript Conventions
 - Use `class_name` for static utility classes (BattleCalculator, StatusEffects, FieldEffects, AbilityEffects, HeldItemEffects, BattleAI)
@@ -348,81 +244,19 @@ This is a server-authoritative multiplayer game. **Every gameplay change — new
 - Use `4.0` instead of `4` in division to avoid integer division warnings
 
 ## Export Build Gotchas
-- **DataRegistry .tres/.remap handling**: Godot exports convert `.tres` files to `.tres.remap` (binary format with remap indirection). Any code using `DirAccess` to scan for resources must check `.tres`, `.res`, AND `.remap` extensions — otherwise the exported build loads zero resources while the editor build works fine.
-- **Battle stacking prevention**: All encounter/battle entry points (TallGrass, EncounterManager, TrainerNPC) must check `BattleManager.player_battle_map` before starting a new battle. The `active_encounters` dict in EncounterManager only tracks wild encounters, NOT trainer/PvP battles. Client-side `start_battle_client()` also guards against duplicate `_start_battle_client` RPCs.
-- **stdbuf for Docker logs**: Godot headless buffers stdout, making `docker logs` empty. The Dockerfile uses `stdbuf -oL` in the CMD to force line-buffered output.
-- **Duplicate node name trap**: If a .tscn file already has a child named "X", creating a new `Node("X")` in `_ready()` and calling `add_child()` causes Godot to silently rename it (e.g. `@Node@38`). This breaks all hardcoded path lookups like `/root/Main/GameWorld/UI/BattleUI`. Always use `get_node("X")` to reference existing nodes, don't create duplicates.
-- **CanvasLayer child visibility persistence**: If you hide all children of a CanvasLayer (e.g. for a summary overlay), you MUST restore their visibility when the next screen/battle starts. Setting the CanvasLayer's own `visible` property does not propagate to children. The `_on_battle_started()` handler restores all child visibility and cleans up leftover dynamically-created panels.
-- **MCP addon excluded from server export**: `export_presets.cfg` has `exclude_filter="addons/mechanical_turk_mcp/*"` on the Linux Server preset. The runtime bridge autoload entry in `project.godot` still exists (needed for editor), so server logs show a non-fatal "File not found" error for `runtime_bridge.gd` on startup — this is expected.
-- **Connection timeout**: ConnectUI has a 10-second timeout. If ENet connects at transport layer but the Godot multiplayer layer rejects the peer (e.g. engine version mismatch), the client shows "Connection timed out" instead of hanging forever.
+- **DataRegistry .tres/.remap handling**: Godot exports convert `.tres` to `.tres.remap`. Any code using `DirAccess` to scan for resources must check `.tres`, `.res`, AND `.remap` extensions.
+- **Battle stacking prevention**: All encounter/battle entry points must check `BattleManager.player_battle_map` before starting a new battle. Client-side `start_battle_client()` also guards against duplicate RPCs.
+- **stdbuf for Docker logs**: Godot headless buffers stdout. Dockerfile uses `stdbuf -oL` for line-buffered output.
+- **Duplicate node name trap**: If a .tscn already has child "X", creating a new `Node("X")` + `add_child()` causes silent rename. Always use `get_node("X")` for existing nodes.
+- **CanvasLayer child visibility**: Hiding CanvasLayer children requires explicit restore on next use. CanvasLayer's own `visible` doesn't propagate. `_on_battle_started()` restores all children.
+- **MCP addon excluded from server export**: `export_presets.cfg` has `exclude_filter="addons/mechanical_turk_mcp/*"`. Non-fatal "File not found" on startup is expected.
+- **Connection timeout**: ConnectUI has a 10-second timeout for transport-connected but multiplayer-rejected peers.
 
 ## Kubernetes Deployment
-- **Namespace**: `godot-multiplayer` (shared with other multiplayer game servers)
-- **3 deployments**:
-  - `creature-crafting-mongodb` — mongo:7, ClusterIP service, 2Gi PVC (`creature-crafting-mongo-data`)
-  - `creature-crafting-api` — Express API (`ghcr.io/crankymagician/mt-creature-crafting-api:latest`), ClusterIP service on port 3000, liveness/readiness probes on `/health`
-  - `creature-crafting-server` — Game server (`ghcr.io/crankymagician/mt-creature-crafting-server:latest`), NodePort 7777/UDP, `SAVE_API_URL=http://creature-crafting-api:3000/api`
-- **Public endpoint**: `207.32.216.76:7777` (UDP) — NodePort 7777 → container 7777.
-- **Internal/VPN endpoint**: `10.225.0.153:7777`.
-- **Node SSH access**: `ssh jayhawk@10.225.0.153` (password: `fir3W0rks!`). User has sudo. k3s config at `/etc/rancher/k3s/config.yaml`. NodePort range: `7000-32767`.
-- **Deploy order**: MongoDB → API (waits for MongoDB rollout) → Game server. The deploy script handles this automatically.
-- **Deploy strategy**: Game server uses `Recreate` (simplicity). API uses default `RollingUpdate`.
-- **MCP config**: `.claude/mcp.json` provides both Godot and Kubernetes MCP servers
-- **K8s MCP**: Uses `blazar-kubernetes-mcp/run-mcp.sh` with `K8S_NAMESPACE=godot-multiplayer`
-- **RBAC**: Service account `mcp-admin` in `godot-multiplayer` namespace (configured in `blazar-kubernetes-mcp/k8s/rbac-setup.yaml`)
-
-### K8s Deploy Workflow
-```bash
-./scripts/deploy-k8s.sh --setup      # first-time: namespace + ghcr-secret + RBAC
-./scripts/deploy-k8s.sh              # full build (server + API images) + push + deploy all 3 deployments
-./scripts/deploy-k8s.sh --skip-build # redeploy without rebuilding images
-./scripts/build-engine-templates.sh          # build engine only (cached)
-./scripts/build-engine-templates.sh --force  # rebuild engine from scratch
-```
-
-### K8s Manifests
-- `k8s/mongodb.yaml` — PVC + Deployment + ClusterIP Service for MongoDB
-- `k8s/api-service.yaml` — Deployment + ClusterIP Service for Express API
-- `k8s/deployment.yaml` — Deployment for game server (SAVE_API_URL env var)
-- `k8s/service.yaml` — NodePort Service for game server (7777/UDP)
+See `docs/k8s-deployment.md` for full K8s deployment details (3 deployments, SSH access, deploy workflow, manifests).
 
 ## MCP Testing Workflow
-
-### Editor-only bridge (single process)
-- MCP bridge by default communicates with the editor process on port 9080, NOT the running game
-- `batch_scene_operations` creates wrong node types — write .tscn files directly instead
-- **To test server-side logic via MCP**: add temporary test code to `connect_ui.gd` `_ready()`, call `NetworkManager.host_game()`, run tests synchronously (no `await`), then check `get_debug_output`. Revert the test code afterward.
-- **IMPORTANT**: Do NOT call `GameManager.start_game()` before your test code finishes — it frees ConnectUI via `queue_free`, killing any running coroutine. Run all assertions before `start_game()`.
-
-### Runtime bridge — MCP multiplayer session (preferred)
-- **Use `run_multiplayer_session` MCP tool** for multi-instance testing. It launches 1 server + N clients, each with a unique runtime bridge port, all managed by MCP.
-- Pass `serverArgs: ["--server"]` so the server instance auto-starts without ConnectUI.
-- Pass `numClients: 2` (or more) for client instances.
-- Target instances with `target: "runtime:server"`, `target: "runtime:client_1"`, `target: "runtime:client_2"`, etc.
-- **Lifecycle**: `stop_all_instances` to stop everything, `list_instances` to see running PIDs/ports.
-- **Client join via GDScript**: Use `execute_gdscript` with `target: "runtime:client_N"` to call `NetworkManager.join_game("127.0.0.1", "PlayerName")` directly (more reliable than emitting button signals or mouse clicks).
-- **Screenshot caching**: MCP screenshot tool may cache results — use `get_scene_tree` or `execute_gdscript` for reliable state verification.
-
-### Runtime bridge — manual setup (alternative)
-- The runtime bridge plugin enables `execute_gdscript`, `capture_screenshot`, `send_input_event`, and `send_action` on **running game processes**
-- Each instance uses a different bridge port via `-- --bridge-port=NNNN` CLI arg
-- **Headless server**: `'/Applications/Mechanical Turk.app/Contents/MacOS/Mechanical Turk' --path <project> --headless -- --bridge-port=9082`
-- **Client 1**: launched via `run_project` MCP tool (uses default bridge port 9081)
-- **Client 2**: launched manually with `-- --bridge-port=9083`
-
-### Runtime bridge caveats
-- **GDScript injection caveats**: runtime errors in injected scripts trigger the Godot debugger break, freezing the entire process. All subsequent MCP calls will timeout. Requires killing and restarting the process. GDScript has no try/catch. Common freeze causes: using `await`, accessing non-existent properties (e.g. `.state` instead of `.plot_state`), calling `.get()` on Resource objects, calling `rpc_id()` from injected scripts, using `is` operator on Arrays.
-- **Server-side direct testing preferred**: For battle testing, call `bm._process_move_turn(battle, "move", "grain_bash")` and `bm._handle_pvp_action(battle, "a", "move", "grain_bash")` directly on the server — avoids `get_remote_sender_id()` issues. Similarly call `rm._enter_restaurant_server(peer_id, owner_name)` and `plot.try_clear(peer_id)` directly.
-- **Key node paths**: FarmManager is at `Main/GameWorld/Zones/FarmZone/FarmManager` (NOT `Main/GameWorld/FarmManager`). HUD trainer label property is `trainer_prompt_label`. FarmPlot state property is `plot_state` (not `state`). DataRegistry stores Resource objects — use `.property_name` not `.get("property")`.
-- **Screenshot size**: use small resolutions (400x300) to avoid WebSocket `ERR_OUT_OF_MEMORY` on large images
-- **PvP testing**: players must be within 5 units for challenge flow. Move them on server via `nm._get_player_node(peer_id).position = Vector3(...)`. PvP has 30s turn timeout — act quickly or increase temporarily.
-- **Battle dict access via MCP**: Battle state is a Dictionary (not an object). Use `bm.battles` (not `active_battles`), `battle.get("side_b_party")`, creature HP key is `"hp"` (not `"current_hp"`). The `request_battle_action` RPC takes `(action_type, action_data)` where action_data for moves is the **move ID string** (e.g. `"grain_bash"`), NOT an index.
-- **Force-winning battles via MCP**: Set enemy creature `"hp"` to 1, set `battle.state = "processing"`, then call `bm._process_move_turn(battle, "move", "quick_bite")` directly on the server. Do NOT use `_end_battle_full()` — it bypasses trainer reward flow. For PvP, use `bm._handle_pvp_action(battle, "a"/"b", "move", "move_id")` for both sides.
-- **Area3D re-detection**: Teleporting a player directly into an Area3D zone may not trigger `body_entered` if the physics engine doesn't detect the transition. Move the player far away first, then back, to guarantee signal fires.
-
-### Port conflicts
-- If `host_game()` returns error 20 (ERR_CANT_CREATE), check `lsof -i :7777` — a Docker container or previous server may be holding the port. Stop it with `docker compose down` first.
-- Check bridge ports: `lsof -i :9081 -i :9082 -i :9083`
+See `docs/mcp-testing.md` for full MCP testing guide (editor bridge, runtime bridge sessions, caveats, port conflicts).
 
 ## File Structure Overview
 - `api/` — Express API service (TypeScript): `src/index.ts`, `src/routes/players.ts`, `src/routes/world.ts`, `Dockerfile`
