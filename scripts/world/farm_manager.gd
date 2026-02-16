@@ -69,6 +69,7 @@ func request_farm_action(plot_index: int, action: String, extra: String) -> void
 				if NetworkManager.server_remove_inventory(sender, extra, 1):
 					success = plots[plot_index].try_plant(sender, extra)
 					if success:
+						StatTracker.increment(sender, "crops_planted")
 						_sync_inventory_remove.rpc_id(sender, extra, 1)
 					else:
 						NetworkManager.server_add_inventory(sender, extra, 1)
@@ -84,6 +85,7 @@ func request_farm_action(plot_index: int, action: String, extra: String) -> void
 			result = plot.try_harvest(sender)
 			if result.size() > 0:
 				success = true
+				StatTracker.increment(sender, "crops_harvested")
 				_grant_harvest.rpc_id(sender, result)
 				# Server-side inventory tracking
 				for item_id in result:

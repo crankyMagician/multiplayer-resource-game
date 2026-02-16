@@ -20,6 +20,7 @@ var calendar_ui_scene = preload("res://scenes/ui/calendar_ui.tscn")
 var compass_ui_scene = preload("res://scenes/ui/compass_ui.tscn")
 var pause_overlay_scene = preload("res://scenes/ui/pause_overlay.tscn")
 var quest_log_ui_scene = preload("res://scenes/ui/quest_log_ui.tscn")
+var compendium_ui_scene = preload("res://scenes/ui/compendium_ui.tscn")
 
 func _ready() -> void:
 	# Initialize DataRegistry
@@ -201,6 +202,9 @@ func _setup_ui() -> void:
 
 	var quest_log_ui = quest_log_ui_scene.instantiate()
 	ui_node.add_child(quest_log_ui)
+
+	var compendium_ui = compendium_ui_scene.instantiate()
+	ui_node.add_child(compendium_ui)
 
 func _spawn_calendar_board() -> void:
 	var board_script = load("res://scripts/world/calendar_board.gd")

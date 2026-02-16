@@ -29,6 +29,9 @@ func _process(_delta: float) -> void:
 	# Quest log (J key)
 	if Input.is_action_just_pressed("quest_log"):
 		_toggle_quest_log()
+	# Compendium (K key)
+	if Input.is_action_just_pressed("compendium"):
+		_toggle_compendium()
 	# Number keys for tool select
 	if Input.is_action_just_pressed("tool_1"):
 		PlayerData.set_tool("")
@@ -235,3 +238,8 @@ func _toggle_quest_log() -> void:
 	var quest_log = get_node_or_null("/root/Main/GameWorld/UI/QuestLogUI")
 	if quest_log and quest_log.has_method("toggle"):
 		quest_log.toggle()
+
+func _toggle_compendium() -> void:
+	var compendium = get_node_or_null("/root/Main/GameWorld/UI/CompendiumUI")
+	if compendium and compendium.has_method("toggle"):
+		compendium.toggle()

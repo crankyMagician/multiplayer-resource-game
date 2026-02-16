@@ -269,6 +269,11 @@ func handle_complete_quest(peer_id: int, quest_id: String) -> void:
 		if qdef.reward_unlock_flag not in flags:
 			flags.append(qdef.reward_unlock_flag)
 
+	# Track quest completion stat by category
+	var stat_category = str(qdef.category)
+	if stat_category == "main_story":
+		stat_category = "main"
+	StatTracker.increment(peer_id, "quests_completed_" + stat_category)
 	# Move to completed
 	active.erase(quest_id)
 	completed[quest_id] = int(Time.get_unix_time_from_system())

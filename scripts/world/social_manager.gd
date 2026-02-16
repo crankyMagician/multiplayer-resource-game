@@ -75,6 +75,7 @@ func handle_talk_request(peer_id: int, npc_id: String) -> void:
 		fs["talked_today"] = true
 		fs["last_interaction_day"] = current_day
 		fs["points"] = clampi(int(fs["points"]) + TALK_BONUS, MIN_FRIENDSHIP, MAX_FRIENDSHIP)
+	StatTracker.increment(peer_id, "npc_conversations")
 
 	# Quest progress: talk_to
 	var quest_mgr = get_node_or_null("/root/Main/GameWorld/QuestManager")
@@ -226,6 +227,7 @@ func handle_gift_request(peer_id: int, npc_id: String, item_id: String) -> void:
 	if multiplier > 1:
 		response_msg += " (Birthday bonus!)"
 
+	StatTracker.increment(peer_id, "gifts_given")
 	# Sync inventory and friendships
 	NetworkManager._sync_inventory_full.rpc_id(peer_id, data.get("inventory", {}))
 	NetworkManager._sync_npc_friendships.rpc_id(peer_id, friendships)

@@ -29,6 +29,7 @@ var active_player_names: Dictionary = {} # player_name -> peer_id
 var _buff_check_timer: float = 0.0
 
 func _ready() -> void:
+	StatTracker.init(player_data_store)
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
@@ -364,6 +365,11 @@ func _finalize_join(sender_id: int, player_name: String, data: Dictionary) -> vo
 	# Backfill quests
 	if not data.has("quests"):
 		data["quests"] = {"active": {}, "completed": {}, "daily_reset_day": 0, "weekly_reset_day": 0, "unlock_flags": []}
+	# Backfill compendium & stats
+	if not data.has("stats"):
+		data["stats"] = {}
+	if not data.has("compendium"):
+		data["compendium"] = {"items": [], "creatures_seen": [], "creatures_owned": []}
 	# Backfill basic tools in inventory
 	var inv = data.get("inventory", {})
 	for tool_id in ["tool_hoe_basic", "tool_axe_basic", "tool_watering_can_basic"]:
@@ -490,6 +496,8 @@ func _create_default_player_data(player_name: String) -> Dictionary:
 		"creature_storage": [],
 		"storage_capacity": 10,
 		"npc_friendships": {},
+		"stats": {},
+		"compendium": {"items": [], "creatures_seen": [], "creatures_owned": []},
 		"restaurant": {
 			"restaurant_index": -1,
 			"tier": 0,
@@ -514,6 +522,8 @@ func server_add_inventory(peer_id: int, item_id: String, amount: int) -> void:
 	else:
 		inv[item_id] = amount
 	player_data_store[peer_id]["inventory"] = inv
+	# Compendium unlock on first obtain
+	StatTracker.unlock_compendium_item(peer_id, item_id)
 	# Quest progress: collect objective
 	var quest_mgr = get_node_or_null("/root/Main/GameWorld/QuestManager")
 	if quest_mgr:
@@ -542,6 +552,7 @@ func server_add_money(peer_id: int, amount: int) -> void:
 		return
 	var current = int(player_data_store[peer_id].get("money", 0))
 	player_data_store[peer_id]["money"] = current + amount
+	StatTracker.increment(peer_id, "money_earned", amount)
 
 func server_remove_money(peer_id: int, amount: int) -> bool:
 	if peer_id not in player_data_store:
@@ -550,6 +561,7 @@ func server_remove_money(peer_id: int, amount: int) -> bool:
 	if current < amount:
 		return false
 	player_data_store[peer_id]["money"] = current - amount
+	StatTracker.increment(peer_id, "money_spent", amount)
 	return true
 
 func server_update_party(peer_id: int, party_array: Array) -> void:
@@ -744,6 +756,24 @@ func _sync_discovered_locations(location_ids: Array) -> void:
 	PlayerData.discovered_locations = location_ids.duplicate()
 	PlayerData.discovered_locations_changed.emit()
 
+@rpc("any_peer", "reliable")
+func request_compendium_sync() -> void:
+	if not multiplayer.is_server():
+		return
+	var sender = multiplayer.get_remote_sender_id()
+	if sender not in player_data_store:
+		return
+	var p_stats = player_data_store[sender].get("stats", {})
+	var p_comp = player_data_store[sender].get("compendium", {})
+	_sync_compendium_client.rpc_id(sender, p_stats, p_comp)
+
+@rpc("authority", "reliable")
+func _sync_compendium_client(p_stats: Dictionary, p_comp: Dictionary) -> void:
+	PlayerData.stats = p_stats.duplicate(true)
+	PlayerData.compendium = p_comp.duplicate(true)
+	PlayerData.stats_changed.emit()
+	PlayerData.compendium_changed.emit()
+
 # === Client->Server RPCs ===
 
 @rpc("any_peer", "reliable")
@@ -872,6 +902,7 @@ func request_sell_item(item_id: String, qty: int) -> void:
 	var total = sell_price * qty
 	server_remove_inventory(sender, item_id, qty)
 	server_add_money(sender, total)
+	StatTracker.increment(sender, "items_sold", qty)
 	_sync_inventory_full.rpc_id(sender, player_data_store[sender].get("inventory", {}))
 	_sync_money.rpc_id(sender, int(player_data_store[sender].get("money", 0)))
 	var info = DataRegistry.get_item_display_info(item_id)
@@ -902,6 +933,7 @@ func request_buy_item(item_id: String, qty: int, shop_id: String) -> void:
 	if not server_remove_money(sender, total):
 		return
 	server_add_inventory(sender, item_id, qty)
+	StatTracker.increment(sender, "items_bought", qty)
 	_sync_inventory_full.rpc_id(sender, player_data_store[sender].get("inventory", {}))
 	_sync_money.rpc_id(sender, int(player_data_store[sender].get("money", 0)))
 	var info = DataRegistry.get_item_display_info(item_id)
@@ -1284,6 +1316,9 @@ func _execute_trade(trade_id: int) -> void:
 	# Sync inventories
 	_sync_inventory_full.rpc_id(peer_a, player_data_store[peer_a].get("inventory", {}))
 	_sync_inventory_full.rpc_id(peer_b, player_data_store[peer_b].get("inventory", {}))
+	# Track trade stats
+	StatTracker.increment(peer_a, "trades_completed")
+	StatTracker.increment(peer_b, "trades_completed")
 	# Notify completion
 	_trade_completed_client.rpc_id(peer_a, trade.offer_b.duplicate())
 	_trade_completed_client.rpc_id(peer_b, trade.offer_a.duplicate())

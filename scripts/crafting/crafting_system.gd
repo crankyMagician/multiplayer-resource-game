@@ -73,6 +73,8 @@ func request_craft(recipe_id: String) -> void:
 			NetworkManager.player_data_store[sender]["party"] = server_party
 			NetworkManager._sync_party_full.rpc_id(sender, server_party)
 		result_name = species.display_name
+		StatTracker.unlock_creature_owned(sender, recipe.result_species_id)
+		StatTracker.increment_species(sender, "species_catches", recipe.result_species_id)
 		_craft_result_client.rpc_id(sender, true, result_name, result_name + " joined your party!")
 
 	elif recipe.result_item_id != "":
@@ -99,6 +101,8 @@ func request_craft(recipe_id: String) -> void:
 			NetworkManager.server_equip_tool(sender, tool_def.tool_type, recipe.result_tool_id)
 		_receive_crafted_item.rpc_id(sender, recipe.result_tool_id, result_name)
 
+	# Track crafting stat
+	StatTracker.increment(sender, "items_crafted")
 	# Sync inventory after crafting
 	NetworkManager._sync_inventory_full.rpc_id(sender, NetworkManager.player_data_store[sender].get("inventory", {}))
 	# Quest progress: craft objective

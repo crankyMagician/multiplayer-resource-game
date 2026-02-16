@@ -55,4 +55,5 @@ func _physics_process(_delta: float) -> void:
 				var quest_mgr = get_node_or_null("/root/Main/GameWorld/QuestManager")
 				if quest_mgr:
 					quest_mgr.notify_progress(peer_id, "discover_location", loc_def.location_id)
+				StatTracker.increment(peer_id, "locations_discovered")
 				print("[LocationManager] Player ", peer_id, " discovered: ", loc_def.display_name)

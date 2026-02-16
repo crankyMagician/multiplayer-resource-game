@@ -79,6 +79,9 @@ func _advance_day() -> void:
 	if current_weather == Weather.RAINY or current_weather == Weather.STORMY:
 		_rain_water_all_farms()
 
+	# Track days_played for all online players
+	for p_id in NetworkManager.player_data_store:
+		StatTracker.increment(p_id, "days_played")
 	print("Day ", total_day_count, " — Year ", current_year, " ", get_month_name(), " ", day_in_month, " — ", get_weather_name().capitalize())
 	_broadcast_time.rpc(current_year, current_month, day_in_month, total_day_count, current_weather)
 	day_changed.emit()

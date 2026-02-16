@@ -286,6 +286,11 @@ func server_start_battle(peer_id: int, enemy_data: Dictionary) -> void:
 		print("[BattleManager] server_start_battle: peer ", peer_id, " already in battle, skipping")
 		return
 	print("[BattleManager] server_start_battle for peer ", peer_id)
+	StatTracker.increment(peer_id, "battles_fought")
+	StatTracker.increment(peer_id, "wild_battles_fought")
+	var enemy_species = enemy_data.get("species_id", "")
+	StatTracker.increment_species(peer_id, "species_encounters", enemy_species)
+	StatTracker.unlock_creature_seen(peer_id, enemy_species)
 	var battle_id = _create_battle(BattleMode.WILD, peer_id)
 	var battle = battles[battle_id]
 	var enemy = enemy_data.duplicate(true)
@@ -326,10 +331,15 @@ func server_start_trainer_battle(peer_id: int, trainer_id: String) -> void:
 		print("[BattleManager] server_start_trainer_battle: peer ", peer_id, " already in battle, skipping")
 		return
 	print("[BattleManager] server_start_trainer_battle for peer ", peer_id, " trainer=", trainer_id)
+	StatTracker.increment(peer_id, "battles_fought")
+	StatTracker.increment(peer_id, "trainer_battles_fought")
 	DataRegistry.ensure_loaded()
 	var trainer = DataRegistry.get_trainer(trainer_id)
 	if trainer == null:
 		return
+	# Unlock trainer party creatures as seen
+	for entry in trainer.party:
+		StatTracker.unlock_creature_seen(peer_id, entry.get("species_id", ""))
 	# Cooldown is now checked by trainer_npc.gd request_challenge()
 	var battle_id = _create_battle(BattleMode.TRAINER, peer_id, 0, trainer_id)
 	var battle = battles[battle_id]
@@ -417,12 +427,22 @@ func respond_pvp_challenge(challenger_peer: int, accepted: bool) -> void:
 	pending_challenges.erase(challenger_peer)
 	if not accepted:
 		return
+	# Track PvP stats for both players
+	StatTracker.increment(challenger_peer, "battles_fought")
+	StatTracker.increment(challenger_peer, "pvp_battles_fought")
+	StatTracker.increment(sender, "battles_fought")
+	StatTracker.increment(sender, "pvp_battles_fought")
 	# Create PvP battle
 	var battle_id = _create_battle(BattleMode.PVP, challenger_peer, sender)
 	var battle = battles[battle_id]
 	# Build both parties from server-authoritative store
 	battle.side_a_party = _build_party_from_store(challenger_peer)
 	battle.side_b_party = _build_party_from_store(sender)
+	# Unlock opponent creatures as seen for both players
+	for c in battle.side_a_party:
+		StatTracker.unlock_creature_seen(sender, c.get("species_id", ""))
+	for c in battle.side_b_party:
+		StatTracker.unlock_creature_seen(challenger_peer, c.get("species_id", ""))
 	if battle.side_a_party.is_empty() or battle.side_b_party.is_empty():
 		print("[BattleManager] PvP: missing party data, aborting")
 		player_battle_map.erase(challenger_peer)
@@ -1145,6 +1165,7 @@ func _check_battle_outcome(battle: Dictionary, turn_log: Array) -> void:
 	var enemy = battle.side_b_party[battle.side_b_active_idx]
 
 	if enemy.hp <= 0:
+		StatTracker.increment(peer_id, "creatures_fainted")
 		# Check if trainer has more creatures
 		if battle.mode == BattleMode.TRAINER:
 			var next_idx = _find_alive_creature(battle.side_b_party, battle.side_b_active_idx)
@@ -1289,6 +1310,7 @@ func _grant_xp_for_defeat(battle: Dictionary, defeated_enemy: Dictionary, _turn_
 		xp_mult *= buff_mult
 
 	var xp_amount = int(raw_xp * xp_mult)
+	StatTracker.increment(peer_id, "total_xp_gained", xp_amount)
 	var participants = battle.get("participants_a", [0])
 	var xp_results = []
 
@@ -1364,6 +1386,8 @@ func _grant_xp_for_defeat(battle: Dictionary, defeated_enemy: Dictionary, _turn_
 				if evo_species:
 					evolved = true
 					new_species_id = c_species.evolves_to
+					StatTracker.increment_species(peer_id, "species_evolutions", new_species_id)
+					StatTracker.unlock_creature_owned(peer_id, new_species_id)
 					creature["species_id"] = new_species_id
 					creature["nickname"] = evo_species.display_name
 					creature["types"] = Array(evo_species.types)
@@ -1505,6 +1529,7 @@ func _resolve_pvp_turn(battle: Dictionary) -> void:
 
 	# Check outcomes
 	if b_creature.hp <= 0:
+		StatTracker.increment(battle.side_a_peer, "creatures_fainted")
 		var next = _find_alive_creature(battle.side_b_party, battle.side_b_active_idx)
 		if next == -1:
 			a_log.append({"type": "victory", "drops": {}})
@@ -1517,6 +1542,7 @@ func _resolve_pvp_turn(battle: Dictionary) -> void:
 			return
 
 	if a_creature.hp <= 0:
+		StatTracker.increment(battle.side_b_peer, "creatures_fainted")
 		var next = _find_alive_creature(battle.side_a_party, battle.side_a_active_idx)
 		if next == -1:
 			b_log.append({"type": "victory", "drops": {}})
@@ -1547,6 +1573,10 @@ func _swap_actor(result: Dictionary) -> Dictionary:
 func _handle_pvp_end(battle: Dictionary, winner: String) -> void:
 	var winner_peer = battle.side_a_peer if winner == "a_wins" else battle.side_b_peer
 	var loser_peer = battle.side_b_peer if winner == "a_wins" else battle.side_a_peer
+	StatTracker.increment(winner_peer, "battles_won")
+	StatTracker.increment(winner_peer, "pvp_wins")
+	StatTracker.increment(loser_peer, "battles_lost")
+	StatTracker.increment(loser_peer, "pvp_losses")
 
 	# PvP rewards: winner gets 25% of each ingredient stack from loser
 	if loser_peer in NetworkManager.player_data_store:
@@ -1883,6 +1913,16 @@ func _end_battle_full(battle: Dictionary, result: String) -> void:
 		if battle.side_b_peer > 0:
 			encounter_mgr.end_encounter(battle.side_b_peer)
 
+	# Track win/loss stats (non-PvP only — PvP tracked in _handle_pvp_end)
+	if battle.mode != BattleMode.PVP:
+		match result:
+			"a_wins":
+				StatTracker.increment(battle.side_a_peer, "battles_won")
+				if battle.mode == BattleMode.TRAINER:
+					StatTracker.increment(battle.side_a_peer, "trainer_battles_won")
+			"b_wins":
+				StatTracker.increment(battle.side_a_peer, "battles_lost")
+
 	match result:
 		"a_wins":
 			_battle_ended_client.rpc_id(battle.side_a_peer, true)
@@ -1900,6 +1940,7 @@ func _end_battle_full(battle: Dictionary, result: String) -> void:
 func _apply_defeat_penalty(_battle: Dictionary, peer_id: int) -> void:
 	if peer_id not in NetworkManager.player_data_store:
 		return
+	StatTracker.increment(peer_id, "player_defeats")
 	var pdata = NetworkManager.player_data_store[peer_id]
 	var current_money = int(pdata.get("money", 0))
 	var penalty = int(floor(current_money * 0.5))

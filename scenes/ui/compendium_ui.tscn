@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3 uid="uid://compendium_ui"]
+
+[ext_resource type="Script" path="res://scripts/ui/compendium_ui.gd" id="1"]
+
+[node name="CompendiumUI" type="CanvasLayer"]
+layer = 10
+script = ExtResource("1")
