@@ -189,8 +189,8 @@ func spawn_overworld_door(player_name: String) -> void:
 	# Add label
 	var label = Label3D.new()
 	label.text = player_name + "'s\nRestaurant"
-	label.font_size = 32
-	label.outline_size = 6
+	label.font_size = 42
+	label.outline_size = 10
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	label.position = Vector3(0, 3.2, 0)
 	label.modulate = Color(1, 0.9, 0.5)
@@ -386,8 +386,8 @@ func _spawn_door_client(player_name: String, rest_index: int) -> void:
 	# Label
 	var label = Label3D.new()
 	label.text = player_name + "'s\nRestaurant"
-	label.font_size = 32
-	label.outline_size = 6
+	label.font_size = 42
+	label.outline_size = 10
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	label.position = Vector3(0, 3.2, 0)
 	label.modulate = Color(1, 0.9, 0.5)

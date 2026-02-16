@@ -251,12 +251,24 @@ func _generate_signposts() -> void:
 		# Sign text
 		var label = Label3D.new()
 		label.text = sp.text
-		label.font_size = 18
+		label.font_size = 36
 		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 		label.modulate = Color(0.95, 0.85, 0.6)
-		label.outline_size = 4
+		label.outline_size = 8
 		label.position = Vector3(sp.pos.x, 2.3, sp.pos.z)
 		signs_node.add_child(label)
+
+	# Floating direction markers toward Restaurant Row
+	var marker_positions = [Vector3(0, 1.5, 6), Vector3(0, 1.5, 9)]
+	for mpos in marker_positions:
+		var marker = Label3D.new()
+		marker.text = "v Restaurant Row v"
+		marker.font_size = 24
+		marker.outline_size = 6
+		marker.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		marker.modulate = Color(1.0, 0.9, 0.4)
+		marker.position = mpos
+		signs_node.add_child(marker)
 
 func _generate_trees() -> void:
 	var trees_node = Node3D.new()

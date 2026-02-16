@@ -12,6 +12,7 @@ var money_label: Label = null
 var buff_label: Label = null
 var location_label: Label = null
 var trainer_prompt_label: Label = null
+var _trainer_prompt_timer: float = 0.0
 
 func _ready() -> void:
 	PlayerData.tool_changed.connect(_on_tool_changed)
@@ -52,7 +53,12 @@ func _ready() -> void:
 	trainer_prompt_label.anchor_bottom = 0.88
 	add_child(trainer_prompt_label)
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	# Auto-hide stale trainer prompt
+	if _trainer_prompt_timer > 0.0:
+		_trainer_prompt_timer -= delta
+		if _trainer_prompt_timer <= 0.0:
+			hide_trainer_prompt()
 	water_label.text = "Water: %d/%d" % [PlayerData.watering_can_current, PlayerData.get_watering_can_capacity()]
 	var season_mgr = get_node_or_null("/root/Main/GameWorld/SeasonManager")
 	if season_mgr:
@@ -118,10 +124,12 @@ func show_trainer_prompt(trainer_name: String) -> void:
 	if trainer_prompt_label:
 		trainer_prompt_label.text = "Press E to challenge %s!" % trainer_name
 		trainer_prompt_label.visible = true
+		_trainer_prompt_timer = 6.0
 
 func hide_trainer_prompt() -> void:
 	if trainer_prompt_label:
 		trainer_prompt_label.visible = false
+		_trainer_prompt_timer = 0.0
 
 func show_grass_indicator(visible_state: bool) -> void:
 	grass_indicator.visible = visible_state
