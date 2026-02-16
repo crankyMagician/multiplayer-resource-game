@@ -13,6 +13,8 @@ signal compass_target_changed(target_id: String)
 signal quests_changed()
 signal stats_changed()
 signal compendium_changed()
+signal player_friends_changed()
+signal player_party_updated()  # player-to-player party (not creature party)
 
 # Location tracking (client-side mirror of server state)
 var current_zone: String = "overworld"
@@ -71,6 +73,17 @@ var unlock_flags: Array = []
 # Compendium & Stats (client-side mirror, synced on demand via RPC)
 var stats: Dictionary = {}
 var compendium: Dictionary = {"items": [], "creatures_seen": [], "creatures_owned": []}
+
+# Player-to-player social
+var friends: Array = [] # [{player_id, player_name, online}]
+var blocked_players: Array = [] # [player_id, ...]
+var incoming_friend_requests: Array = [] # [{from_id, from_name, sent_at}]
+var outgoing_friend_requests: Array = [] # [{to_id, to_name, sent_at}]
+
+# Player-to-player party (ephemeral, not persisted)
+var group_party_id: int = -1
+var group_party_leader_id: String = ""
+var group_party_members: Array = [] # [{player_id, player_name, online}]
 
 # Player state
 var player_name: String = "Player"
@@ -187,10 +200,16 @@ func load_from_server(data: Dictionary) -> void:
 	# Load compendium & stats
 	stats = data.get("stats", {}).duplicate(true)
 	compendium = data.get("compendium", {"items": [], "creatures_seen": [], "creatures_owned": []}).duplicate(true)
+	# Load player social (friends are synced separately via FriendManager, but incoming/outgoing stored in save)
+	# Social data is synced on-demand via FriendManager.request_friends_sync()
 	# Reset tool
 	current_tool_slot = ""
 	selected_seed_id = ""
 	compass_target_id = ""
+	# Reset party group (ephemeral, not persisted)
+	group_party_id = -1
+	group_party_leader_id = ""
+	group_party_members.clear()
 	inventory_changed.emit()
 	party_changed.emit()
 	known_recipes_changed.emit()
@@ -255,6 +274,13 @@ func reset() -> void:
 	unlock_flags.clear()
 	stats.clear()
 	compendium = {"items": [], "creatures_seen": [], "creatures_owned": []}
+	friends.clear()
+	blocked_players.clear()
+	incoming_friend_requests.clear()
+	outgoing_friend_requests.clear()
+	group_party_id = -1
+	group_party_leader_id = ""
+	group_party_members.clear()
 	current_zone = "overworld"
 	current_restaurant_owner = ""
 	restaurant_data.clear()

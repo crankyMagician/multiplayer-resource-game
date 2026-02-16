@@ -24,6 +24,13 @@ extends Resource
 }
 
 # NPC gifts at friendship thresholds: [{threshold: int, item_id: String, quantity: int, message: String}]
+# OR creature gifts: [{threshold: int, creature_species_id: String, creature_level: int, creature_nickname: String, message: String}]
 @export var npc_gifts: Array = []
+
+# Creature trades: NPCs offer creatures to players for items/money, gated by conditions
+# [{creature_species_id, creature_level, creature_nickname, cost_items: {item_id: qty}, cost_money: int,
+#   required_friendship: String, required_season: String, required_quest_id: String,
+#   dialogue_text: String, dialogue_accept_label: String, dialogue_decline_label: String, one_time: bool}]
+@export var creature_trades: Array = []
 
 @export var occupation: String = ""

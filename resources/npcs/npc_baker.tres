@@ -159,4 +159,18 @@ npc_gifts = [{
 "quantity": 5,
 "message": "These rare crystals are my most prized baking ingredient. For you, my dearest friend."
 }]
+creature_trades = [{
+"creature_species_id": "wheat_golem",
+"creature_level": 8,
+"creature_nickname": "Brioche Jr.",
+"cost_items": { "grain_wheat": 20, "sweet_crystal": 3 },
+"cost_money": 500,
+"required_friendship": "like",
+"required_season": "spring",
+"required_quest_id": "",
+"dialogue_text": "I've been raising a little Wheat Golem in the back kitchen. Would you like to take care of it? I'd need some wheat and crystals to cover my ingredients...",
+"dialogue_accept_label": "I'd love to! Here's the wheat and crystals.",
+"dialogue_decline_label": "Maybe another time.",
+"one_time": true
+}]
 occupation = "Baker"

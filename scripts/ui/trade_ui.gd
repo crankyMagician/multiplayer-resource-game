@@ -17,9 +17,18 @@ var confirm_button: Button = null
 var cancel_button: Button = null
 var status_label: Label = null
 
+# Creature trade elements
+var my_creature_offer_label: Label = null
+var their_creature_offer_label: Label = null
+var creature_selector_list: VBoxContainer = null
+var receive_pref_container: VBoxContainer = null
+
 var partner_name: String = ""
 var my_offer: Dictionary = {} # item_id -> count
 var their_offer: Dictionary = {} # item_id -> count
+var my_creature_offer: Dictionary = {} # creature preview or empty
+var their_creature_offer: Dictionary = {} # creature preview or empty
+var my_receive_pref: Dictionary = {} # destination pref
 var is_confirmed: bool = false
 
 func _ready() -> void:
@@ -29,6 +38,8 @@ func _ready() -> void:
 	NetworkManager.trade_request_received.connect(_on_trade_request)
 	NetworkManager.trade_started.connect(_on_trade_started)
 	NetworkManager.trade_offer_updated.connect(_on_offer_updated)
+	NetworkManager.trade_creature_offer_updated.connect(_on_creature_offer_updated)
+	NetworkManager.trade_receive_pref_updated.connect(_on_receive_pref_updated)
 	NetworkManager.trade_confirmed.connect(_on_trade_confirmed)
 	NetworkManager.trade_completed.connect(_on_trade_completed)
 	NetworkManager.trade_cancelled.connect(_on_trade_cancelled)
@@ -123,15 +134,40 @@ func _build_trade_panel() -> void:
 	columns.add_child(my_offer_col)
 	my_offer_list = my_offer_col.get_node("Scroll/Items")
 
+	# Add creature offer display under my offer
+	my_creature_offer_label = Label.new()
+	my_creature_offer_label.text = ""
+	my_creature_offer_label.add_theme_color_override("font_color", Color(0.4, 0.9, 0.4))
+	my_creature_offer_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	my_offer_col.add_child(my_creature_offer_label)
+
 	# Their Offer column
 	var their_offer_col = _make_column("Their Offer")
 	columns.add_child(their_offer_col)
 	their_offer_list = their_offer_col.get_node("Scroll/Items")
 
+	# Add creature offer display under their offer
+	their_creature_offer_label = Label.new()
+	their_creature_offer_label.text = ""
+	their_creature_offer_label.add_theme_color_override("font_color", Color(0.9, 0.7, 0.3))
+	their_creature_offer_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	their_offer_col.add_child(their_creature_offer_label)
+
 	# My Inventory column (for adding items)
-	var inv_col = _make_column("Your Inventory")
+	var inv_col = _make_column("Your Inventory / Creatures")
 	columns.add_child(inv_col)
 	my_inventory_list = inv_col.get_node("Scroll/Items")
+
+	# Creature selector (below inventory in the same column)
+	creature_selector_list = VBoxContainer.new()
+	creature_selector_list.name = "CreatureSelector"
+	inv_col.add_child(creature_selector_list)
+
+	# Receive preference section (below columns)
+	receive_pref_container = VBoxContainer.new()
+	receive_pref_container.name = "ReceivePref"
+	receive_pref_container.visible = false
+	outer_vbox.add_child(receive_pref_container)
 
 	# Bottom buttons
 	var btn_row = HBoxContainer.new()
@@ -198,6 +234,9 @@ func _on_trade_started(p_name: String) -> void:
 	partner_name = p_name
 	my_offer = {}
 	their_offer = {}
+	my_creature_offer = {}
+	their_creature_offer = {}
+	my_receive_pref = {}
 	is_confirmed = false
 	partner_label.text = "Trading with: %s" % partner_name
 	status_label.text = ""
@@ -213,34 +252,48 @@ func _on_trade_started(p_name: String) -> void:
 func _on_offer_updated(new_my_offer: Dictionary, new_their_offer: Dictionary) -> void:
 	my_offer = new_my_offer
 	their_offer = new_their_offer
-	# Reset confirmation when offers change
 	is_confirmed = false
 	confirm_button.text = "Confirm Trade"
 	confirm_button.disabled = false
 	status_label.text = ""
 	_refresh_all()
 
+func _on_creature_offer_updated(my_creature: Dictionary, their_creature: Dictionary) -> void:
+	my_creature_offer = my_creature
+	their_creature_offer = their_creature
+	is_confirmed = false
+	confirm_button.text = "Confirm Trade"
+	confirm_button.disabled = false
+	status_label.text = ""
+	_refresh_creature_offers()
+	_refresh_receive_pref()
+
+func _on_receive_pref_updated(pref: Dictionary) -> void:
+	my_receive_pref = pref
+
 func _on_trade_confirmed(who: String) -> void:
 	status_label.text = "%s confirmed the trade" % who
 
-func _on_trade_completed(received_items: Dictionary) -> void:
+func _on_trade_completed(received_items: Dictionary, received_creature: Dictionary) -> void:
 	var msg = "Trade complete! Received: "
 	var parts: Array[String] = []
 	DataRegistry.ensure_loaded()
 	for item_id in received_items:
 		var info = DataRegistry.get_item_display_info(item_id)
 		parts.append("%s x%d" % [info.get("display_name", item_id), received_items[item_id]])
+	if not received_creature.is_empty():
+		var species = DataRegistry.get_species(str(received_creature.get("species_id", "")))
+		var cname = species.display_name if species else str(received_creature.get("species_id", ""))
+		parts.append(cname + " (creature)")
 	if parts.is_empty():
 		msg += "nothing"
 	else:
 		msg += ", ".join(parts)
 	status_label.text = msg
-	# Close after a brief delay
 	get_tree().create_timer(2.0).timeout.connect(_close)
 
 func _on_trade_cancelled(reason: String) -> void:
 	status_label.text = reason
-	# Close after a brief delay
 	get_tree().create_timer(1.5).timeout.connect(_close)
 
 # --- UI actions ---
@@ -263,6 +316,9 @@ func _close() -> void:
 	NetworkManager.request_set_busy.rpc_id(1, false)
 	my_offer = {}
 	their_offer = {}
+	my_creature_offer = {}
+	their_creature_offer = {}
+	my_receive_pref = {}
 	is_confirmed = false
 
 # --- Refresh ---
@@ -271,6 +327,9 @@ func _refresh_all() -> void:
 	_refresh_offer_list(my_offer_list, my_offer, true)
 	_refresh_offer_list(their_offer_list, their_offer, false)
 	_refresh_inventory()
+	_refresh_creature_offers()
+	_refresh_creature_selector()
+	_refresh_receive_pref()
 
 func _refresh_offer_list(list_node: VBoxContainer, offer: Dictionary, can_remove: bool) -> void:
 	for child in list_node.get_children():
@@ -301,6 +360,172 @@ func _refresh_offer_list(list_node: VBoxContainer, offer: Dictionary, can_remove
 			var iid = item_id
 			btn.pressed.connect(func(): _remove_from_offer(iid))
 			hbox.add_child(btn)
+
+func _refresh_creature_offers() -> void:
+	DataRegistry.ensure_loaded()
+	if my_creature_offer.is_empty():
+		my_creature_offer_label.text = ""
+	else:
+		var species = DataRegistry.get_species(str(my_creature_offer.get("species_id", "")))
+		var cname = species.display_name if species else str(my_creature_offer.get("species_id", ""))
+		my_creature_offer_label.text = "Creature: %s (Lv %d)" % [cname, int(my_creature_offer.get("level", 1))]
+
+	if their_creature_offer.is_empty():
+		their_creature_offer_label.text = ""
+	else:
+		var species = DataRegistry.get_species(str(their_creature_offer.get("species_id", "")))
+		var cname = species.display_name if species else str(their_creature_offer.get("species_id", ""))
+		their_creature_offer_label.text = "Creature: %s (Lv %d)" % [cname, int(their_creature_offer.get("level", 1))]
+
+func _refresh_creature_selector() -> void:
+	for child in creature_selector_list.get_children():
+		child.queue_free()
+
+	DataRegistry.ensure_loaded()
+
+	# Separator
+	var sep = Label.new()
+	sep.text = "— Creatures —"
+	sep.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	sep.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
+	creature_selector_list.add_child(sep)
+
+	# Party creatures
+	for i in range(PlayerData.party.size()):
+		var c = PlayerData.party[i]
+		var sid: String = str(c.get("species_id", ""))
+		var species = DataRegistry.get_species(sid)
+		var cname = species.display_name if species else sid
+		var clevel = int(c.get("level", 1))
+
+		var hbox = HBoxContainer.new()
+		creature_selector_list.add_child(hbox)
+
+		var lbl = Label.new()
+		lbl.text = "[P] %s Lv%d" % [cname, clevel]
+		lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		hbox.add_child(lbl)
+
+		var btn = Button.new()
+		var is_offered = not my_creature_offer.is_empty() and str(my_creature_offer.get("creature_id", "")) == str(c.get("creature_id", ""))
+		if is_offered:
+			btn.text = "Remove"
+			btn.pressed.connect(func(): _remove_creature_offer())
+		else:
+			btn.text = "Offer"
+			# Disable if only 1 creature in party or already offering a creature
+			if PlayerData.party.size() <= 1 or (not my_creature_offer.is_empty() and not is_offered):
+				btn.disabled = true
+			var idx = i
+			btn.pressed.connect(func(): _offer_creature("party", idx))
+		btn.custom_minimum_size.x = 60
+		hbox.add_child(btn)
+
+	# Storage creatures
+	for i in range(PlayerData.creature_storage.size()):
+		var c = PlayerData.creature_storage[i]
+		var sid: String = str(c.get("species_id", ""))
+		var species = DataRegistry.get_species(sid)
+		var cname = species.display_name if species else sid
+		var clevel = int(c.get("level", 1))
+
+		var hbox = HBoxContainer.new()
+		creature_selector_list.add_child(hbox)
+
+		var lbl = Label.new()
+		lbl.text = "[S] %s Lv%d" % [cname, clevel]
+		lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		hbox.add_child(lbl)
+
+		var btn = Button.new()
+		var is_offered = not my_creature_offer.is_empty() and str(my_creature_offer.get("creature_id", "")) == str(c.get("creature_id", ""))
+		if is_offered:
+			btn.text = "Remove"
+			btn.pressed.connect(func(): _remove_creature_offer())
+		else:
+			btn.text = "Offer"
+			if not my_creature_offer.is_empty() and not is_offered:
+				btn.disabled = true
+			var idx = i
+			btn.pressed.connect(func(): _offer_creature("storage", idx))
+		btn.custom_minimum_size.x = 60
+		hbox.add_child(btn)
+
+func _refresh_receive_pref() -> void:
+	for child in receive_pref_container.get_children():
+		child.queue_free()
+
+	# Only show if partner is offering a creature
+	if their_creature_offer.is_empty():
+		receive_pref_container.visible = false
+		return
+
+	receive_pref_container.visible = true
+
+	var header = Label.new()
+	header.text = "Where to receive their creature?"
+	header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	header.add_theme_font_size_override("font_size", 14)
+	receive_pref_container.add_child(header)
+
+	var hbox = HBoxContainer.new()
+	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	hbox.add_theme_constant_override("separation", 10)
+	receive_pref_container.add_child(hbox)
+
+	var party_has_space = PlayerData.party.size() < PlayerData.MAX_PARTY_SIZE
+	var current_dest = str(my_receive_pref.get("destination", ""))
+
+	# Party button (direct add if space)
+	if party_has_space:
+		var party_btn = Button.new()
+		party_btn.text = "Add to Party"
+		party_btn.custom_minimum_size.x = 120
+		party_btn.disabled = current_dest == "party"
+		party_btn.pressed.connect(func(): _set_receive_pref("party", -1))
+		hbox.add_child(party_btn)
+
+	# Storage button
+	var storage_btn = Button.new()
+	storage_btn.text = "Send to Storage"
+	storage_btn.custom_minimum_size.x = 120
+	storage_btn.disabled = current_dest == "storage" or PlayerData.creature_storage.size() >= PlayerData.storage_capacity
+	storage_btn.pressed.connect(func(): _set_receive_pref("storage", -1))
+	hbox.add_child(storage_btn)
+
+	# Swap buttons (if party full)
+	if not party_has_space:
+		var swap_label = Label.new()
+		swap_label.text = "Swap with party member:"
+		swap_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		receive_pref_container.add_child(swap_label)
+
+		DataRegistry.ensure_loaded()
+		for i in range(PlayerData.party.size()):
+			var c = PlayerData.party[i]
+			var sid = str(c.get("species_id", ""))
+			var species = DataRegistry.get_species(sid)
+			var cname = species.display_name if species else sid
+
+			var swap_hbox = HBoxContainer.new()
+			receive_pref_container.add_child(swap_hbox)
+
+			var lbl = Label.new()
+			lbl.text = "%s (Lv %d)" % [cname, int(c.get("level", 1))]
+			lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			swap_hbox.add_child(lbl)
+
+			var swap_btn = Button.new()
+			swap_btn.text = "Swap"
+			swap_btn.custom_minimum_size.x = 60
+			var swap_idx = int(my_receive_pref.get("swap_party_idx", -1))
+			swap_btn.disabled = current_dest == "party" and swap_idx == i
+			# Disable if storage full (swapped creature goes to storage)
+			if PlayerData.creature_storage.size() >= PlayerData.storage_capacity:
+				swap_btn.disabled = true
+			var idx = i
+			swap_btn.pressed.connect(func(): _set_receive_pref("party", idx))
+			swap_hbox.add_child(swap_btn)
 
 func _refresh_inventory() -> void:
 	for child in my_inventory_list.get_children():
@@ -338,3 +563,12 @@ func _add_to_offer(item_id: String) -> void:
 
 func _remove_from_offer(item_id: String) -> void:
 	NetworkManager.update_trade_offer.rpc_id(1, item_id, -1)
+
+func _offer_creature(source: String, index: int) -> void:
+	NetworkManager.update_trade_creature_offer.rpc_id(1, source, index, true)
+
+func _remove_creature_offer() -> void:
+	NetworkManager.update_trade_creature_offer.rpc_id(1, "", 0, false)
+
+func _set_receive_pref(destination: String, swap_party_idx: int) -> void:
+	NetworkManager.set_trade_receive_preference.rpc_id(1, destination, swap_party_idx)

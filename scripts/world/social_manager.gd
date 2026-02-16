@@ -107,17 +107,29 @@ func handle_talk_request(peer_id: int, npc_id: String) -> void:
 	var node_idx = randi() % dialogues.size()
 	var dialogue_node: Dictionary = dialogues[node_idx]
 
+	# Check for available creature trade offer
+	var creature_trade: Dictionary = _get_available_creature_trade(peer_id, npc_id, npc_def)
+	var creature_trade_choice_idx: int = -1
+
 	# Store pending dialogue for choice validation
 	pending_dialogue[peer_id] = {
 		"npc_id": npc_id,
 		"dialogue_node": dialogue_node,
+		"creature_trade": creature_trade,
+		"creature_trade_choice_idx": -1,
 	}
 
-	# Send dialogue to client
+	# Build choice labels, appending creature trade if available
 	var choices: Array = dialogue_node.get("choices", [])
 	var choice_labels: Array = []
 	for c in choices:
 		choice_labels.append(str(c.get("label", "")))
+
+	if not creature_trade.is_empty():
+		creature_trade_choice_idx = choice_labels.size()
+		choice_labels.append(str(creature_trade.get("dialogue_accept_label", "Accept creature trade")))
+		choice_labels.append(str(creature_trade.get("dialogue_decline_label", "Decline")))
+		pending_dialogue[peer_id]["creature_trade_choice_idx"] = creature_trade_choice_idx
 
 	_send_dialogue.rpc_id(peer_id, npc_id, str(dialogue_node.get("text", "")), choice_labels, int(fs["points"]), tier)
 
@@ -134,8 +146,23 @@ func handle_dialogue_choice(peer_id: int, choice_idx: int) -> void:
 	var npc_id: String = pending["npc_id"]
 	var dialogue_node: Dictionary = pending["dialogue_node"]
 	var choices: Array = dialogue_node.get("choices", [])
+	var creature_trade: Dictionary = pending.get("creature_trade", {})
+	var creature_trade_choice_idx: int = int(pending.get("creature_trade_choice_idx", -1))
 
-	# Validate choice index
+	# Check if this is a creature trade accept
+	if creature_trade_choice_idx >= 0 and choice_idx == creature_trade_choice_idx:
+		_handle_creature_trade_accept(peer_id, npc_id, creature_trade)
+		pending_dialogue.erase(peer_id)
+		return
+
+	# Check if this is the creature trade decline choice (the one right after accept)
+	if creature_trade_choice_idx >= 0 and choice_idx == creature_trade_choice_idx + 1:
+		var decline_text = str(creature_trade.get("dialogue_decline_label", "Maybe another time."))
+		_dialogue_choice_result.rpc_id(peer_id, "\"" + decline_text + "\"", 0, "")
+		pending_dialogue.erase(peer_id)
+		return
+
+	# Validate choice index (normal dialogue choices)
 	if choice_idx < 0 or choice_idx >= choices.size():
 		pending_dialogue.erase(peer_id)
 		return
@@ -307,6 +334,123 @@ static func _resolve_schedule_position(npc_def: Resource, time_fraction: float, 
 				)
 	return Vector3.ZERO
 
+# === NPC Creature Trade ===
+
+func _get_available_creature_trade(peer_id: int, npc_id: String, npc_def: Resource) -> Dictionary:
+	if npc_def.creature_trades.is_empty():
+		return {}
+	if peer_id not in NetworkManager.player_data_store:
+		return {}
+
+	var data = NetworkManager.player_data_store[peer_id]
+	var fs: Dictionary = data.get("npc_friendships", {}).get(npc_id, {})
+	var received: Array = fs.get("gifts_received", [])
+	var completed_quests: Dictionary = data.get("quests", {}).get("completed", {})
+
+	var season_mgr = get_node_or_null("/root/Main/GameWorld/SeasonManager")
+	var current_season: String = season_mgr.get_current_season() if season_mgr else ""
+
+	for trade in npc_def.creature_trades:
+		# Check one_time
+		var trade_key: String = "npc_creature_trade_" + npc_id + "_" + str(trade.get("creature_species_id", ""))
+		if trade.get("one_time", false) and trade_key in received:
+			continue
+		# Check friendship tier
+		var required_friendship: String = str(trade.get("required_friendship", ""))
+		if required_friendship != "":
+			var current_tier: String = get_friendship_tier(int(fs.get("points", 0)))
+			if not _tier_meets_requirement(current_tier, required_friendship):
+				continue
+		# Check season
+		var required_season: String = str(trade.get("required_season", ""))
+		if required_season != "" and current_season != required_season:
+			continue
+		# Check quest
+		var required_quest: String = str(trade.get("required_quest_id", ""))
+		if required_quest != "" and required_quest not in completed_quests:
+			continue
+		return trade
+
+	return {}
+
+static func _tier_meets_requirement(current_tier: String, required_tier: String) -> bool:
+	var tier_order: Array = ["hate", "dislike", "neutral", "like", "love"]
+	var current_idx: int = tier_order.find(current_tier)
+	var required_idx: int = tier_order.find(required_tier)
+	if current_idx < 0 or required_idx < 0:
+		return false
+	return current_idx >= required_idx
+
+func _handle_creature_trade_accept(peer_id: int, npc_id: String, trade: Dictionary) -> void:
+	if peer_id not in NetworkManager.player_data_store:
+		return
+
+	# Re-validate conditions server-side
+	DataRegistry.ensure_loaded()
+	var npc_def = DataRegistry.get_npc(npc_id)
+	if npc_def == null:
+		_dialogue_choice_result.rpc_id(peer_id, "Something went wrong.", 0, "")
+		return
+
+	var recheck = _get_available_creature_trade(peer_id, npc_id, npc_def)
+	if recheck.is_empty() or str(recheck.get("creature_species_id", "")) != str(trade.get("creature_species_id", "")):
+		_dialogue_choice_result.rpc_id(peer_id, "This offer is no longer available.", 0, "")
+		return
+
+	# Validate cost
+	var cost_items: Dictionary = trade.get("cost_items", {})
+	var cost_money: int = int(trade.get("cost_money", 0))
+
+	for item_id in cost_items:
+		if not NetworkManager.server_has_inventory(peer_id, str(item_id), int(cost_items[item_id])):
+			_dialogue_choice_result.rpc_id(peer_id, "You don't have the required items.", 0, "")
+			return
+	if cost_money > 0:
+		var current_money: int = int(NetworkManager.player_data_store[peer_id].get("money", 0))
+		if current_money < cost_money:
+			_dialogue_choice_result.rpc_id(peer_id, "You don't have enough money.", 0, "")
+			return
+
+	# Deduct cost
+	for item_id in cost_items:
+		NetworkManager.server_remove_inventory(peer_id, str(item_id), int(cost_items[item_id]))
+	if cost_money > 0:
+		NetworkManager.server_remove_money(peer_id, cost_money)
+
+	# Create creature
+	var species_id: String = str(trade.get("creature_species_id", ""))
+	var species = DataRegistry.get_species(species_id)
+	if species == null:
+		_dialogue_choice_result.rpc_id(peer_id, "Creature species not found.", 0, "")
+		return
+	var creature_level: int = int(trade.get("creature_level", 1))
+	var creature = CreatureInstance.create_from_species(species, creature_level)
+	var creature_data: Dictionary = creature.to_dict()
+	creature_data["creature_id"] = NetworkManager._generate_uuid()
+	var nickname: String = str(trade.get("creature_nickname", ""))
+	if nickname != "":
+		creature_data["nickname"] = nickname
+
+	# Give creature via universal handler
+	NetworkManager.server_give_creature(peer_id, creature_data, "npc_trade", npc_id)
+
+	# Mark as received if one_time
+	if trade.get("one_time", false):
+		var data = NetworkManager.player_data_store[peer_id]
+		var fs: Dictionary = data.get("npc_friendships", {}).get(npc_id, {})
+		var gifts_received: Array = fs.get("gifts_received", [])
+		var trade_key: String = "npc_creature_trade_" + npc_id + "_" + species_id
+		gifts_received.append(trade_key)
+		fs["gifts_received"] = gifts_received
+
+	# Sync
+	NetworkManager._sync_inventory_full.rpc_id(peer_id, NetworkManager.player_data_store[peer_id].get("inventory", {}))
+	NetworkManager._sync_money.rpc_id(peer_id, int(NetworkManager.player_data_store[peer_id].get("money", 0)))
+
+	var display_name: String = species.display_name
+	_dialogue_choice_result.rpc_id(peer_id, "You received " + display_name + "!", 0, "")
+	print("[NPC Trade] ", peer_id, " acquired ", species_id, " from ", npc_id)
+
 # === NPC Gift Threshold Rewards ===
 
 func _check_npc_gifts(peer_id: int, npc_id: String, current_points: int) -> void:
@@ -321,17 +465,34 @@ func _check_npc_gifts(peer_id: int, npc_id: String, current_points: int) -> void
 
 	for gift in npc_def.npc_gifts:
 		var threshold: int = int(gift.get("threshold", 0))
-		var gift_item: String = str(gift.get("item_id", ""))
-		var quantity: int = int(gift.get("quantity", 1))
 		var message: String = str(gift.get("message", ""))
-		var gift_key: String = "npc_gift_" + npc_id + "_" + gift_item
+		var gift_key: String = "npc_gift_" + npc_id + "_" + str(threshold)
 
 		if current_points >= threshold and gift_key not in received:
 			received.append(gift_key)
 			fs["gifts_received"] = received
-			NetworkManager.server_add_inventory(peer_id, gift_item, quantity)
-			NetworkManager._sync_inventory_full.rpc_id(peer_id, data.get("inventory", {}))
-			_notify_npc_gift.rpc_id(peer_id, npc_id, gift_item, quantity, message)
+
+			# Check if this is a creature gift
+			var creature_species_id: String = str(gift.get("creature_species_id", ""))
+			if creature_species_id != "":
+				var species = DataRegistry.get_species(creature_species_id)
+				if species:
+					var creature_level: int = int(gift.get("creature_level", 1))
+					var creature = CreatureInstance.create_from_species(species, creature_level)
+					var creature_data: Dictionary = creature.to_dict()
+					creature_data["creature_id"] = NetworkManager._generate_uuid()
+					var nickname: String = str(gift.get("creature_nickname", ""))
+					if nickname != "":
+						creature_data["nickname"] = nickname
+					NetworkManager.server_give_creature(peer_id, creature_data, "npc_gift", npc_id)
+					_notify_npc_gift.rpc_id(peer_id, npc_id, creature_species_id, 1, message)
+			else:
+				# Normal item gift
+				var gift_item: String = str(gift.get("item_id", ""))
+				var quantity: int = int(gift.get("quantity", 1))
+				NetworkManager.server_add_inventory(peer_id, gift_item, quantity)
+				NetworkManager._sync_inventory_full.rpc_id(peer_id, data.get("inventory", {}))
+				_notify_npc_gift.rpc_id(peer_id, npc_id, gift_item, quantity, message)
 
 # === Helpers ===
 

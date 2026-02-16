@@ -154,6 +154,12 @@ func _on_peer_disconnected(id: int) -> void:
 	# Cancel active trade
 	if id in player_trade_map:
 		_cancel_trade_internal(player_trade_map[id], "Partner disconnected.")
+	# Clean up pending creature destination choice
+	pending_creature_choices.erase(id)
+	# Handle friend/party disconnect
+	var friend_mgr = get_node_or_null("/root/Main/GameWorld/FriendManager")
+	if friend_mgr and friend_mgr.has_method("handle_disconnect"):
+		friend_mgr.handle_disconnect(id)
 	# Handle battle disconnect (PvP forfeit, cleanup)
 	var battle_mgr = get_node_or_null("/root/Main/GameWorld/BattleManager")
 	if battle_mgr:
@@ -370,6 +376,11 @@ func _finalize_join(sender_id: int, player_name: String, data: Dictionary) -> vo
 		data["stats"] = {}
 	if not data.has("compendium"):
 		data["compendium"] = {"items": [], "creatures_seen": [], "creatures_owned": []}
+	# Backfill social data
+	if not data.has("social"):
+		data["social"] = {"friends": [], "blocked": [], "incoming_requests": [], "outgoing_requests": []}
+	# Prune expired friend requests on login
+	_prune_expired_requests(data)
 	# Backfill basic tools in inventory
 	var inv = data.get("inventory", {})
 	for tool_id in ["tool_hoe_basic", "tool_axe_basic", "tool_watering_can_basic"]:
@@ -498,6 +509,7 @@ func _create_default_player_data(player_name: String) -> Dictionary:
 		"npc_friendships": {},
 		"stats": {},
 		"compendium": {"items": [], "creatures_seen": [], "creatures_owned": []},
+		"social": {"friends": [], "blocked": [], "incoming_requests": [], "outgoing_requests": []},
 		"restaurant": {
 			"restaurant_index": -1,
 			"tier": 0,
@@ -695,6 +707,33 @@ func _get_player_node(peer_id: int) -> Node3D:
 	if players_node:
 		return players_node.get_node_or_null(str(peer_id))
 	return null
+
+## Returns peer_id for a given player_id UUID, or 0 if not online.
+func get_peer_for_player_id(target_player_id: String) -> int:
+	for pid in player_data_store:
+		if str(player_data_store[pid].get("player_id", "")) == target_player_id:
+			return pid
+	return 0
+
+## Returns player_id UUID for a given peer_id, or "" if not found.
+func get_player_id_for_peer(peer_id: int) -> String:
+	if peer_id in player_data_store:
+		return str(player_data_store[peer_id].get("player_id", ""))
+	return ""
+
+const FRIEND_REQUEST_TTL_SEC = 604800 # 7 days
+
+func _prune_expired_requests(data: Dictionary) -> void:
+	var social = data.get("social", {})
+	var now = Time.get_unix_time_from_system()
+	for key in ["incoming_requests", "outgoing_requests"]:
+		var reqs = social.get(key, [])
+		var i = reqs.size() - 1
+		while i >= 0:
+			var sent_at = float(reqs[i].get("sent_at", 0))
+			if sent_at > 0 and (now - sent_at) > FRIEND_REQUEST_TTL_SEC:
+				reqs.remove_at(i)
+			i -= 1
 
 # === New RPCs ===
 
@@ -1174,13 +1213,19 @@ func request_feed_creature(creature_idx: int, food_id: String) -> void:
 signal trade_request_received(peer_name: String, peer_id: int)
 signal trade_started(partner_name: String)
 signal trade_offer_updated(my_offer: Dictionary, their_offer: Dictionary)
+signal trade_creature_offer_updated(my_creature: Dictionary, their_creature: Dictionary)
+signal trade_receive_pref_updated(my_pref: Dictionary)
 signal trade_confirmed(who: String)
-signal trade_completed(received_items: Dictionary)
+signal trade_completed(received_items: Dictionary, received_creature: Dictionary)
 signal trade_cancelled(reason: String)
+signal creature_destination_requested(creature_data: Dictionary, current_party: Array, storage_size: int, storage_capacity: int)
 
-var active_trades: Dictionary = {} # trade_id -> {peer_a, peer_b, offer_a, offer_b, confirmed_a, confirmed_b}
+var active_trades: Dictionary = {} # trade_id -> {peer_a, peer_b, offer_a, offer_b, confirmed_a, confirmed_b, ...creature fields}
 var player_trade_map: Dictionary = {} # peer_id -> trade_id
 var next_trade_id: int = 1
+
+# Universal creature destination chooser (server-side pending state)
+var pending_creature_choices: Dictionary = {} # peer_id -> {creature_data, source_type, source_id}
 
 @rpc("any_peer", "reliable")
 func request_trade(target_peer: int) -> void:
@@ -1229,6 +1274,10 @@ func respond_trade(initiator_peer: int, accepted: bool) -> void:
 		"peer_b": sender,
 		"offer_a": {},
 		"offer_b": {},
+		"offer_creature_a": {},
+		"offer_creature_b": {},
+		"receive_pref_a": {},
+		"receive_pref_b": {},
 		"confirmed_a": false,
 		"confirmed_b": false,
 	}
@@ -1269,6 +1318,107 @@ func update_trade_offer(item_id: String, count: int) -> void:
 	_trade_offer_sync.rpc_id(trade.peer_b, trade.offer_b, trade.offer_a)
 
 @rpc("any_peer", "reliable")
+func update_trade_creature_offer(source: String, index: int, offered: bool) -> void:
+	if not multiplayer.is_server():
+		return
+	var sender = multiplayer.get_remote_sender_id()
+	if not _check_rate_limit(sender):
+		return
+	if sender not in player_trade_map:
+		return
+	var trade_id = player_trade_map[sender]
+	var trade = active_trades.get(trade_id)
+	if trade == null:
+		return
+	var side = "a" if trade.peer_a == sender else "b"
+	var offer_key = "offer_creature_" + side
+
+	if offered:
+		# Validate source and index
+		if source != "party" and source != "storage":
+			return
+		var pool: Array = []
+		if source == "party":
+			pool = player_data_store[sender].get("party", [])
+			# Must keep at least 1 creature in party
+			if pool.size() <= 1:
+				return
+		else:
+			pool = player_data_store[sender].get("creature_storage", [])
+		if index < 0 or index >= pool.size():
+			return
+		var creature = pool[index]
+		var cid = str(creature.get("creature_id", ""))
+		if cid == "":
+			return
+		trade[offer_key] = {"source": source, "index": index, "creature_id": cid}
+	else:
+		trade[offer_key] = {}
+
+	# Reset confirmations
+	trade.confirmed_a = false
+	trade.confirmed_b = false
+	# Sync creature offers to both
+	_sync_trade_creatures(trade)
+
+@rpc("any_peer", "reliable")
+func set_trade_receive_preference(destination: String, swap_party_idx: int) -> void:
+	if not multiplayer.is_server():
+		return
+	var sender = multiplayer.get_remote_sender_id()
+	if not _check_rate_limit(sender):
+		return
+	if sender not in player_trade_map:
+		return
+	var trade_id = player_trade_map[sender]
+	var trade = active_trades.get(trade_id)
+	if trade == null:
+		return
+	var side = "a" if trade.peer_a == sender else "b"
+	var pref_key = "receive_pref_" + side
+
+	if destination == "party":
+		trade[pref_key] = {"destination": "party", "swap_party_idx": swap_party_idx}
+	elif destination == "storage":
+		trade[pref_key] = {"destination": "storage", "swap_party_idx": -1}
+	else:
+		return
+
+	# Reset confirmations
+	trade.confirmed_a = false
+	trade.confirmed_b = false
+	# Sync to both
+	_sync_trade_creatures(trade)
+
+func _sync_trade_creatures(trade: Dictionary) -> void:
+	var oc_a = _resolve_creature_preview(trade.offer_creature_a, int(trade.peer_a))
+	var oc_b = _resolve_creature_preview(trade.offer_creature_b, int(trade.peer_b))
+	_trade_creature_offer_sync.rpc_id(int(trade.peer_a), oc_a, oc_b, trade.receive_pref_a)
+	_trade_creature_offer_sync.rpc_id(int(trade.peer_b), oc_b, oc_a, trade.receive_pref_b)
+	# Also re-sync item offers (since confirmations were reset)
+	_trade_offer_sync.rpc_id(int(trade.peer_a), trade.offer_a, trade.offer_b)
+	_trade_offer_sync.rpc_id(int(trade.peer_b), trade.offer_b, trade.offer_a)
+
+func _resolve_creature_preview(offer_creature: Dictionary, peer_id: int) -> Dictionary:
+	if offer_creature.is_empty():
+		return {}
+	var source: String = str(offer_creature.get("source", ""))
+	var idx: int = int(offer_creature.get("index", -1))
+	var cid: String = str(offer_creature.get("creature_id", ""))
+	if peer_id not in player_data_store:
+		return {}
+	var pool: Array = []
+	if source == "party":
+		pool = player_data_store[peer_id].get("party", [])
+	elif source == "storage":
+		pool = player_data_store[peer_id].get("creature_storage", [])
+	# Re-resolve by creature_id for safety
+	for c in pool:
+		if str(c.get("creature_id", "")) == cid:
+			return {"species_id": c.get("species_id", ""), "nickname": c.get("nickname", ""), "level": c.get("level", 1), "types": c.get("types", []), "creature_id": cid}
+	return {}
+
+@rpc("any_peer", "reliable")
 func confirm_trade() -> void:
 	if not multiplayer.is_server():
 		return
@@ -1306,27 +1456,192 @@ func _execute_trade(trade_id: int) -> void:
 		if not server_has_inventory(peer_b, item_id, int(trade.offer_b[item_id])):
 			_cancel_trade_internal(trade_id, "Trade failed — items no longer available.")
 			return
-	# Execute atomic swap
+
+	# Validate creature offers (re-resolve by creature_id)
+	var creature_a_data: Dictionary = {}
+	var creature_a_src: String = ""
+	var creature_a_idx: int = -1
+	if not trade.offer_creature_a.is_empty():
+		var resolved = _resolve_trade_creature(peer_a, trade.offer_creature_a)
+		if resolved.is_empty():
+			_cancel_trade_internal(trade_id, "Trade failed — offered creature no longer available.")
+			return
+		creature_a_data = resolved["creature"]
+		creature_a_src = resolved["source"]
+		creature_a_idx = resolved["index"]
+	var creature_b_data: Dictionary = {}
+	var creature_b_src: String = ""
+	var creature_b_idx: int = -1
+	if not trade.offer_creature_b.is_empty():
+		var resolved = _resolve_trade_creature(peer_b, trade.offer_creature_b)
+		if resolved.is_empty():
+			_cancel_trade_internal(trade_id, "Trade failed — offered creature no longer available.")
+			return
+		creature_b_data = resolved["creature"]
+		creature_b_src = resolved["source"]
+		creature_b_idx = resolved["index"]
+
+	# Validate receive prefs for creature destination
+	if not creature_b_data.is_empty():
+		# Peer A is receiving creature_b
+		var pref_a = trade.get("receive_pref_a", {})
+		if not _validate_trade_receive_pref(peer_a, pref_a, creature_a_idx if creature_a_src == "party" else -1):
+			_cancel_trade_internal(trade_id, "Trade failed — destination invalid for received creature.")
+			return
+	if not creature_a_data.is_empty():
+		# Peer B is receiving creature_a
+		var pref_b = trade.get("receive_pref_b", {})
+		if not _validate_trade_receive_pref(peer_b, pref_b, creature_b_idx if creature_b_src == "party" else -1):
+			_cancel_trade_internal(trade_id, "Trade failed — destination invalid for received creature.")
+			return
+
+	# === Atomic execution ===
+
+	# 1. Item swap (existing)
 	for item_id in trade.offer_a:
 		server_remove_inventory(peer_a, item_id, int(trade.offer_a[item_id]))
 		server_add_inventory(peer_b, item_id, int(trade.offer_a[item_id]))
 	for item_id in trade.offer_b:
 		server_remove_inventory(peer_b, item_id, int(trade.offer_b[item_id]))
 		server_add_inventory(peer_a, item_id, int(trade.offer_b[item_id]))
-	# Sync inventories
+
+	# 2. Remove offered creatures (remove higher index first if both from same peer's party)
+	if not creature_a_data.is_empty():
+		_remove_creature_from_pool(peer_a, creature_a_src, creature_a_idx)
+	if not creature_b_data.is_empty():
+		# If peer_a already had a creature removed from party, adjust index for peer_b if needed
+		_remove_creature_from_pool(peer_b, creature_b_src, creature_b_idx)
+
+	# 3. Place received creatures using prefs
+	var received_creature_a: Dictionary = {} # what peer_a received
+	var received_creature_b: Dictionary = {} # what peer_b received
+	if not creature_b_data.is_empty():
+		_place_creature_by_pref(peer_a, creature_b_data, trade.get("receive_pref_a", {}))
+		received_creature_a = creature_b_data
+		StatTracker.increment(peer_a, "creatures_traded")
+		StatTracker.unlock_creature_owned(peer_a, str(creature_b_data.get("species_id", "")))
+	if not creature_a_data.is_empty():
+		_place_creature_by_pref(peer_b, creature_a_data, trade.get("receive_pref_b", {}))
+		received_creature_b = creature_a_data
+		StatTracker.increment(peer_b, "creatures_traded")
+		StatTracker.unlock_creature_owned(peer_b, str(creature_a_data.get("species_id", "")))
+
+	# Sync everything
 	_sync_inventory_full.rpc_id(peer_a, player_data_store[peer_a].get("inventory", {}))
 	_sync_inventory_full.rpc_id(peer_b, player_data_store[peer_b].get("inventory", {}))
+	if not creature_a_data.is_empty() or not creature_b_data.is_empty():
+		_sync_party_full.rpc_id(peer_a, player_data_store[peer_a].get("party", []))
+		_sync_party_full.rpc_id(peer_b, player_data_store[peer_b].get("party", []))
+		_sync_storage_full.rpc_id(peer_a, player_data_store[peer_a].get("creature_storage", []), int(player_data_store[peer_a].get("storage_capacity", 10)))
+		_sync_storage_full.rpc_id(peer_b, player_data_store[peer_b].get("creature_storage", []), int(player_data_store[peer_b].get("storage_capacity", 10)))
+
 	# Track trade stats
 	StatTracker.increment(peer_a, "trades_completed")
 	StatTracker.increment(peer_b, "trades_completed")
 	# Notify completion
-	_trade_completed_client.rpc_id(peer_a, trade.offer_b.duplicate())
-	_trade_completed_client.rpc_id(peer_b, trade.offer_a.duplicate())
+	_trade_completed_client.rpc_id(peer_a, trade.offer_b.duplicate(), received_creature_a)
+	_trade_completed_client.rpc_id(peer_b, trade.offer_a.duplicate(), received_creature_b)
 	# Cleanup
 	player_trade_map.erase(peer_a)
 	player_trade_map.erase(peer_b)
 	active_trades.erase(trade_id)
 	print("[Trade] Completed between peer ", peer_a, " and peer ", peer_b)
+
+func _resolve_trade_creature(peer_id: int, offer_creature: Dictionary) -> Dictionary:
+	if peer_id not in player_data_store:
+		return {}
+	var cid: String = str(offer_creature.get("creature_id", ""))
+	var source: String = str(offer_creature.get("source", ""))
+	var pool: Array = []
+	if source == "party":
+		pool = player_data_store[peer_id].get("party", [])
+		# Min-party check
+		if pool.size() <= 1:
+			return {}
+	elif source == "storage":
+		pool = player_data_store[peer_id].get("creature_storage", [])
+	else:
+		return {}
+	for i in range(pool.size()):
+		if str(pool[i].get("creature_id", "")) == cid:
+			return {"creature": pool[i].duplicate(true), "source": source, "index": i}
+	return {}
+
+func _validate_trade_receive_pref(peer_id: int, pref: Dictionary, offered_party_idx: int) -> bool:
+	if pref.is_empty():
+		# Default to party if space, else storage
+		return true
+	var dest: String = str(pref.get("destination", "party"))
+	var party = player_data_store[peer_id].get("party", [])
+	var effective_party_size: int = party.size()
+	if offered_party_idx >= 0:
+		effective_party_size -= 1 # One will be removed
+	if dest == "party":
+		if effective_party_size < PlayerData.MAX_PARTY_SIZE:
+			return true
+		# Party full after removal — need swap
+		var swap_idx: int = int(pref.get("swap_party_idx", -1))
+		if swap_idx < 0 or swap_idx >= party.size():
+			return false
+		if swap_idx == offered_party_idx:
+			return false # Can't swap with the one being traded
+		var storage = player_data_store[peer_id].get("creature_storage", [])
+		var capacity = int(player_data_store[peer_id].get("storage_capacity", 10))
+		return storage.size() < capacity
+	elif dest == "storage":
+		var storage = player_data_store[peer_id].get("creature_storage", [])
+		var capacity = int(player_data_store[peer_id].get("storage_capacity", 10))
+		return storage.size() < capacity
+	return false
+
+func _remove_creature_from_pool(peer_id: int, source: String, index: int) -> void:
+	if source == "party":
+		var party = player_data_store[peer_id].get("party", [])
+		if index >= 0 and index < party.size():
+			party.remove_at(index)
+			player_data_store[peer_id]["party"] = party
+	elif source == "storage":
+		var storage = player_data_store[peer_id].get("creature_storage", [])
+		if index >= 0 and index < storage.size():
+			storage.remove_at(index)
+			player_data_store[peer_id]["creature_storage"] = storage
+
+func _place_creature_by_pref(peer_id: int, creature_data: Dictionary, pref: Dictionary) -> void:
+	var dest: String = str(pref.get("destination", "party"))
+	var party = player_data_store[peer_id].get("party", [])
+
+	if dest == "party":
+		if party.size() < PlayerData.MAX_PARTY_SIZE:
+			party.append(creature_data)
+			player_data_store[peer_id]["party"] = party
+		else:
+			# Swap
+			var swap_idx: int = int(pref.get("swap_party_idx", -1))
+			if swap_idx >= 0 and swap_idx < party.size():
+				var swapped = party[swap_idx]
+				var storage = player_data_store[peer_id].get("creature_storage", [])
+				storage.append(swapped)
+				party[swap_idx] = creature_data
+				player_data_store[peer_id]["party"] = party
+				player_data_store[peer_id]["creature_storage"] = storage
+			else:
+				# Fallback: try storage
+				var storage = player_data_store[peer_id].get("creature_storage", [])
+				storage.append(creature_data)
+				player_data_store[peer_id]["creature_storage"] = storage
+	elif dest == "storage":
+		var storage = player_data_store[peer_id].get("creature_storage", [])
+		storage.append(creature_data)
+		player_data_store[peer_id]["creature_storage"] = storage
+	else:
+		# Fallback: party or storage
+		if party.size() < PlayerData.MAX_PARTY_SIZE:
+			party.append(creature_data)
+			player_data_store[peer_id]["party"] = party
+		else:
+			var storage = player_data_store[peer_id].get("creature_storage", [])
+			storage.append(creature_data)
+			player_data_store[peer_id]["creature_storage"] = storage
 
 @rpc("any_peer", "reliable")
 func cancel_trade() -> void:
@@ -1371,9 +1686,13 @@ func _trade_confirmed_client(who: String) -> void:
 	trade_confirmed.emit(who)
 
 @rpc("authority", "reliable")
-func _trade_completed_client(received_items: Dictionary) -> void:
-	# Update local inventory from server sync (already handled by _sync_inventory_full)
-	trade_completed.emit(received_items)
+func _trade_creature_offer_sync(my_creature: Dictionary, their_creature: Dictionary, my_pref: Dictionary) -> void:
+	trade_creature_offer_updated.emit(my_creature, their_creature)
+	trade_receive_pref_updated.emit(my_pref)
+
+@rpc("authority", "reliable")
+func _trade_completed_client(received_items: Dictionary, received_creature: Dictionary) -> void:
+	trade_completed.emit(received_items, received_creature)
 
 @rpc("authority", "reliable")
 func _trade_cancelled_client(reason: String) -> void:
@@ -1404,6 +1723,125 @@ func _clear_prompts_client() -> void:
 	var hud = get_node_or_null("/root/Main/GameWorld/UI/HUD")
 	if hud and hud.has_method("hide_trainer_prompt"):
 		hud.hide_trainer_prompt()
+
+# === Universal Creature Give (server-side entry point for ALL creature receipts) ===
+
+func server_give_creature(peer_id: int, creature_data: Dictionary, source_type: String, source_id: String) -> void:
+	if peer_id not in player_data_store:
+		return
+	# Track stats
+	var species_id: String = str(creature_data.get("species_id", ""))
+	StatTracker.unlock_creature_owned(peer_id, species_id)
+	StatTracker.increment_species(peer_id, "species_catches", species_id)
+
+	var party = player_data_store[peer_id].get("party", [])
+	if party.size() < PlayerData.MAX_PARTY_SIZE:
+		# Party has space — add directly
+		party.append(creature_data)
+		player_data_store[peer_id]["party"] = party
+		_sync_party_full.rpc_id(peer_id, party)
+		_notify_creature_received.rpc_id(peer_id, creature_data, "party", source_type, source_id)
+		print("[Creature] ", peer_id, " received ", species_id, " to party from ", source_type)
+	else:
+		# Party full — store pending and ask client for destination
+		pending_creature_choices[peer_id] = {
+			"creature_data": creature_data,
+			"source_type": source_type,
+			"source_id": source_id,
+		}
+		var storage = player_data_store[peer_id].get("creature_storage", [])
+		var capacity = int(player_data_store[peer_id].get("storage_capacity", 10))
+		_show_creature_destination_chooser.rpc_id(peer_id, creature_data, party.duplicate(true), storage.size(), capacity)
+		print("[Creature] ", peer_id, " party full, showing destination chooser for ", species_id)
+
+@rpc("any_peer", "reliable")
+func request_creature_destination(choice: String, swap_party_idx: int) -> void:
+	if not multiplayer.is_server():
+		return
+	var sender = multiplayer.get_remote_sender_id()
+	if not _check_rate_limit(sender):
+		return
+	if sender not in pending_creature_choices:
+		return
+	var pending = pending_creature_choices[sender]
+	var creature_data: Dictionary = pending["creature_data"]
+	var source_type: String = str(pending["source_type"])
+	var source_id: String = str(pending["source_id"])
+
+	if choice == "storage":
+		var storage = player_data_store[sender].get("creature_storage", [])
+		var capacity = int(player_data_store[sender].get("storage_capacity", 10))
+		if storage.size() >= capacity:
+			_creature_destination_error.rpc_id(sender, "Storage is full!")
+			return
+		storage.append(creature_data)
+		player_data_store[sender]["creature_storage"] = storage
+		pending_creature_choices.erase(sender)
+		_sync_storage_full.rpc_id(sender, storage, capacity)
+		_notify_creature_received.rpc_id(sender, creature_data, "storage", source_type, source_id)
+		print("[Creature] ", sender, " sent ", creature_data.get("species_id", ""), " to storage")
+
+	elif choice == "swap":
+		var party = player_data_store[sender].get("party", [])
+		var storage = player_data_store[sender].get("creature_storage", [])
+		var capacity = int(player_data_store[sender].get("storage_capacity", 10))
+		if swap_party_idx < 0 or swap_party_idx >= party.size():
+			_creature_destination_error.rpc_id(sender, "Invalid party slot.")
+			return
+		if party.size() <= 1:
+			_creature_destination_error.rpc_id(sender, "Must keep at least 1 creature in party.")
+			return
+		if storage.size() >= capacity:
+			_creature_destination_error.rpc_id(sender, "Storage is full, cannot swap.")
+			return
+		# Move party creature to storage, put incoming in party slot
+		var swapped_out = party[swap_party_idx]
+		storage.append(swapped_out)
+		party[swap_party_idx] = creature_data
+		player_data_store[sender]["party"] = party
+		player_data_store[sender]["creature_storage"] = storage
+		pending_creature_choices.erase(sender)
+		_sync_party_full.rpc_id(sender, party)
+		_sync_storage_full.rpc_id(sender, storage, capacity)
+		_notify_creature_received.rpc_id(sender, creature_data, "party", source_type, source_id)
+		print("[Creature] ", sender, " swapped party slot ", swap_party_idx, " for ", creature_data.get("species_id", ""))
+
+@rpc("any_peer", "reliable")
+func cancel_creature_destination() -> void:
+	if not multiplayer.is_server():
+		return
+	var sender = multiplayer.get_remote_sender_id()
+	if sender in pending_creature_choices:
+		print("[Creature] ", sender, " cancelled creature destination — creature lost")
+		pending_creature_choices.erase(sender)
+
+@rpc("authority", "reliable")
+func _show_creature_destination_chooser(creature_data: Dictionary, current_party: Array, storage_size: int, storage_cap: int) -> void:
+	creature_destination_requested.emit(creature_data, current_party, storage_size, storage_cap)
+
+@rpc("authority", "reliable")
+func _creature_destination_error(msg: String) -> void:
+	var hud = get_node_or_null("/root/Main/GameWorld/UI/HUD")
+	if hud and hud.has_method("show_toast"):
+		hud.show_toast("Error: " + msg)
+
+@rpc("authority", "reliable")
+func _notify_creature_received(creature_data: Dictionary, destination: String, source_type: String, _source_id: String) -> void:
+	var species_id: String = str(creature_data.get("species_id", ""))
+	DataRegistry.ensure_loaded()
+	var species = DataRegistry.get_species(species_id)
+	var display_name: String = species.display_name if species else species_id
+	var hud = get_node_or_null("/root/Main/GameWorld/UI/HUD")
+	if hud and hud.has_method("show_toast"):
+		var dest_text = "party" if destination == "party" else "storage"
+		var source_text = ""
+		match source_type:
+			"craft": source_text = "Crafted "
+			"npc_trade": source_text = "Received "
+			"npc_gift": source_text = "Gift: "
+			"trade": source_text = "Traded: "
+			_: source_text = "Received "
+		hud.show_toast(source_text + display_name + " sent to " + dest_text + "!")
 
 # === Bond Points — Battle Win ===
 

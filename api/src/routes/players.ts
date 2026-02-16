@@ -79,6 +79,78 @@ export function createPlayerRoutes(db: Db): Router {
     }
   });
 
+  // Atomic social field updates (for offline player mutations)
+  router.patch("/:id/social", async (req, res) => {
+    try {
+      const playerId = req.params.id;
+      const ops = req.body;
+      if (!ops || typeof ops !== "object") {
+        return res.status(400).json({ error: "Request body must be an object of operations" });
+      }
+
+      const updateDoc: Record<string, any> = {};
+      const pullDoc: Record<string, any> = {};
+
+      // $addToSet operations
+      if (ops.add_friend && typeof ops.add_friend === "string") {
+        updateDoc["$addToSet"] = updateDoc["$addToSet"] || {};
+        updateDoc["$addToSet"]["social.friends"] = ops.add_friend;
+      }
+      if (ops.add_blocked && typeof ops.add_blocked === "string") {
+        updateDoc["$addToSet"] = updateDoc["$addToSet"] || {};
+        updateDoc["$addToSet"]["social.blocked"] = ops.add_blocked;
+      }
+      if (ops.add_incoming_request && typeof ops.add_incoming_request === "object") {
+        updateDoc["$addToSet"] = updateDoc["$addToSet"] || {};
+        updateDoc["$addToSet"]["social.incoming_requests"] = ops.add_incoming_request;
+      }
+      if (ops.add_outgoing_request && typeof ops.add_outgoing_request === "object") {
+        updateDoc["$addToSet"] = updateDoc["$addToSet"] || {};
+        updateDoc["$addToSet"]["social.outgoing_requests"] = ops.add_outgoing_request;
+      }
+
+      // $pull operations
+      if (ops.remove_friend && typeof ops.remove_friend === "string") {
+        pullDoc["social.friends"] = ops.remove_friend;
+      }
+      if (ops.remove_blocked && typeof ops.remove_blocked === "string") {
+        pullDoc["social.blocked"] = ops.remove_blocked;
+      }
+      if (ops.remove_incoming_request_from && typeof ops.remove_incoming_request_from === "string") {
+        pullDoc["social.incoming_requests"] = { from_id: ops.remove_incoming_request_from };
+      }
+      if (ops.remove_outgoing_request_to && typeof ops.remove_outgoing_request_to === "string") {
+        pullDoc["social.outgoing_requests"] = { to_id: ops.remove_outgoing_request_to };
+      }
+
+      // Build the final update pipeline — MongoDB doesn't allow $addToSet and $pull in the same update
+      // so we run them sequentially if both are present
+      const player = await col.findOne({ player_id: playerId });
+      if (!player) {
+        return res.status(404).json({ error: "Player not found" });
+      }
+
+      // Ensure social sub-document exists
+      if (!player.social) {
+        await col.updateOne(
+          { player_id: playerId },
+          { $set: { social: { friends: [], blocked: [], incoming_requests: [], outgoing_requests: [] } } }
+        );
+      }
+
+      if (Object.keys(updateDoc).length > 0) {
+        await col.updateOne({ player_id: playerId }, updateDoc);
+      }
+      if (Object.keys(pullDoc).length > 0) {
+        await col.updateOne({ player_id: playerId }, { $pull: pullDoc });
+      }
+
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ error: String(err) });
+    }
+  });
+
   // Delete player by UUID
   router.delete("/:id", async (req, res) => {
     try {

@@ -350,6 +350,89 @@ func _load_world_file() -> Dictionary:
 func load_world() -> Dictionary:
 	return _load_world_file()
 
+# === Social PATCH (for offline player mutations) ===
+
+## Atomically update social fields for an offline player via PATCH /api/players/:id/social.
+## operations: Dictionary of atomic ops like {add_friend: "uuid", remove_incoming_request_from: "uuid", ...}
+## Falls back to file I/O if no API.
+func update_player_social(player_id: String, operations: Dictionary) -> void:
+	if use_api:
+		_patch_social_api(player_id, operations)
+	else:
+		_patch_social_file(player_id, operations)
+
+func _patch_social_api(player_id: String, operations: Dictionary) -> void:
+	var http = _get_free_http()
+	if http == null:
+		return
+	var url = api_base_url + "/players/" + player_id.uri_encode() + "/social"
+	var json_str = JSON.stringify(operations)
+	var headers = ["Content-Type: application/json"]
+	var err = http.request(url, headers, HTTPClient.METHOD_PATCH, json_str)
+	if err != OK:
+		print("[SaveManager] Failed to PATCH social for player ", player_id, " (err=", err, ")")
+
+func _patch_social_file(player_id: String, operations: Dictionary) -> void:
+	# File fallback: find player file by scanning save dir, load, modify social, write back
+	if save_base_path == "":
+		_init_file_fallback()
+	var dir = DirAccess.open(save_base_path + "players")
+	if dir == null:
+		return
+	dir.list_dir_begin()
+	var fname = dir.get_next()
+	while fname != "":
+		if fname.ends_with(".json"):
+			var path = save_base_path + "players/" + fname
+			var file = FileAccess.open(path, FileAccess.READ)
+			if file:
+				var text = file.get_as_text()
+				file.close()
+				var json = JSON.new()
+				if json.parse(text) == OK and json.data is Dictionary:
+					var data = json.data as Dictionary
+					if str(data.get("player_id", "")) == player_id:
+						_apply_social_ops(data, operations)
+						var out = FileAccess.open(path, FileAccess.WRITE)
+						if out:
+							out.store_string(JSON.stringify(data, "\t"))
+							out.close()
+						return
+		fname = dir.get_next()
+
+func _apply_social_ops(data: Dictionary, ops: Dictionary) -> void:
+	if not data.has("social"):
+		data["social"] = {"friends": [], "blocked": [], "incoming_requests": [], "outgoing_requests": []}
+	var social = data["social"]
+	if ops.has("add_friend"):
+		if ops["add_friend"] not in social["friends"]:
+			social["friends"].append(ops["add_friend"])
+	if ops.has("remove_friend"):
+		social["friends"].erase(ops["remove_friend"])
+	if ops.has("add_blocked"):
+		if ops["add_blocked"] not in social["blocked"]:
+			social["blocked"].append(ops["add_blocked"])
+	if ops.has("remove_blocked"):
+		social["blocked"].erase(ops["remove_blocked"])
+	if ops.has("add_incoming_request"):
+		social["incoming_requests"].append(ops["add_incoming_request"])
+	if ops.has("remove_incoming_request_from"):
+		var from_id = str(ops["remove_incoming_request_from"])
+		var i = social["incoming_requests"].size() - 1
+		while i >= 0:
+			if str(social["incoming_requests"][i].get("from_id", "")) == from_id:
+				social["incoming_requests"].remove_at(i)
+			i -= 1
+	if ops.has("add_outgoing_request"):
+		social["outgoing_requests"].append(ops["add_outgoing_request"])
+	if ops.has("remove_outgoing_request_to"):
+		var to_id = str(ops["remove_outgoing_request_to"])
+		var i = social["outgoing_requests"].size() - 1
+		while i >= 0:
+			if str(social["outgoing_requests"][i].get("to_id", "")) == to_id:
+				social["outgoing_requests"].remove_at(i)
+			i -= 1
+
 # === UUID Generation ===
 
 func _generate_uuid() -> String:

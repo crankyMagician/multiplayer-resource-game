@@ -148,4 +148,18 @@ npc_gifts = [{
 "quantity": 5,
 "message": "My family's secret hot sauce recipe. Burns like the forge itself!"
 }]
+creature_trades = [{
+"creature_species_id": "sear_slug",
+"creature_level": 12,
+"creature_nickname": "Ember's Flame",
+"cost_items": { "chili_pepper": 10, "spicy_essence": 5 },
+"cost_money": 800,
+"required_friendship": "love",
+"required_season": "",
+"required_quest_id": "",
+"dialogue_text": "This Sear Slug has been keeping my forge hot for years. But I think you've earned the right to have it. It'll need some peppers and frost essence for the transfer...",
+"dialogue_accept_label": "I'm honored, Ember!",
+"dialogue_decline_label": "Maybe when I'm ready.",
+"one_time": true
+}]
 occupation = "Blacksmith"

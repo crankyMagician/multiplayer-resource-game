@@ -36,14 +36,6 @@ func request_craft(recipe_id: String) -> void:
 			_craft_result_client.rpc_id(sender, false, "", "Missing required tool")
 			return
 
-	# Check party space for creature recipes
-	if recipe.result_species_id != "":
-		if sender in NetworkManager.player_data_store:
-			var party = NetworkManager.player_data_store[sender].get("party", [])
-			if party.size() >= PlayerData.MAX_PARTY_SIZE:
-				_craft_result_client.rpc_id(sender, false, "", "Party is full")
-				return
-
 	# === All validation passed — deduct and produce ===
 
 	# Deduct ingredients
@@ -59,7 +51,7 @@ func request_craft(recipe_id: String) -> void:
 	var result_name = ""
 
 	if recipe.result_species_id != "":
-		# Creature recipe
+		# Creature recipe — use universal server_give_creature (handles party-full)
 		var species = DataRegistry.get_species(recipe.result_species_id)
 		if species == null:
 			_craft_result_client.rpc_id(sender, false, "", "Species not found")
@@ -67,15 +59,9 @@ func request_craft(recipe_id: String) -> void:
 		var creature = CreatureInstance.create_from_species(species, 1)
 		var creature_data = creature.to_dict()
 		creature_data["creature_id"] = NetworkManager._generate_uuid()
-		if sender in NetworkManager.player_data_store:
-			var server_party = NetworkManager.player_data_store[sender].get("party", [])
-			server_party.append(creature_data)
-			NetworkManager.player_data_store[sender]["party"] = server_party
-			NetworkManager._sync_party_full.rpc_id(sender, server_party)
 		result_name = species.display_name
-		StatTracker.unlock_creature_owned(sender, recipe.result_species_id)
-		StatTracker.increment_species(sender, "species_catches", recipe.result_species_id)
-		_craft_result_client.rpc_id(sender, true, result_name, result_name + " joined your party!")
+		NetworkManager.server_give_creature(sender, creature_data, "craft", recipe_id)
+		_craft_result_client.rpc_id(sender, true, result_name, result_name + " has been crafted!")
 
 	elif recipe.result_item_id != "":
 		# Held item recipe

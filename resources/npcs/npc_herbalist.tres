@@ -148,4 +148,18 @@ npc_gifts = [{
 "quantity": 5,
 "message": "Rare moonpetal mint — I've only shared this with one other person. You."
 }]
+creature_trades = [{
+"creature_species_id": "basil_sprite",
+"creature_level": 10,
+"creature_nickname": "Sage's Sprout",
+"cost_items": { "herb_leaf": 15 },
+"cost_money": 300,
+"required_friendship": "like",
+"required_season": "summer",
+"required_quest_id": "",
+"dialogue_text": "This Basil Sprite has been my garden companion for years. I think it would be happier adventuring with you. Some herbs and a small fee would help me start a new seedling...",
+"dialogue_accept_label": "I'll take great care of it!",
+"dialogue_decline_label": "Not right now, thanks.",
+"one_time": true
+}]
 occupation = "Herbalist"
