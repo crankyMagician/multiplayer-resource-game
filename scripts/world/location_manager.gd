@@ -51,4 +51,8 @@ func _physics_process(_delta: float) -> void:
 				discovered.append(loc_def.location_id)
 				NetworkManager.player_data_store[peer_id]["discovered_locations"] = discovered
 				NetworkManager._notify_location_discovered.rpc_id(peer_id, loc_def.location_id, loc_def.display_name)
+				# Quest progress: discover_location
+				var quest_mgr = get_node_or_null("/root/Main/GameWorld/QuestManager")
+				if quest_mgr:
+					quest_mgr.notify_progress(peer_id, "discover_location", loc_def.location_id)
 				print("[LocationManager] Player ", peer_id, " discovered: ", loc_def.display_name)

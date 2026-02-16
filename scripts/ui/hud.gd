@@ -13,6 +13,7 @@ var buff_label: Label = null
 var location_label: Label = null
 var trainer_prompt_label: Label = null
 var _trainer_prompt_timer: float = 0.0
+var quest_tracker_panel: VBoxContainer = null
 
 func _ready() -> void:
 	PlayerData.tool_changed.connect(_on_tool_changed)
@@ -52,6 +53,14 @@ func _ready() -> void:
 	trainer_prompt_label.anchor_top = 0.82
 	trainer_prompt_label.anchor_bottom = 0.88
 	add_child(trainer_prompt_label)
+	# Quest tracker panel (bottom-right)
+	quest_tracker_panel = VBoxContainer.new()
+	quest_tracker_panel.anchor_left = 0.7
+	quest_tracker_panel.anchor_right = 0.98
+	quest_tracker_panel.anchor_top = 0.6
+	quest_tracker_panel.anchor_bottom = 0.78
+	add_child(quest_tracker_panel)
+	PlayerData.quests_changed.connect(_update_quest_tracker)
 
 func _process(delta: float) -> void:
 	# Auto-hide stale trainer prompt
@@ -148,6 +157,68 @@ func hide_trainer_prompt() -> void:
 	if trainer_prompt_label:
 		trainer_prompt_label.visible = false
 		_trainer_prompt_timer = 0.0
+
+func _update_quest_tracker() -> void:
+	if quest_tracker_panel == null:
+		return
+	for child in quest_tracker_panel.get_children():
+		child.queue_free()
+	# Find tracked quest from QuestLogUI, or show first active quest
+	var quest_log = get_node_or_null("/root/Main/GameWorld/UI/QuestLogUI")
+	var tracked_id: String = ""
+	if quest_log and "tracked_quest_id" in quest_log:
+		tracked_id = quest_log.tracked_quest_id
+	# Fallback: show first active quest
+	if tracked_id == "" or tracked_id not in PlayerData.active_quests:
+		for qid in PlayerData.active_quests:
+			tracked_id = qid
+			break
+	if tracked_id == "" or tracked_id not in PlayerData.active_quests:
+		return
+	DataRegistry.ensure_loaded()
+	var qdef = DataRegistry.get_quest(tracked_id)
+	if qdef == null:
+		return
+	var state = PlayerData.active_quests[tracked_id]
+	var obj_states = state.get("objectives", [])
+	# Quest name
+	var name_label = Label.new()
+	name_label.text = qdef.display_name
+	name_label.add_theme_font_size_override("font_size", 14)
+	name_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
+	quest_tracker_panel.add_child(name_label)
+	# Objectives
+	for i in range(qdef.objectives.size()):
+		var obj = qdef.objectives[i]
+		var target_count = int(obj.get("target_count", 1))
+		var progress = 0
+		if i < obj_states.size():
+			progress = int(obj_states[i].get("progress", 0))
+		var obj_label = Label.new()
+		var check = "[x]" if progress >= target_count else "[ ]"
+		obj_label.text = check + " " + str(obj.get("description", "")) + " " + str(progress) + "/" + str(target_count)
+		obj_label.add_theme_font_size_override("font_size", 12)
+		if progress >= target_count:
+			obj_label.add_theme_color_override("font_color", Color(0.3, 0.9, 0.3))
+		quest_tracker_panel.add_child(obj_label)
+
+func show_toast(message: String) -> void:
+	var toast = Label.new()
+	toast.text = message
+	toast.add_theme_font_size_override("font_size", 18)
+	toast.add_theme_color_override("font_color", Color(1.0, 1.0, 0.6))
+	toast.add_theme_constant_override("shadow_offset_x", 1)
+	toast.add_theme_constant_override("shadow_offset_y", 1)
+	toast.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.7))
+	toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	toast.anchor_left = 0.2
+	toast.anchor_right = 0.8
+	toast.anchor_top = 0.75
+	toast.anchor_bottom = 0.8
+	add_child(toast)
+	var tween = create_tween()
+	tween.tween_property(toast, "modulate:a", 0.0, 2.0).set_delay(1.0)
+	tween.tween_callback(toast.queue_free)
 
 func show_grass_indicator(visible_state: bool) -> void:
 	grass_indicator.visible = visible_state

@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="QuestDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/quest_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+quest_id = "ms_02_first_harvest"
+display_name = "Fresh Bread"
+description = "Baker Brioche needs wheat for a special batch of bread. Harvest 3 wheat from the farm and deliver them."
+category = "main_story"
+quest_giver_npc_id = "npc_baker"
+prereq_quest_ids = ["ms_01_meet_baker"]
+prereq_friendship = {}
+prereq_locations = []
+prereq_season = ""
+prereq_weather = ""
+prereq_main_story_quest_id = ""
+objectives = [{
+"type": "deliver",
+"target_id": "wheat",
+"target_count": 3,
+"description": "Deliver 3 Wheat to Baker Brioche",
+"deliver_to_npc": "npc_baker",
+"consumes_items": true
+}]
+reward_money = 100
+reward_items = {"herb_basil": 5}
+reward_friendship = {"npc_baker": 10}
+reward_recipe_scroll_id = ""
+reward_unlock_flag = ""
+next_quest_id = "ms_03_first_battle"
+chapter = 1
+sort_order = 2
+offer_dialogue = "I'm running low on wheat! Could you bring me 3 from the community farm?"
+in_progress_dialogue = "Still waiting on that wheat. The farm is to the east!"
+completion_dialogue = "Perfect wheat! This will make wonderful bread. Now, have you explored the wild zones yet?"

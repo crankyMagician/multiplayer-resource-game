@@ -137,6 +137,13 @@ func _physics_process(delta: float) -> void:
 	if not is_on_floor():
 		velocity.y -= GRAVITY * delta
 
+	# Busy lock: decay horizontal velocity, skip input
+	if is_busy:
+		velocity.x = move_toward(velocity.x, 0, SPEED * delta * 5)
+		velocity.z = move_toward(velocity.z, 0, SPEED * delta * 5)
+		move_and_slide()
+		return
+
 	# Calculate movement direction based on camera yaw
 	var forward = Vector3(sin(camera_yaw), 0, cos(camera_yaw))
 	var right = Vector3(cos(camera_yaw), 0, -sin(camera_yaw))

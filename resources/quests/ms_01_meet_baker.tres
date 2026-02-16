@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="QuestDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/quest_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+quest_id = "ms_01_meet_baker"
+display_name = "A Warm Welcome"
+description = "Baker Brioche is known for welcoming newcomers. Go introduce yourself!"
+category = "main_story"
+quest_giver_npc_id = "npc_baker"
+prereq_quest_ids = []
+prereq_friendship = {}
+prereq_locations = []
+prereq_season = ""
+prereq_weather = ""
+prereq_main_story_quest_id = ""
+objectives = [{
+"type": "talk_to",
+"target_id": "npc_baker",
+"target_count": 1,
+"description": "Talk to Baker Brioche"
+}]
+reward_money = 50
+reward_items = {}
+reward_friendship = {"npc_baker": 5}
+reward_recipe_scroll_id = ""
+reward_unlock_flag = ""
+next_quest_id = "ms_02_first_harvest"
+chapter = 1
+sort_order = 1
+offer_dialogue = "Welcome to town, newcomer! I'm Baker Brioche. There's always room for one more at my counter."
+in_progress_dialogue = "Don't be shy! Come say hello properly."
+completion_dialogue = "That's the spirit! Here's a little something to get you started. Now, about that wheat..."

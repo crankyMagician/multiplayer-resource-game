@@ -101,6 +101,10 @@ func request_craft(recipe_id: String) -> void:
 
 	# Sync inventory after crafting
 	NetworkManager._sync_inventory_full.rpc_id(sender, NetworkManager.player_data_store[sender].get("inventory", {}))
+	# Quest progress: craft objective
+	var quest_mgr = get_node_or_null("/root/Main/GameWorld/QuestManager")
+	if quest_mgr:
+		quest_mgr.notify_progress(sender, "craft", recipe_id)
 	print("[Craft] ", sender, " crafted: ", result_name)
 
 @rpc("authority", "reliable")

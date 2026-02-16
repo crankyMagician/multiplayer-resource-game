@@ -226,6 +226,24 @@ See `docs/docker-build.md` for full build instructions (two-phase engine + game 
 - **No class_name on SocialManager** — inlined static methods in dialogue_ui.gd and test files to avoid autoload reference issues.
 - **Files**: `scripts/data/npc_def.gd`, `scripts/world/social_npc.gd`, `scripts/world/social_manager.gd`, `scripts/ui/dialogue_ui.gd`, `scenes/ui/dialogue_ui.tscn`, `resources/npcs/*.tres` (5), `test/unit/world/test_social_system.gd`, `test/integration/test_social_flow.gd`
 
+## Quest System
+- **Data-driven**: QuestDef Resource (`scripts/data/quest_def.gd`, `class_name QuestDef`) with quest_id, objectives array, prereqs, rewards, NPC dialogue, chain/story fields
+- **6 quest .tres resources**: 3 main story (ms_01_meet_baker, ms_02_first_harvest, ms_03_first_battle), 1 side (side_herbalist_remedy), 1 daily (daily_creature_patrol), 1 weekly (weekly_forager)
+- **Categories**: `main_story`, `side`, `daily`, `weekly`. Daily/weekly auto-reset via SeasonManager day_changed signal.
+- **QuestManager** (`scripts/world/quest_manager.gd`): Server-authoritative, no `class_name` (follows SocialManager pattern). Handles accept, progress, completion, abandonment, daily/weekly resets.
+- **Objective types**: Cumulative (defeat_trainer, defeat_creature, defeat_pvp, discover_location, talk_to, craft, collect without consumes_items) tracked via `notify_progress()`. Inventory-check (deliver, collect with consumes_items=true) validated at turn-in.
+- **Integration hooks**: `notify_progress()` called from NetworkManager (collect), BattleManager (defeat_trainer/creature/pvp), CraftingSystem (craft), LocationManager (discover_location), SocialManager (talk_to)
+- **Prerequisites**: prereq_quest_ids, prereq_friendship, prereq_locations, prereq_season, prereq_weather, prereq_main_story_quest_id — all checked in `check_prereqs()`
+- **Rewards**: money, items, friendship points, recipe scrolls, unlock flags. Granted atomically in `handle_complete_quest()`. Delivery items consumed at turn-in.
+- **Quest chains**: `next_quest_id` auto-offers next quest on completion. `chapter` + `sort_order` for main story grouping.
+- **NPC quest indicators**: SocialNPC shows "!" (available quests) or "?" (completable quests) Label3D above head. Updated client-side in `_process()`.
+- **QuestLogUI** (`scripts/ui/quest_log_ui.gd`): CanvasLayer (layer 10), J key toggle. Tabs: Active/Completed/Main Story. Shows objectives, rewards, action buttons (Track/Abandon/Complete). Also handles NPC quest offer/turn-in via `show_npc_quests()`. Sets busy state.
+- **HUD quest tracker**: Bottom-right VBoxContainer showing tracked quest name + objective progress. Connected to `PlayerData.quests_changed`.
+- **Player state**: `player_data_store[peer_id]["quests"]` = `{active: {}, completed: {}, daily_reset_day, weekly_reset_day, unlock_flags: []}`. Backfilled in `_finalize_join()`. Client mirror in PlayerData: `active_quests`, `completed_quests`, `unlock_flags`, signal `quests_changed`.
+- **RPCs**: Client→Server: `request_available_quests`, `request_accept_quest`, `request_complete_quest`, `request_abandon_quest`. Server→Client: `_send_available_quests`, `_sync_quest_state`, `_notify_quest_progress`, `_notify_quest_complete`, `_offer_next_quest`.
+- **Exploit prevention**: Server-only progress, atomic rewards, duplicate completion check, delivery re-validation at turn-in, main_story cannot be abandoned.
+- **Files**: `scripts/data/quest_def.gd`, `scripts/world/quest_manager.gd`, `scripts/ui/quest_log_ui.gd`, `scenes/ui/quest_log_ui.tscn`, `resources/quests/*.tres` (6), `test/unit/world/test_quest_system.gd`, `test/integration/test_quest_flow.gd`
+
 ## Networking Rules (IMPORTANT)
 
 This is a server-authoritative multiplayer game. **Every gameplay change — new feature, new action, new resource, any UI that affects game state — must be evaluated for networking impact.** If the user does not specify whether a change should be networked, always ask before implementing.
@@ -256,6 +274,7 @@ This is a server-authoritative multiplayer game. **Every gameplay change — new
 | Player trading | Server (atomic swap in `_execute_trade`) | RPCs for offer updates, confirm, cancel |
 | Busy state | Server (`request_set_busy` RPC) | StateSync (always mode) on player node |
 | NPC friendship | Server (SocialManager) | RPCs: `_sync_npc_friendships`, `_send_dialogue`, `_gift_response` |
+| Quest system | Server (QuestManager) | RPCs: `_sync_quest_state`, `_notify_quest_progress`, `_notify_quest_complete` |
 | Location discovery | Server (LocationManager) | `_notify_location_discovered` RPC to client |
 | Compass/minimap rendering | Client only | Reads local camera_yaw + cached LocationDef positions |
 | Save/load | Server only (SaveManager → Express API → MongoDB) | Data sent to client via `_receive_player_data` |
@@ -320,7 +339,7 @@ See `docs/k8s-deployment.md` for full K8s deployment details (3 deployments, SSH
 
 ### Run Commands
 ```bash
-# GDScript tests (GUT) — 459 tests
+# GDScript tests (GUT) — 512 tests
 '/Applications/Mechanical Turk.app/Contents/MacOS/Mechanical Turk' --path . --headless -s addons/gut/gut_cmdln.gd -gexit
 
 # Express API tests (Vitest) — 21 tests
@@ -350,7 +369,7 @@ cd api && npx vitest run
 - **New battle mechanic** (move effect, ability, held item): Add tests to the relevant `test/unit/battle/` file. Update `registry_seeder.gd` if new data entries are needed.
 - **New data type or resource**: Add serialization round-trip tests in `test/unit/data/`.
 - **New API endpoint**: Add tests in `api/test/`. Use the existing `setupTestDb()` pattern.
-- **Run tests before committing**: All 459 tests must pass.
+- **Run tests before committing**: All 512 tests must pass.
 
 ## MCP Testing Workflow
 See `docs/mcp-testing.md` for full MCP testing guide (editor bridge, runtime bridge sessions, caveats, port conflicts).
@@ -359,18 +378,18 @@ See `docs/mcp-testing.md` for full MCP testing guide (editor bridge, runtime bri
 - `api/` — Express API service (TypeScript): `src/index.ts`, `src/routes/players.ts`, `src/routes/world.ts`, `Dockerfile`
 - `k8s/` — Kubernetes manifests: `mongodb.yaml`, `api-service.yaml`, `deployment.yaml`, `service.yaml`
 - `scripts/autoload/` — NetworkManager, GameManager, PlayerData, SaveManager
-- `scripts/data/` — 18 Resource class definitions (+ food_def, tool_def, recipe_scroll_def, battle_item_def, shop_def, npc_def, location_def, calendar_events)
+- `scripts/data/` — 19 Resource class definitions (+ food_def, tool_def, recipe_scroll_def, battle_item_def, shop_def, npc_def, location_def, calendar_events, quest_def)
 - `scripts/battle/` — BattleManager, BattleCalculator, StatusEffects, FieldEffects, AbilityEffects, HeldItemEffects, BattleAI
-- `scripts/world/` — FarmPlot, FarmManager, SeasonManager, TallGrass, EncounterManager, GameWorld, TrainerNPC, CraftingStation, RecipePickup, WorldItem, WorldItemManager, RestaurantManager, RestaurantInterior, RestaurantDoor, ShopNPC, SocialNPC, SocialManager, LocationManager, CalendarBoard
+- `scripts/world/` — FarmPlot, FarmManager, SeasonManager, TallGrass, EncounterManager, GameWorld, TrainerNPC, CraftingStation, RecipePickup, WorldItem, WorldItemManager, RestaurantManager, RestaurantInterior, RestaurantDoor, ShopNPC, SocialNPC, SocialManager, LocationManager, CalendarBoard, QuestManager
 - `scripts/crafting/` — CraftingSystem
 - `scripts/player/` — PlayerController, PlayerInteraction
-- `scripts/ui/` — ConnectUI, HUD (calendar + weather + trainer prompt + discovery toast), BattleUI, CraftingUI (station-filtered), InventoryUI (tabbed), PartyUI (networked equip), PvPChallengeUI, TrainerDialogueUI (gatekeeper accept/decline + post-battle dialogue), ShopUI (buy/sell tabs), TradeUI (offer/confirm panels), DialogueUI (NPC social dialogue + gift panel), CompassUI (directional compass strip), MinimapUI (2D top-down map), PauseOverlay (Esc/M key map overlay), CalendarUI (12-month event calendar)
+- `scripts/ui/` — ConnectUI, HUD (calendar + weather + trainer prompt + discovery toast), BattleUI, CraftingUI (station-filtered), InventoryUI (tabbed), PartyUI (networked equip), PvPChallengeUI, TrainerDialogueUI (gatekeeper accept/decline + post-battle dialogue), ShopUI (buy/sell tabs), TradeUI (offer/confirm panels), DialogueUI (NPC social dialogue + gift panel), CompassUI (directional compass strip), MinimapUI (2D top-down map), PauseOverlay (Esc/M key map overlay), CalendarUI (12-month event calendar), QuestLogUI (J key quest log + NPC quest offers)
 - `test/helpers/` — MockMove, BattleFactory, RegistrySeeder, BattleTestScene
 - `test/unit/battle/` — test_battle_calculator, test_battle_calculator_rng, test_status_effects, test_field_effects, test_ability_effects, test_held_item_effects, test_battle_ai, test_battle_items
 - `test/unit/data/` — test_creature_instance, test_creature_instance_creation, test_battle_item_def
-- `test/unit/world/` — test_season_manager, test_shop_system, test_social_system, test_location_system, test_calendar_events
+- `test/unit/world/` — test_season_manager, test_shop_system, test_social_system, test_location_system, test_calendar_events, test_quest_system
 - `test/unit/ui/` — test_compass_math
 - `test/unit/crafting/` — test_crafting_validation
-- `test/integration/` — test_battle_turn, test_battle_pvp, test_player_trading, test_social_flow
+- `test/integration/` — test_battle_turn, test_battle_pvp, test_player_trading, test_social_flow, test_quest_flow
 - `api/test/` — players.test.ts, world.test.ts, health.test.ts
-- `resources/` — ingredients/ (16), creatures/ (21), moves/ (57), encounters/ (6), recipes/ (58), abilities/ (20), held_items/ (18), trainers/ (7), foods/ (12), tools/ (12), recipe_scrolls/ (13), battle_items/ (6), shops/ (3), npcs/ (5), locations/ (28)
+- `resources/` — ingredients/ (16), creatures/ (21), moves/ (57), encounters/ (6), recipes/ (58), abilities/ (20), held_items/ (18), trainers/ (7), foods/ (12), tools/ (12), recipe_scrolls/ (13), battle_items/ (6), shops/ (3), npcs/ (5), locations/ (28), quests/ (6)

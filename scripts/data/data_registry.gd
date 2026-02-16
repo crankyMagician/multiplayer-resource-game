@@ -17,6 +17,7 @@ static var shops: Dictionary = {} # id -> ShopDef
 static var battle_items: Dictionary = {} # id -> BattleItemDef
 static var npcs: Dictionary = {} # id -> NPCDef
 static var locations: Dictionary = {} # id -> LocationDef
+static var quests: Dictionary = {} # id -> QuestDef
 
 static var _loaded: bool = false
 
@@ -39,7 +40,8 @@ static func ensure_loaded() -> void:
 	_load_all("res://resources/battle_items/", battle_items, "item_id")
 	_load_all("res://resources/npcs/", npcs, "npc_id")
 	_load_all("res://resources/locations/", locations, "location_id")
-	print("DataRegistry loaded: ", ingredients.size(), " ingredients, ", species.size(), " species, ", moves.size(), " moves, ", encounter_tables.size(), " encounter tables, ", recipes.size(), " recipes, ", abilities.size(), " abilities, ", held_items.size(), " held items, ", trainers.size(), " trainers, ", foods.size(), " foods, ", tools.size(), " tools, ", recipe_scrolls.size(), " recipe scrolls, ", shops.size(), " shops, ", battle_items.size(), " battle items, ", npcs.size(), " npcs, ", locations.size(), " locations")
+	_load_all("res://resources/quests/", quests, "quest_id")
+	print("DataRegistry loaded: ", ingredients.size(), " ingredients, ", species.size(), " species, ", moves.size(), " moves, ", encounter_tables.size(), " encounter tables, ", recipes.size(), " recipes, ", abilities.size(), " abilities, ", held_items.size(), " held items, ", trainers.size(), " trainers, ", foods.size(), " foods, ", tools.size(), " tools, ", recipe_scrolls.size(), " recipe scrolls, ", shops.size(), " shops, ", battle_items.size(), " battle items, ", npcs.size(), " npcs, ", locations.size(), " locations, ", quests.size(), " quests")
 
 static func _load_all(path: String, registry: Dictionary, id_field: String) -> void:
 	var dir = DirAccess.open(path)
@@ -123,6 +125,10 @@ static func get_npc(id: String):
 static func get_location(id: String):
 	ensure_loaded()
 	return locations.get(id)
+
+static func get_quest(id: String):
+	ensure_loaded()
+	return quests.get(id)
 
 static func get_sell_price(item_id: String) -> int:
 	ensure_loaded()

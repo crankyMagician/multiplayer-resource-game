@@ -361,6 +361,9 @@ func _finalize_join(sender_id: int, player_name: String, data: Dictionary) -> vo
 	# Backfill discovered locations
 	if not data.has("discovered_locations"):
 		data["discovered_locations"] = []
+	# Backfill quests
+	if not data.has("quests"):
+		data["quests"] = {"active": {}, "completed": {}, "daily_reset_day": 0, "weekly_reset_day": 0, "unlock_flags": []}
 	# Backfill basic tools in inventory
 	var inv = data.get("inventory", {})
 	for tool_id in ["tool_hoe_basic", "tool_axe_basic", "tool_watering_can_basic"]:
@@ -511,6 +514,10 @@ func server_add_inventory(peer_id: int, item_id: String, amount: int) -> void:
 	else:
 		inv[item_id] = amount
 	player_data_store[peer_id]["inventory"] = inv
+	# Quest progress: collect objective
+	var quest_mgr = get_node_or_null("/root/Main/GameWorld/QuestManager")
+	if quest_mgr:
+		quest_mgr.notify_progress(peer_id, "collect", item_id, amount)
 
 func server_remove_inventory(peer_id: int, item_id: String, amount: int) -> bool:
 	if peer_id not in player_data_store:
@@ -1349,11 +1356,19 @@ func request_set_busy(busy: bool) -> void:
 	var player_node = _get_player_node(sender)
 	if player_node:
 		player_node.is_busy = busy
+		if busy:
+			_clear_prompts_client.rpc_id(sender)
 
 func server_clear_busy(peer_id: int) -> void:
 	var player_node = _get_player_node(peer_id)
 	if player_node:
 		player_node.is_busy = false
+
+@rpc("authority", "reliable")
+func _clear_prompts_client() -> void:
+	var hud = get_node_or_null("/root/Main/GameWorld/UI/HUD")
+	if hud and hud.has_method("hide_trainer_prompt"):
+		hud.hide_trainer_prompt()
 
 # === Bond Points — Battle Win ===
 

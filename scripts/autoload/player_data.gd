@@ -10,6 +10,7 @@ signal location_changed(zone: String, owner_name: String)
 signal friendships_changed()
 signal discovered_locations_changed()
 signal compass_target_changed(target_id: String)
+signal quests_changed()
 
 # Location tracking (client-side mirror of server state)
 var current_zone: String = "overworld"
@@ -59,6 +60,11 @@ var npc_friendships: Dictionary = {}
 # Location discovery
 var discovered_locations: Array = []
 var compass_target_id: String = ""
+
+# Quests
+var active_quests: Dictionary = {} # quest_id -> {started_at, objectives: [{progress}]}
+var completed_quests: Dictionary = {} # quest_id -> unix_timestamp
+var unlock_flags: Array = []
 
 # Player state
 var player_name: String = "Player"
@@ -167,6 +173,11 @@ func load_from_server(data: Dictionary) -> void:
 	npc_friendships = data.get("npc_friendships", {}).duplicate(true)
 	# Load discovered locations
 	discovered_locations = data.get("discovered_locations", []).duplicate()
+	# Load quests
+	var quest_data = data.get("quests", {})
+	active_quests = quest_data.get("active", {}).duplicate(true)
+	completed_quests = quest_data.get("completed", {}).duplicate(true)
+	unlock_flags = quest_data.get("unlock_flags", []).duplicate()
 	# Reset tool
 	current_tool_slot = ""
 	selected_seed_id = ""
@@ -178,6 +189,7 @@ func load_from_server(data: Dictionary) -> void:
 	storage_changed.emit()
 	friendships_changed.emit()
 	discovered_locations_changed.emit()
+	quests_changed.emit()
 
 func to_dict() -> Dictionary:
 	return {
@@ -196,6 +208,11 @@ func to_dict() -> Dictionary:
 		"restaurant": restaurant_data.duplicate(true),
 		"npc_friendships": npc_friendships.duplicate(true),
 		"discovered_locations": discovered_locations.duplicate(),
+		"quests": {
+			"active": active_quests.duplicate(true),
+			"completed": completed_quests.duplicate(true),
+			"unlock_flags": unlock_flags.duplicate(),
+		},
 	}
 
 func reset() -> void:
@@ -220,6 +237,9 @@ func reset() -> void:
 	npc_friendships.clear()
 	discovered_locations.clear()
 	compass_target_id = ""
+	active_quests.clear()
+	completed_quests.clear()
+	unlock_flags.clear()
 	current_zone = "overworld"
 	current_restaurant_owner = ""
 	restaurant_data.clear()
@@ -230,6 +250,7 @@ func reset() -> void:
 	storage_changed.emit()
 	friendships_changed.emit()
 	discovered_locations_changed.emit()
+	quests_changed.emit()
 
 func add_to_inventory(item_id: String, amount: int = 1) -> void:
 	if item_id in inventory:

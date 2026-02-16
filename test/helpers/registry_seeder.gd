@@ -14,6 +14,7 @@ static func seed_all() -> void:
 	_seed_shops()
 	_seed_npcs()
 	_seed_locations()
+	_seed_quests()
 
 static func clear_all() -> void:
 	DataRegistry.moves.clear()
@@ -31,6 +32,7 @@ static func clear_all() -> void:
 	DataRegistry.battle_items.clear()
 	DataRegistry.npcs.clear()
 	DataRegistry.locations.clear()
+	DataRegistry.quests.clear()
 	DataRegistry._loaded = false
 
 static func _seed_moves() -> void:
@@ -257,3 +259,140 @@ static func _seed_locations() -> void:
 	loc3.category = "wild_zone"
 	loc3.icon_color = Color.GREEN
 	DataRegistry.locations["test_wild"] = loc3
+
+static func _seed_quests() -> void:
+	# Side quest: collect (cumulative)
+	var QDef = load("res://scripts/data/quest_def.gd")
+	var q1 = QDef.new()
+	q1.quest_id = "test_collect"
+	q1.display_name = "Test Collect Quest"
+	q1.description = "Collect 5 items."
+	q1.category = "side"
+	q1.quest_giver_npc_id = "test_npc"
+	q1.objectives = [{"type": "collect", "target_id": "", "target_count": 5, "description": "Collect 5 items"}]
+	q1.reward_money = 100
+	DataRegistry.quests["test_collect"] = q1
+
+	# Daily quest: defeat creatures
+	var q2 = QDef.new()
+	q2.quest_id = "test_daily"
+	q2.display_name = "Test Daily Quest"
+	q2.description = "Defeat 2 creatures."
+	q2.category = "daily"
+	q2.quest_giver_npc_id = "test_npc"
+	q2.objectives = [{"type": "defeat_creature", "target_id": "", "target_count": 2, "description": "Defeat 2 creatures"}]
+	q2.reward_money = 25
+	DataRegistry.quests["test_daily"] = q2
+
+	# Weekly quest
+	var q2w = QDef.new()
+	q2w.quest_id = "test_weekly"
+	q2w.display_name = "Test Weekly Quest"
+	q2w.description = "Weekly gathering."
+	q2w.category = "weekly"
+	q2w.quest_giver_npc_id = "test_npc"
+	q2w.objectives = [{"type": "collect", "target_id": "", "target_count": 10, "description": "Collect 10 items"}]
+	q2w.reward_money = 100
+	DataRegistry.quests["test_weekly"] = q2w
+
+	# Delivery quest
+	var q3 = QDef.new()
+	q3.quest_id = "test_delivery"
+	q3.display_name = "Test Delivery Quest"
+	q3.description = "Deliver 3 wheat."
+	q3.category = "side"
+	q3.quest_giver_npc_id = "test_npc"
+	q3.objectives = [{"type": "deliver", "target_id": "wheat", "target_count": 3, "description": "Deliver 3 Wheat", "deliver_to_npc": "test_npc", "consumes_items": true}]
+	q3.reward_money = 200
+	q3.reward_items = {"herb_basil": 5}
+	DataRegistry.quests["test_delivery"] = q3
+
+	# Main story chain: quest 1
+	var q4 = QDef.new()
+	q4.quest_id = "test_ms_01"
+	q4.display_name = "Main Story 1"
+	q4.description = "First main story quest."
+	q4.category = "main_story"
+	q4.quest_giver_npc_id = "test_npc"
+	q4.objectives = [{"type": "talk_to", "target_id": "test_npc", "target_count": 1, "description": "Talk to Test NPC"}]
+	q4.reward_money = 50
+	q4.reward_unlock_flag = "ms_01_done"
+	q4.next_quest_id = "test_ms_02"
+	q4.chapter = 1
+	q4.sort_order = 1
+	DataRegistry.quests["test_ms_01"] = q4
+
+	# Main story chain: quest 2
+	var q5 = QDef.new()
+	q5.quest_id = "test_ms_02"
+	q5.display_name = "Main Story 2"
+	q5.description = "Second main story quest."
+	q5.category = "main_story"
+	q5.quest_giver_npc_id = "test_npc"
+	q5.prereq_quest_ids = ["test_ms_01"]
+	q5.objectives = [{"type": "defeat_trainer", "target_id": "test_easy", "target_count": 1, "description": "Defeat Test Easy Trainer"}]
+	q5.reward_money = 150
+	q5.chapter = 1
+	q5.sort_order = 2
+	DataRegistry.quests["test_ms_02"] = q5
+
+	# Quest with friendship prereq
+	var q6 = QDef.new()
+	q6.quest_id = "test_prereq_friendship"
+	q6.display_name = "Friendship Quest"
+	q6.description = "Requires friendship."
+	q6.category = "side"
+	q6.quest_giver_npc_id = "test_npc"
+	q6.prereq_friendship = {"test_npc": 20}
+	q6.objectives = [{"type": "collect", "target_id": "", "target_count": 1, "description": "Collect 1 item"}]
+	q6.reward_money = 50
+	DataRegistry.quests["test_prereq_friendship"] = q6
+
+	# Quest with location prereq
+	var q7 = QDef.new()
+	q7.quest_id = "test_prereq_location"
+	q7.display_name = "Location Quest"
+	q7.description = "Requires location discovery."
+	q7.category = "side"
+	q7.quest_giver_npc_id = "test_npc"
+	q7.prereq_locations = ["test_wild"]
+	q7.objectives = [{"type": "collect", "target_id": "", "target_count": 1, "description": "Collect 1 item"}]
+	q7.reward_money = 50
+	DataRegistry.quests["test_prereq_location"] = q7
+
+	# Quest with main story prereq
+	var q8 = QDef.new()
+	q8.quest_id = "test_prereq_ms"
+	q8.display_name = "Post-Story Quest"
+	q8.description = "Requires main story completion."
+	q8.category = "side"
+	q8.quest_giver_npc_id = "test_npc"
+	q8.prereq_main_story_quest_id = "test_ms_01"
+	q8.objectives = [{"type": "collect", "target_id": "", "target_count": 1, "description": "Collect 1 item"}]
+	q8.reward_money = 50
+	DataRegistry.quests["test_prereq_ms"] = q8
+
+	# Quest from different NPC
+	var q9 = QDef.new()
+	q9.quest_id = "test_other_npc"
+	q9.display_name = "Other NPC Quest"
+	q9.description = "From another NPC."
+	q9.category = "side"
+	q9.quest_giver_npc_id = "other_npc"
+	q9.objectives = [{"type": "collect", "target_id": "", "target_count": 1, "description": "Collect 1 item"}]
+	q9.reward_money = 50
+	DataRegistry.quests["test_other_npc"] = q9
+
+	# Multi-objective quest
+	var q10 = QDef.new()
+	q10.quest_id = "test_multi_obj"
+	q10.display_name = "Multi Objective Quest"
+	q10.description = "Multiple objectives."
+	q10.category = "side"
+	q10.quest_giver_npc_id = "test_npc"
+	q10.objectives = [
+		{"type": "defeat_creature", "target_id": "", "target_count": 2, "description": "Defeat 2 creatures"},
+		{"type": "discover_location", "target_id": "test_wild", "target_count": 1, "description": "Discover Test Wild Zone"},
+	]
+	q10.reward_money = 300
+	DataRegistry.quests["test_multi_obj"] = q10

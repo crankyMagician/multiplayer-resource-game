@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="QuestDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/quest_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+quest_id = "ms_03_first_battle"
+display_name = "Prove Your Mettle"
+description = "Sous Chef Pepper is the first trainer on the path to the wild zones. Defeat him to prove you're ready for the journey ahead."
+category = "main_story"
+quest_giver_npc_id = "npc_baker"
+prereq_quest_ids = ["ms_02_first_harvest"]
+prereq_friendship = {}
+prereq_locations = []
+prereq_season = ""
+prereq_weather = ""
+prereq_main_story_quest_id = ""
+objectives = [{
+"type": "defeat_trainer",
+"target_id": "sous_chef_pepper",
+"target_count": 1,
+"description": "Defeat Sous Chef Pepper"
+}]
+reward_money = 150
+reward_items = {}
+reward_friendship = {}
+reward_recipe_scroll_id = ""
+reward_unlock_flag = "chapter_1_complete"
+next_quest_id = ""
+chapter = 1
+sort_order = 3
+offer_dialogue = "If you want to explore the wild zones, you'll need to prove yourself. Sous Chef Pepper guards the path north."
+in_progress_dialogue = "Sous Chef Pepper is waiting along the northern path. Show him what you've got!"
+completion_dialogue = "You defeated Pepper?! Incredible! The wild zones are open to you now. Be careful out there."

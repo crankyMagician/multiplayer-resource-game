@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="QuestDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/quest_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+quest_id = "side_herbalist_remedy"
+display_name = "Herbal Remedy"
+description = "The Sage Herbalist needs herb basil to prepare a remedy. Gather 5 herb basil and discover the Herb Garden."
+category = "side"
+quest_giver_npc_id = "npc_herbalist"
+prereq_quest_ids = []
+prereq_friendship = {}
+prereq_locations = []
+prereq_season = ""
+prereq_weather = ""
+prereq_main_story_quest_id = ""
+objectives = [{
+"type": "deliver",
+"target_id": "herb_basil",
+"target_count": 5,
+"description": "Deliver 5 Herb Basil",
+"deliver_to_npc": "npc_herbalist",
+"consumes_items": true
+}, {
+"type": "discover_location",
+"target_id": "herb_garden",
+"target_count": 1,
+"description": "Discover the Herb Garden"
+}]
+reward_money = 200
+reward_items = {}
+reward_friendship = {"npc_herbalist": 10}
+reward_recipe_scroll_id = ""
+reward_unlock_flag = ""
+next_quest_id = ""
+chapter = 0
+sort_order = 0
+offer_dialogue = "I'm running low on basil for my remedies. Could you gather some from the Herb Garden?"
+in_progress_dialogue = "I still need that basil. The Herb Garden is to the northwest."
+completion_dialogue = "Wonderful! These herbs are perfect. Thank you for your help!"

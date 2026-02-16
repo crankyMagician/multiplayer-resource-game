@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="QuestDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/quest_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+quest_id = "weekly_forager"
+display_name = "Weekly Foraging"
+description = "Gather 10 of any ingredient this week. Sell them, use them, or save them — the gathering is what counts!"
+category = "weekly"
+quest_giver_npc_id = "npc_herbalist"
+prereq_quest_ids = []
+prereq_friendship = {}
+prereq_locations = []
+prereq_season = ""
+prereq_weather = ""
+prereq_main_story_quest_id = ""
+objectives = [{
+"type": "collect",
+"target_id": "",
+"target_count": 10,
+"description": "Collect 10 ingredients"
+}]
+reward_money = 100
+reward_items = {}
+reward_friendship = {}
+reward_recipe_scroll_id = ""
+reward_unlock_flag = ""
+next_quest_id = ""
+chapter = 0
+sort_order = 0
+offer_dialogue = "I always admire dedicated foragers. Think you can gather 10 ingredients this week?"
+in_progress_dialogue = "Keep gathering! Every ingredient counts."
+completion_dialogue = "Impressive haul! You're a natural forager."

@@ -1227,6 +1227,15 @@ func _check_battle_outcome(battle: Dictionary, turn_log: Array) -> void:
 				# Send post-battle dialogue
 				_trainer_dialogue_client.rpc_id(peer_id, trainer.display_name, trainer.dialogue_after, false)
 
+		# Quest progress hooks
+		var quest_mgr = get_node_or_null("/root/Main/GameWorld/QuestManager")
+		if quest_mgr:
+			if battle.mode == BattleMode.TRAINER and battle.trainer_id != "":
+				quest_mgr.notify_progress(peer_id, "defeat_trainer", battle.trainer_id)
+			elif battle.mode == BattleMode.WILD:
+				var species_id = str(enemy.get("species_id", ""))
+				quest_mgr.notify_progress(peer_id, "defeat_creature", species_id)
+
 		_end_battle_for_peer(battle, peer_id, true)
 		return
 
@@ -1574,6 +1583,11 @@ func _handle_pvp_end(battle: Dictionary, winner: String) -> void:
 	if winner == "b_wins":
 		battle.side_a_peer = saved_peer
 		battle.participants_a = saved_participants
+
+	# Quest progress: PvP victory
+	var quest_mgr = get_node_or_null("/root/Main/GameWorld/QuestManager")
+	if quest_mgr:
+		quest_mgr.notify_progress(winner_peer, "defeat_pvp", "", 1)
 
 	_end_battle_full(battle, winner)
 

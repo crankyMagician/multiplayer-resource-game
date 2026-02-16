@@ -3,6 +3,7 @@ extends Area3D
 @export var npc_id: String = ""
 
 var nearby_peers: Dictionary = {} # peer_id -> true
+var quest_indicator: Label3D = null
 
 func _ready() -> void:
 	add_to_group("social_npc")
@@ -48,6 +49,53 @@ func _create_visual() -> void:
 	label.position.y = 2.0
 	add_child(label)
 
+	# Quest indicator (! or ?) — client-side only
+	quest_indicator = Label3D.new()
+	quest_indicator.text = ""
+	quest_indicator.font_size = 48
+	quest_indicator.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	quest_indicator.position.y = 2.6
+	quest_indicator.visible = false
+	add_child(quest_indicator)
+
+func _process(_delta: float) -> void:
+	if multiplayer.is_server():
+		return
+	if quest_indicator == null:
+		return
+	# Update quest indicator based on local player quest state
+	DataRegistry.ensure_loaded()
+	var has_completable: bool = false
+	var has_available: bool = false
+	# Check for completable quests (?) — active quests from this NPC
+	for quest_id in PlayerData.active_quests:
+		var qdef = DataRegistry.get_quest(quest_id)
+		if qdef and qdef.quest_giver_npc_id == npc_id:
+			has_completable = true
+			break
+	# Check for available quests (!) — not active, not completed, from this NPC
+	if not has_completable:
+		for quest_id in DataRegistry.quests:
+			var qdef = DataRegistry.quests[quest_id]
+			if qdef.quest_giver_npc_id != npc_id:
+				continue
+			if quest_id in PlayerData.active_quests:
+				continue
+			if quest_id in PlayerData.completed_quests:
+				continue
+			has_available = true
+			break
+	if has_completable:
+		quest_indicator.text = "?"
+		quest_indicator.modulate = Color(1.0, 1.0, 0.3)
+		quest_indicator.visible = true
+	elif has_available:
+		quest_indicator.text = "!"
+		quest_indicator.modulate = Color(1.0, 0.85, 0.0)
+		quest_indicator.visible = true
+	else:
+		quest_indicator.visible = false
+
 func _on_body_entered(body: Node3D) -> void:
 	if not multiplayer.is_server():
 		return
@@ -57,6 +105,8 @@ func _on_body_entered(body: Node3D) -> void:
 	if peer_id <= 0:
 		return
 	nearby_peers[peer_id] = true
+	if body.get("is_busy"):
+		return
 	_show_npc_prompt.rpc_id(peer_id, npc_id)
 
 func _on_body_exited(body: Node3D) -> void:
@@ -85,6 +135,13 @@ func request_talk() -> void:
 	var social_mgr = get_node_or_null("/root/Main/GameWorld/SocialManager")
 	if social_mgr:
 		social_mgr.handle_talk_request(peer_id, npc_id)
+	# Also check for quests from this NPC (server-side call, sends RPC to client)
+	var quest_mgr = get_node_or_null("/root/Main/GameWorld/QuestManager")
+	if quest_mgr:
+		var available = quest_mgr.get_available_quests(peer_id, npc_id)
+		var completable = quest_mgr.get_completable_quests(peer_id, npc_id)
+		if available.size() > 0 or completable.size() > 0:
+			quest_mgr._send_quest_data_to_peer(peer_id, npc_id)
 
 @rpc("any_peer", "reliable")
 func request_give_gift(item_id: String) -> void:

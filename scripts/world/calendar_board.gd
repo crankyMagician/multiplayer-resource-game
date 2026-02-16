@@ -59,6 +59,8 @@ func _on_body_entered(body: Node3D) -> void:
 		return
 	nearby_peers[peer_id] = true
 	if multiplayer.is_server():
+		if body.get("is_busy"):
+			return
 		_show_prompt.rpc_id(peer_id)
 
 func _on_body_exited(body: Node3D) -> void:

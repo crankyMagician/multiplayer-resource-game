@@ -12,6 +12,10 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if peer_id != multiplayer.get_unique_id():
 		return
+	# Busy lock: block all interactions (defense-in-depth; server also validates)
+	var player = get_parent()
+	if player and player.get("is_busy"):
+		return
 	if Input.is_action_just_pressed("interact"):
 		_try_interact()
 	if Input.is_action_just_pressed("cycle_tool"):
@@ -22,6 +26,9 @@ func _process(_delta: float) -> void:
 	# Trade (T key)
 	if Input.is_action_just_pressed("trade"):
 		_try_trade()
+	# Quest log (J key)
+	if Input.is_action_just_pressed("quest_log"):
+		_toggle_quest_log()
 	# Number keys for tool select
 	if Input.is_action_just_pressed("tool_1"):
 		PlayerData.set_tool("")
@@ -223,3 +230,8 @@ func _open_crafting_ui(station: Area3D = null) -> void:
 			ui.visible = !ui.visible
 			if ui.visible and ui.has_method("refresh"):
 				ui.refresh()
+
+func _toggle_quest_log() -> void:
+	var quest_log = get_node_or_null("/root/Main/GameWorld/UI/QuestLogUI")
+	if quest_log and quest_log.has_method("toggle"):
+		quest_log.toggle()

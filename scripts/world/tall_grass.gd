@@ -85,6 +85,12 @@ func _physics_process(_delta: float) -> void:
 						_trigger_encounter(peer_id)
 
 func _trigger_encounter(peer_id: int) -> void:
+	# Defensive busy guard
+	var players_node = get_node_or_null("/root/Main/GameWorld/Players")
+	if players_node:
+		var player = players_node.get_node_or_null(str(peer_id))
+		if player and player.get("is_busy"):
+			return
 	player_step_counters.erase(peer_id)
 	var encounter_mgr = get_node_or_null("/root/Main/GameWorld/EncounterManager")
 	if encounter_mgr:

@@ -76,6 +76,11 @@ func handle_talk_request(peer_id: int, npc_id: String) -> void:
 		fs["last_interaction_day"] = current_day
 		fs["points"] = clampi(int(fs["points"]) + TALK_BONUS, MIN_FRIENDSHIP, MAX_FRIENDSHIP)
 
+	# Quest progress: talk_to
+	var quest_mgr = get_node_or_null("/root/Main/GameWorld/QuestManager")
+	if quest_mgr:
+		quest_mgr.notify_progress(peer_id, "talk_to", npc_id)
+
 	# Pick dialogue node based on friendship tier
 	DataRegistry.ensure_loaded()
 	var npc_def = DataRegistry.get_npc(npc_id)
