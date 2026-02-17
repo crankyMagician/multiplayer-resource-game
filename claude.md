@@ -115,20 +115,37 @@ See `docs/crafting-items.md` for full details: buff application points, PlayerDa
 - **WorldItemManager**: Server-authoritative pickup via Area3D `body_entered`. Node naming: `"WorldItem_" + str(uid)`.
 - **Restaurant**: Per-player instances at `Vector3(1000+idx*200,0,1000)`. Auto-save position fix checks `RestaurantManager.overworld_positions`. Farm routing via `get_farm_manager_for_peer(peer_id)`.
 - **3 shops**: General Store, Battle Supplies, Rare Goods. `request_buy/sell_item` RPCs. Sets busy state.
-- **Trading**: T key, 5-unit range. Atomic swap via `_execute_trade()`. Sets busy state.
+- **Trading**: T key, 5-unit range. Atomic swap via `_execute_trade()`. Sets busy state. Supports creature offers (party/storage) + receive preferences.
 - **Busy state**: `is_busy: bool` on player, StateSync always mode. Guards encounters, PvP, trainers, shop, trade.
 
-See `docs/world-systems.md` for full details: trainer difficulty colors, gatekeeper mechanics, world item lifecycle, restaurant architecture, shop/trade RPCs.
+See `docs/world-systems.md` for full details: trainer difficulty colors, gatekeeper mechanics, world item lifecycle, restaurant architecture, shop/trade RPCs, creature trading, friend system.
 
 ## NPC Social System
 - **Friendship**: -100 to +100 per NPC, 5 tiers (hate/dislike/neutral/like/love)
 - **Talk**: +2 daily bonus (once/NPC/day), branching dialogue with choices
 - **Gifts**: 1/NPC/day. loved(+15), liked(+8), neutral(+3), disliked(-8), hated(-15). 3x birthday.
 - **Daily decay**: -1/day (floor 0). NPC gift thresholds at 20/50/80.
-- **5 NPCs**: Baker Brioche, Sage Herbalist, Old Salt, Ember Smith, Professor Umami
+- **5 NPCs**: Baker Brioche, Sage Herbalist, Old Salt, Ember Smith, Professor Umami — each with optional creature trade offers
+- **NPC creature trades**: Data-driven (`npc_def.creature_trades` array). Gated by friendship tier, season, quest, one-time flag. Server validates + deducts cost items/money, creates creature via `server_give_creature()`.
 - **Architecture**: SocialManager (no `class_name`). Key RPCs: `request_talk` → `_send_dialogue`, `request_give_gift` → `_gift_response`.
 
 See `docs/social-quests.md` for full details.
+
+## Creature Destination Chooser
+- **Universal entry point**: `server_give_creature(peer_id, creature_data, source_type, source_id)` handles ALL creature receipts (crafting, NPC trade, P2P trade, battle catches)
+- **Party has space**: Creature added directly to party, `_notify_creature_received` RPC
+- **Party full**: Stores in `pending_creature_choices[peer_id]`, sends `_show_creature_destination_chooser` RPC
+- **CreatureDestinationUI**: CanvasLayer modal with 3 options: Send to Storage, Swap with party member, Release (creature lost)
+- **RPC**: `request_creature_destination(choice, swap_party_idx)` — validates bounds, min-party, storage capacity
+
+## Friend & Party System
+- **Friend requests**: Send/accept/decline/cancel. Works for online + offline players (offline via API PATCH)
+- **Blocking**: Block/unblock players. Blocks prevent friend requests and remove existing friendships
+- **Parties**: 4-player max, leader-based invite system. Runtime-only (not persisted). 60s invite TTL.
+- **FriendManager**: No `class_name`, child of GameWorld. Server-authoritative with pair-locks on mutations.
+- **Social data**: `player_data_store[peer_id]["social"]` = `{friends, blocked, incoming_requests, outgoing_requests}`
+- **API**: `PATCH /api/players/:id/social` for atomic offline player social mutations
+- **RPCs**: `request_send_friend_request`, `request_accept_friend_request`, `request_create_party`, `request_invite_to_party`. Syncs: `_sync_friends_list`, `_sync_party_state`.
 
 ## Quest System
 - **Data-driven**: QuestDef Resource (`class_name QuestDef`), 6 quests (3 main story, 1 side, 1 daily, 1 weekly)
@@ -170,7 +187,12 @@ This is a server-authoritative multiplayer game. **Every gameplay change — new
 | Calendar/weather | Server (SeasonManager) | `_broadcast_time(year, month, day, total_days, weather)` RPC to all |
 | Calendar board | Server (CalendarBoard) | `_open_calendar_client` RPC to requesting peer |
 | Shop buy/sell | Server (`request_buy/sell_item` RPCs) | Server validates + syncs inventory via RPC |
-| Player trading | Server (atomic swap in `_execute_trade`) | RPCs for offer updates, confirm, cancel |
+| Player trading (items) | Server (atomic swap in `_execute_trade`) | RPCs for offer updates, confirm, cancel |
+| Creature trading (P2P) | Server (`_execute_trade` with creature offers) | `_sync_trade_creatures`, `_trade_completed_client` RPCs |
+| Creature trading (NPC) | Server (SocialManager) | Dialogue choice RPC, `_notify_creature_received` |
+| Creature destination | Server (`server_give_creature`) | `_show_creature_destination_chooser`, `request_creature_destination` RPCs |
+| Friend system | Server (FriendManager) | `_sync_friends_list`, `_friend_action_result` RPCs |
+| Party system | Server (FriendManager) | `_sync_party_state`, `_notify_party_invite` RPCs |
 | Busy state | Server (`request_set_busy` RPC) | StateSync (always mode) on player node |
 | NPC friendship | Server (SocialManager) | RPCs: `_sync_npc_friendships`, `_send_dialogue`, `_gift_response` |
 | Quest system | Server (QuestManager) | RPCs: `_sync_quest_state`, `_notify_quest_progress`, `_notify_quest_complete` |
