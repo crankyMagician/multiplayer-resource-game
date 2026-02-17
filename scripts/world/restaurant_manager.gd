@@ -109,6 +109,11 @@ func _exit_restaurant(peer_id: int) -> void:
 	_exit_cooldown[peer_id] = Time.get_ticks_msec()
 	# Update location
 	player_location[peer_id] = {"zone": "overworld", "owner": ""}
+	# Toggle monitoring on overworld door to reset body_entered tracking after teleport
+	if owner_name in door_nodes:
+		var door_area: Area3D = door_nodes[owner_name]
+		door_area.monitoring = false
+		door_area.set_deferred("monitoring", true)
 	# Notify client
 	_notify_location_change.rpc_id(peer_id, "overworld", "", -1)
 	print("[Restaurant] Player ", peer_id, " exited ", owner_name, "'s restaurant")
@@ -383,6 +388,8 @@ func _spawn_door_client(player_name: String, rest_index: int) -> void:
 	var door = Node3D.new()
 	door.name = "ClientDoor_" + player_name.replace(" ", "_")
 	door.position = Vector3(rest_index * DOOR_SPACING, 0, 0)
+	door.add_to_group("restaurant_door")
+	door.set_meta("owner_name", player_name)
 	# Door mesh
 	var mesh_inst = MeshInstance3D.new()
 	var box_mesh = BoxMesh.new()

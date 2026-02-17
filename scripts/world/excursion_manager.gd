@@ -265,8 +265,34 @@ func _validate_and_enter(sender_peer: int) -> void:
 		_excursion_action_result.rpc_id(sender_peer, "enter", false, "Party system unavailable.")
 		return
 
+	# Check max instances
+	if excursion_instances.size() >= MAX_EXCURSION_INSTANCES:
+		_excursion_action_result.rpc_id(sender_peer, "enter", false, "Too many active excursions. Try again later.")
+		return
+
+	var battle_mgr := get_node_or_null("../BattleManager")
+	var rest_mgr := get_node_or_null("../RestaurantManager")
+
+	# Solo player (not in a party)
 	if player_id not in friend_mgr.player_party_map:
-		_excursion_action_result.rpc_id(sender_peer, "enter", false, "You need a party to enter an excursion.")
+		# Validate solo player state
+		if sender_peer in player_excursion_map:
+			_excursion_action_result.rpc_id(sender_peer, "enter", false, "You are already in an excursion.")
+			return
+		if battle_mgr and sender_peer in battle_mgr.player_battle_map:
+			_excursion_action_result.rpc_id(sender_peer, "enter", false, "You are in battle.")
+			return
+		if rest_mgr:
+			var loc: Dictionary = rest_mgr.player_location.get(sender_peer, {})
+			if loc.get("zone", "") == "restaurant":
+				_excursion_action_result.rpc_id(sender_peer, "enter", false, "You are in a restaurant.")
+				return
+		var solo_node := nm._get_player_node(sender_peer)
+		if solo_node and solo_node.get("is_busy"):
+			_excursion_action_result.rpc_id(sender_peer, "enter", false, "You are busy.")
+			return
+		# All solo checks passed — create solo instance
+		_create_excursion_instance(-1, {}, [player_id])
 		return
 
 	var party_id: int = friend_mgr.player_party_map[player_id]
@@ -280,14 +306,7 @@ func _validate_and_enter(sender_peer: int) -> void:
 		_excursion_action_result.rpc_id(sender_peer, "enter", false, "Only the party leader can start an excursion.")
 		return
 
-	# Check max instances
-	if excursion_instances.size() >= MAX_EXCURSION_INSTANCES:
-		_excursion_action_result.rpc_id(sender_peer, "enter", false, "Too many active excursions. Try again later.")
-		return
-
 	# Check no party member is busy/in-battle/in-restaurant/in-excursion
-	var battle_mgr := get_node_or_null("../BattleManager")
-	var rest_mgr := get_node_or_null("../RestaurantManager")
 	var members: Array = party["members"]
 
 	for member_id in members:
@@ -489,6 +508,12 @@ func _exit_member(peer_id: int) -> void:
 	var rest_mgr := get_node_or_null("../RestaurantManager")
 	if rest_mgr:
 		rest_mgr.player_location[peer_id] = {"zone": "overworld", "owner": ""}
+
+	# Toggle monitoring on overworld excursion portal to reset body_entered tracking after teleport
+	var portal_area := get_node_or_null("../ExcursionEntrance/ExcursionPortalArea")
+	if portal_area and portal_area is Area3D:
+		portal_area.monitoring = false
+		portal_area.set_deferred("monitoring", true)
 
 	# Remove from instance members
 	var inst: Dictionary = excursion_instances.get(instance_id, {})

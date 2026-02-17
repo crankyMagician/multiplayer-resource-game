@@ -278,7 +278,7 @@ func _spawn_excursion_entrance() -> void:
 
 	# Hint label for clients
 	var hint = Label3D.new()
-	hint.text = "Party Required"
+	hint.text = "Press E to Enter"
 	hint.font_size = 24
 	hint.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	hint.modulate = Color(0.8, 0.8, 0.8, 0.7)
@@ -315,8 +315,8 @@ func _on_excursion_portal_entered(body: Node3D) -> void:
 		return
 
 	if player_id not in friend_mgr.player_party_map:
-		# Not in a party — show message
-		excursion_mgr._excursion_action_result.rpc_id(peer_id, "enter", false, "You need a party to enter an excursion. Form a party first!")
+		# Solo player — allow direct entry
+		excursion_mgr._create_excursion_from_portal(peer_id)
 		return
 
 	var party_id = friend_mgr.player_party_map[player_id]
@@ -329,9 +329,7 @@ func _on_excursion_portal_entered(body: Node3D) -> void:
 		excursion_mgr._excursion_action_result.rpc_id(peer_id, "enter", false, "Waiting for party leader to start the excursion.")
 		return
 
-	# Party leader — auto-trigger entry (server already knows sender from body)
-	# We simulate the RPC by calling the server's internal entry logic directly
-	# since this runs on the server already
+	# Party leader — auto-trigger entry
 	excursion_mgr._create_excursion_from_portal(peer_id)
 
 

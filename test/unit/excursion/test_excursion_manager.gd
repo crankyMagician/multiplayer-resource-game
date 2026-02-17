@@ -148,3 +148,71 @@ func test_max_instances():
 
 func test_exit_cooldown():
 	assert_eq(mgr.EXIT_COOLDOWN_MS, 2000, "Exit cooldown should be 2000ms")
+
+# --- Entry Immunity ---
+
+func test_entry_immunity_tracks_timestamp():
+	mgr._entry_immunity[10] = Time.get_ticks_msec()
+	assert_true(10 in mgr._entry_immunity, "Entry immunity should be tracked")
+
+func test_entry_immunity_cleared_on_erase():
+	mgr._entry_immunity[10] = Time.get_ticks_msec()
+	mgr._entry_immunity.erase(10)
+	assert_false(10 in mgr._entry_immunity, "Entry immunity should be cleared after erase")
+
+# --- Overworld Position Tracking ---
+
+func test_overworld_position_saved():
+	mgr.overworld_positions[5] = Vector3(10, 1, 20)
+	assert_eq(mgr.overworld_positions[5], Vector3(10, 1, 20), "Should save overworld position")
+
+func test_overworld_position_cleared_after_erase():
+	mgr.overworld_positions[5] = Vector3(10, 1, 20)
+	mgr.overworld_positions.erase(5)
+	assert_false(5 in mgr.overworld_positions, "Position should be cleared")
+
+# --- Portal Monitoring Toggle ---
+
+func test_portal_monitoring_toggle():
+	# Verify the set_deferred monitoring toggle pattern works for Area3D
+	var area = Area3D.new()
+	area.monitoring = true
+	add_child_autofree(area)
+	area.monitoring = false
+	area.set_deferred("monitoring", true)
+	# After set_deferred, value updates next frame — immediate check sees false
+	assert_false(area.monitoring, "Monitoring should be false until deferred set takes effect")
+
+# --- Solo Excursion ---
+
+func test_solo_excursion_party_id_sentinel():
+	# Solo excursion uses party_id = -1, which should not match real party lookups
+	var instance_id := "solo-test"
+	mgr.excursion_instances[instance_id] = {
+		"instance_id": instance_id,
+		"party_id": -1,
+		"seed": 99,
+		"members": [10],
+		"allowed_player_ids": ["player-abc"],
+	}
+	# Verify party_id is -1 sentinel
+	assert_eq(mgr.excursion_instances[instance_id]["party_id"], -1, "Solo excursion should have party_id = -1")
+	# Verify no real party_id matches
+	for iid in mgr.excursion_instances:
+		var inst = mgr.excursion_instances[iid]
+		if inst["party_id"] == 42: # some real party id
+			assert_true(false, "Solo instance should not match real party id")
+
+func test_solo_excursion_single_member():
+	var instance_id := "solo-member-test"
+	mgr.player_excursion_map[10] = instance_id
+	mgr.excursion_instances[instance_id] = {
+		"instance_id": instance_id,
+		"party_id": -1,
+		"members": [10],
+	}
+	var members = mgr.get_instance_members(instance_id)
+	assert_eq(members.size(), 1, "Solo excursion should have 1 member")
+	assert_has(members, 10)
+	# Level boost should be 0 for solo
+	assert_eq(mgr.get_level_boost_for_peer(10), 0, "Solo excursion should have 0 level boost")
