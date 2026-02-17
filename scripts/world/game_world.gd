@@ -10,19 +10,14 @@ const FARM_MANAGER_PATH: NodePath = "Zones/FarmZone/FarmManager"
 var hud_scene = preload("res://scenes/ui/hud.tscn")
 var battle_ui_scene = preload("res://scenes/ui/battle_ui.tscn")
 var crafting_ui_scene = preload("res://scenes/ui/crafting_ui.tscn")
-var inventory_ui_scene = preload("res://scenes/ui/inventory_ui.tscn")
-var party_ui_scene = preload("res://scenes/ui/party_ui.tscn")
+var pause_menu_scene = preload("res://scenes/ui/pause_menu.tscn")
 var storage_ui_scene = preload("res://scenes/ui/storage_ui.tscn")
 var shop_ui_scene = preload("res://scenes/ui/shop_ui.tscn")
 var trade_ui_scene = preload("res://scenes/ui/trade_ui.tscn")
 var dialogue_ui_scene = preload("res://scenes/ui/dialogue_ui.tscn")
 var calendar_ui_scene = preload("res://scenes/ui/calendar_ui.tscn")
 var compass_ui_scene = preload("res://scenes/ui/compass_ui.tscn")
-var pause_overlay_scene = preload("res://scenes/ui/pause_overlay.tscn")
-var quest_log_ui_scene = preload("res://scenes/ui/quest_log_ui.tscn")
-var compendium_ui_scene = preload("res://scenes/ui/compendium_ui.tscn")
 var creature_destination_ui_scene = preload("res://scenes/ui/creature_destination_ui.tscn")
-var friend_list_ui_scene = preload("res://scenes/ui/friend_list_ui.tscn")
 var hotbar_ui_scene = preload("res://scenes/ui/hotbar_ui.tscn")
 var excursion_hud_scene = preload("res://scenes/ui/excursion_hud.tscn")
 
@@ -180,11 +175,8 @@ func _setup_ui() -> void:
 	ui_node.add_child(crafting_ui)
 	crafting_ui.setup($CraftingSystem)
 
-	var inventory_ui = inventory_ui_scene.instantiate()
-	ui_node.add_child(inventory_ui)
-
-	var party_ui = party_ui_scene.instantiate()
-	ui_node.add_child(party_ui)
+	var pause_menu = pause_menu_scene.instantiate()
+	ui_node.add_child(pause_menu)
 
 	var storage_ui = storage_ui_scene.instantiate()
 	ui_node.add_child(storage_ui)
@@ -204,20 +196,8 @@ func _setup_ui() -> void:
 	var compass_ui = compass_ui_scene.instantiate()
 	ui_node.add_child(compass_ui)
 
-	var pause_overlay = pause_overlay_scene.instantiate()
-	ui_node.add_child(pause_overlay)
-
-	var quest_log_ui = quest_log_ui_scene.instantiate()
-	ui_node.add_child(quest_log_ui)
-
-	var compendium_ui = compendium_ui_scene.instantiate()
-	ui_node.add_child(compendium_ui)
-
 	var creature_destination_ui = creature_destination_ui_scene.instantiate()
 	ui_node.add_child(creature_destination_ui)
-
-	var friend_list_ui = friend_list_ui_scene.instantiate()
-	ui_node.add_child(friend_list_ui)
 
 	var hotbar_ui = hotbar_ui_scene.instantiate()
 	ui_node.add_child(hotbar_ui)
@@ -237,6 +217,7 @@ func _spawn_excursion_entrance() -> void:
 	var entrance = Node3D.new()
 	entrance.name = "ExcursionEntrance"
 	entrance.position = Vector3(-15, 0, 0)
+	entrance.add_to_group("excursion_portal")
 	add_child(entrance)
 
 	# Signpost

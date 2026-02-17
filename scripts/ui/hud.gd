@@ -152,8 +152,8 @@ func _update_quest_tracker() -> void:
 		return
 	for child in quest_tracker_panel.get_children():
 		child.queue_free()
-	# Find tracked quest from QuestLogUI, or show first active quest
-	var quest_log = get_node_or_null("/root/Main/GameWorld/UI/QuestLogUI")
+	# Find tracked quest from PauseMenu, or show first active quest
+	var quest_log = get_node_or_null("/root/Main/GameWorld/UI/PauseMenu")
 	var tracked_id: String = ""
 	if quest_log and "tracked_quest_id" in quest_log:
 		tracked_id = quest_log.tracked_quest_id

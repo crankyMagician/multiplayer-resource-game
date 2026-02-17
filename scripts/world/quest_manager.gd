@@ -480,8 +480,8 @@ func request_abandon_quest(quest_id: String) -> void:
 
 @rpc("authority", "reliable")
 func _send_available_quests(quests_data: Array) -> void:
-	# Client-side: forward to QuestLogUI or DialogueUI
-	var quest_log = get_node_or_null("/root/Main/GameWorld/UI/QuestLogUI")
+	# Client-side: forward to PauseMenu quest tab
+	var quest_log = get_node_or_null("/root/Main/GameWorld/UI/PauseMenu")
 	if quest_log and quest_log.has_method("show_npc_quests"):
 		quest_log.show_npc_quests(quests_data)
 
@@ -532,6 +532,6 @@ func _notify_quest_complete(quest_id: String, quest_name: String, rewards: Dicti
 @rpc("authority", "reliable")
 func _offer_next_quest(_quest_id: String, _npc_id: String, _dialogue: String, _quest_data: Dictionary) -> void:
 	# Client: show auto-offer for next quest in chain
-	var quest_log = get_node_or_null("/root/Main/GameWorld/UI/QuestLogUI")
+	var quest_log = get_node_or_null("/root/Main/GameWorld/UI/PauseMenu")
 	if quest_log and quest_log.has_method("show_next_quest_offer"):
 		quest_log.show_next_quest_offer(_quest_id, _npc_id, _dialogue, _quest_data)

@@ -1,9 +1,7 @@
-extends CanvasLayer
+extends Control
 
-# Quest log UI — toggled with J key. Shows active, completed, and main story quests.
-# Also handles NPC quest offer/complete interactions.
+# Quest log tab content for PauseMenu. Ported from quest_log_ui.gd.
 
-var panel: PanelContainer
 var tab_bar: TabBar
 var quest_list: VBoxContainer
 var detail_panel: VBoxContainer
@@ -12,34 +10,19 @@ var detail_desc: RichTextLabel
 var detail_objectives: VBoxContainer
 var detail_rewards: Label
 var action_button: Button
-var close_button: Button
 var tracked_quest_id: String = ""
-var _current_tab: int = 0 # 0=Active, 1=Completed, 2=Main Story
-var _npc_quests: Array = [] # Quests from NPC interaction
+var _current_tab: int = 0
+var _npc_quests: Array = []
 var _showing_npc_quests: bool = false
 
 func _ready() -> void:
-	layer = 10
-	visible = false
 	_build_ui()
 	PlayerData.quests_changed.connect(_refresh)
 
 func _build_ui() -> void:
-	panel = PanelContainer.new()
-	panel.anchor_left = 0.1
-	panel.anchor_right = 0.9
-	panel.anchor_top = 0.05
-	panel.anchor_bottom = 0.95
-
-	var main_vbox = VBoxContainer.new()
-	panel.add_child(main_vbox)
-
-	# Title
-	var title = Label.new()
-	title.text = "Quest Log"
-	title.add_theme_font_size_override("font_size", 24)
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	main_vbox.add_child(title)
+	var main_vbox := VBoxContainer.new()
+	main_vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(main_vbox)
 
 	# Tab bar
 	tab_bar = TabBar.new()
@@ -50,12 +33,12 @@ func _build_ui() -> void:
 	main_vbox.add_child(tab_bar)
 
 	# Content split
-	var hsplit = HSplitContainer.new()
+	var hsplit := HSplitContainer.new()
 	hsplit.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	main_vbox.add_child(hsplit)
 
 	# Left: quest list
-	var left_scroll = ScrollContainer.new()
+	var left_scroll := ScrollContainer.new()
 	left_scroll.custom_minimum_size = Vector2(250, 0)
 	hsplit.add_child(left_scroll)
 
@@ -64,7 +47,7 @@ func _build_ui() -> void:
 	left_scroll.add_child(quest_list)
 
 	# Right: detail panel
-	var right_scroll = ScrollContainer.new()
+	var right_scroll := ScrollContainer.new()
 	right_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hsplit.add_child(right_scroll)
 
@@ -96,32 +79,13 @@ func _build_ui() -> void:
 	action_button.visible = false
 	detail_panel.add_child(action_button)
 
-	# Close button
-	close_button = Button.new()
-	close_button.text = "Close"
-	close_button.pressed.connect(_close)
-	main_vbox.add_child(close_button)
-
-	add_child(panel)
-
-func toggle() -> void:
-	if visible:
-		_close()
-	else:
-		_open()
-
-func _open() -> void:
+func activate() -> void:
 	_showing_npc_quests = false
 	_npc_quests.clear()
-	visible = true
 	_refresh()
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	NetworkManager.request_set_busy.rpc_id(1, true)
 
-func _close() -> void:
-	visible = false
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-	NetworkManager.request_set_busy.rpc_id(1, false)
+func deactivate() -> void:
+	pass
 
 func _on_tab_changed(tab: int) -> void:
 	_current_tab = tab
@@ -129,7 +93,6 @@ func _on_tab_changed(tab: int) -> void:
 	_refresh()
 
 func _refresh() -> void:
-	# Clear quest list
 	for child in quest_list.get_children():
 		child.queue_free()
 	_clear_detail()
@@ -141,18 +104,17 @@ func _refresh() -> void:
 	DataRegistry.ensure_loaded()
 
 	match _current_tab:
-		0: # Active
+		0:
 			for quest_id in PlayerData.active_quests:
 				var qdef = DataRegistry.get_quest(quest_id)
 				if qdef and qdef.category != "main_story":
 					_add_quest_button(quest_id, qdef, true)
-		1: # Completed
+		1:
 			for quest_id in PlayerData.completed_quests:
 				var qdef = DataRegistry.get_quest(quest_id)
 				if qdef:
 					_add_quest_button(quest_id, qdef, false)
-		2: # Main Story
-			# Show active main story quests first, then completed
+		2:
 			for quest_id in PlayerData.active_quests:
 				var qdef = DataRegistry.get_quest(quest_id)
 				if qdef and qdef.category == "main_story":
@@ -163,7 +125,7 @@ func _refresh() -> void:
 					_add_quest_button(quest_id, qdef, false)
 
 func _add_quest_button(quest_id: String, qdef: Resource, is_active: bool) -> void:
-	var btn = Button.new()
+	var btn := Button.new()
 	var prefix = ""
 	if quest_id == tracked_quest_id:
 		prefix = "> "
@@ -192,7 +154,6 @@ func _show_quest_detail(quest_id: String, is_active: bool) -> void:
 	detail_name.text = qdef.display_name
 	detail_desc.text = qdef.description
 
-	# Objectives
 	var quest_state = PlayerData.active_quests.get(quest_id, {})
 	var obj_states = quest_state.get("objectives", [])
 	for i in range(qdef.objectives.size()):
@@ -203,7 +164,7 @@ func _show_quest_detail(quest_id: String, is_active: bool) -> void:
 		if i < obj_states.size():
 			progress = int(obj_states[i].get("progress", 0))
 
-		var obj_label = Label.new()
+		var obj_label := Label.new()
 		if is_active:
 			var check = "[x] " if progress >= target_count else "[ ] "
 			obj_label.text = check + desc + " (" + str(progress) + "/" + str(target_count) + ")"
@@ -214,7 +175,6 @@ func _show_quest_detail(quest_id: String, is_active: bool) -> void:
 			obj_label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
 		detail_objectives.add_child(obj_label)
 
-	# Rewards
 	var reward_parts: Array = []
 	if qdef.reward_money > 0:
 		reward_parts.append("$" + str(qdef.reward_money))
@@ -224,12 +184,10 @@ func _show_quest_detail(quest_id: String, is_active: bool) -> void:
 	if not reward_parts.is_empty():
 		detail_rewards.text = "Rewards: " + ", ".join(reward_parts)
 
-	# Action button
 	if is_active:
 		if qdef.category != "main_story":
 			action_button.text = "Abandon Quest"
 			action_button.visible = true
-			# Disconnect previous connections
 			if action_button.pressed.is_connected(_on_action_pressed):
 				action_button.pressed.disconnect(_on_action_pressed)
 			action_button.pressed.connect(_on_abandon.bind(quest_id))
@@ -250,10 +208,10 @@ func _on_abandon(quest_id: String) -> void:
 func show_npc_quests(quests_data: Array) -> void:
 	_npc_quests = quests_data
 	_showing_npc_quests = true
-	if not visible:
-		visible = true
-		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-		NetworkManager.request_set_busy.rpc_id(1, true)
+	# Tell the pause menu to open to this tab
+	var pause_menu = get_node_or_null("/root/Main/GameWorld/UI/PauseMenu")
+	if pause_menu and not pause_menu.is_open:
+		pause_menu.open_to_tab("Quests")
 	_refresh_npc_quests()
 
 func _refresh_npc_quests() -> void:
@@ -262,7 +220,7 @@ func _refresh_npc_quests() -> void:
 	_clear_detail()
 
 	for quest_data in _npc_quests:
-		var btn = Button.new()
+		var btn := Button.new()
 		var status = str(quest_data.get("status", ""))
 		var name_text = str(quest_data.get("display_name", ""))
 		match status:
@@ -276,7 +234,7 @@ func _refresh_npc_quests() -> void:
 		quest_list.add_child(btn)
 
 	if _npc_quests.is_empty():
-		var empty_label = Label.new()
+		var empty_label := Label.new()
 		empty_label.text = "No quests available."
 		quest_list.add_child(empty_label)
 
@@ -292,14 +250,12 @@ func _show_npc_quest_detail(quest_data: Dictionary) -> void:
 				detail_desc.text = dialogue + "\n\n" + str(quest_data.get("description", ""))
 			else:
 				detail_desc.text = str(quest_data.get("description", ""))
-			# Show objectives
 			var objectives = quest_data.get("objectives", [])
 			for i in range(objectives.size()):
 				var obj = objectives[i]
-				var obj_label = Label.new()
+				var obj_label := Label.new()
 				obj_label.text = "[ ] " + str(obj.get("description", "Objective " + str(i + 1)))
 				detail_objectives.add_child(obj_label)
-			# Show rewards
 			var reward_parts: Array = []
 			var money = int(quest_data.get("reward_money", 0))
 			if money > 0:
@@ -310,7 +266,6 @@ func _show_npc_quest_detail(quest_data: Dictionary) -> void:
 				reward_parts.append(str(items[item_id]) + "x " + info.get("display_name", item_id))
 			if not reward_parts.is_empty():
 				detail_rewards.text = "Rewards: " + ", ".join(reward_parts)
-			# Accept button
 			action_button.text = "Accept Quest"
 			action_button.visible = true
 			if action_button.pressed.is_connected(_on_action_pressed):
@@ -337,16 +292,20 @@ func _on_accept_quest(quest_id: String) -> void:
 	var quest_mgr = get_node_or_null("/root/Main/GameWorld/QuestManager")
 	if quest_mgr:
 		quest_mgr.request_accept_quest.rpc_id(1, quest_id)
-	_close()
+	# Close the pause menu after accepting
+	var pause_menu = get_node_or_null("/root/Main/GameWorld/UI/PauseMenu")
+	if pause_menu:
+		pause_menu.close()
 
 func _on_complete_quest(quest_id: String) -> void:
 	var quest_mgr = get_node_or_null("/root/Main/GameWorld/QuestManager")
 	if quest_mgr:
 		quest_mgr.request_complete_quest.rpc_id(1, quest_id)
-	_close()
+	var pause_menu = get_node_or_null("/root/Main/GameWorld/UI/PauseMenu")
+	if pause_menu:
+		pause_menu.close()
 
 func show_next_quest_offer(quest_id: String, _npc_id: String, _dialogue: String, quest_data: Dictionary) -> void:
-	# Auto-offer the next quest in a chain
 	quest_data["status"] = "available"
 	quest_data["offer_dialogue"] = _dialogue
 	show_npc_quests([quest_data])

@@ -24,15 +24,6 @@ func _process(_delta: float) -> void:
 	# Trade (T key)
 	if Input.is_action_just_pressed("trade"):
 		_try_trade()
-	# Quest log (J key)
-	if Input.is_action_just_pressed("quest_log"):
-		_toggle_quest_log()
-	# Compendium (K key)
-	if Input.is_action_just_pressed("compendium"):
-		_toggle_compendium()
-	# Friend list (F key)
-	if Input.is_action_just_pressed("friend_list"):
-		_toggle_friend_list()
 	# Hotbar slot selection (1-8)
 	for i in range(8):
 		var action_name = "hotbar_%d" % (i + 1)
@@ -78,7 +69,8 @@ func _try_interact() -> void:
 				rm.request_exit_restaurant.rpc_id(1)
 			return
 	# Check for restaurant door proximity (interact key as alternative to walk-over)
-	var door = _find_nearest_area("restaurant_door", pos, 3.0)
+	# Uses _find_nearest_in_group to find both server Area3D doors and client Node3D doors
+	var door = _find_nearest_in_group("restaurant_door", pos, 3.0)
 	if door:
 		var door_owner = door.get_meta("owner_name", "") if door.has_meta("owner_name") else ""
 		if door_owner != "":
@@ -86,6 +78,13 @@ func _try_interact() -> void:
 			if rm:
 				rm.request_enter_restaurant.rpc_id(1, door_owner)
 			return
+	# Check for excursion portal proximity (E key to enter)
+	var portal = _find_nearest_in_group("excursion_portal", pos, 4.0)
+	if portal:
+		var excursion_mgr = get_node_or_null("/root/Main/GameWorld/ExcursionManager")
+		if excursion_mgr:
+			excursion_mgr.request_enter_excursion.rpc_id(1)
+		return
 	# Check for storage station proximity
 	var storage = _find_nearest_area("storage_station", pos, 3.0)
 	if storage:
@@ -259,17 +258,3 @@ func _open_crafting_ui(station: Area3D = null) -> void:
 			if ui.visible and ui.has_method("refresh"):
 				ui.refresh()
 
-func _toggle_quest_log() -> void:
-	var quest_log = get_node_or_null("/root/Main/GameWorld/UI/QuestLogUI")
-	if quest_log and quest_log.has_method("toggle"):
-		quest_log.toggle()
-
-func _toggle_compendium() -> void:
-	var compendium = get_node_or_null("/root/Main/GameWorld/UI/CompendiumUI")
-	if compendium and compendium.has_method("toggle"):
-		compendium.toggle()
-
-func _toggle_friend_list() -> void:
-	var friend_ui = get_node_or_null("/root/Main/GameWorld/UI/FriendListUI")
-	if friend_ui and friend_ui.has_method("toggle"):
-		friend_ui.toggle()
