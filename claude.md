@@ -267,7 +267,7 @@ See `docs/compendium-stats.md` for full tracked stat list and hook locations.
 - **Battle stacking prevention**: All encounter/battle entry points must check `BattleManager.player_battle_map` before starting a new battle. Client-side `start_battle_client()` also guards against duplicate RPCs.
 - **stdbuf for Docker logs**: Godot headless buffers stdout. Dockerfile uses `stdbuf -oL` for line-buffered output.
 - **Duplicate node name trap**: If a .tscn already has child "X", creating a new `Node("X")` + `add_child()` causes silent rename. Always use `get_node("X")` for existing nodes.
-- **CanvasLayer child visibility**: Hiding CanvasLayer children requires explicit restore on next use. CanvasLayer's own `visible` doesn't propagate. `_on_battle_started()` restores all children.
+- **CanvasLayer child visibility**: CanvasLayer's `visible = false` does NOT propagate to child Controls — they still report `visible = true`. When checking if a CanvasLayer-based UI is open, always check the CanvasLayer's own `.visible` first. Hiding children requires explicit restore on next use. `_on_battle_started()` restores all children.
 - **MCP addon excluded from server export**: `export_presets.cfg` has `exclude_filter="addons/mechanical_turk_mcp/*"`. Non-fatal "File not found" on startup is expected.
 - **Connection timeout**: ConnectUI has a 10-second timeout for transport-connected but multiplayer-rejected peers.
 

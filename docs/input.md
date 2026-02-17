@@ -17,8 +17,8 @@ Quick reference for how input is declared and consumed across the project.
 | --- | --- | --- | --- |
 | `move_forward/back/left/right` | `W/S/A/D` | Captured locally for movement input; sent via `InputSync`; server applies motion. | `scripts/player/player_controller.gd` |
 | `interact` | `E` | Contextual world interaction: calendar board, social/shop/trainer NPCs, restaurant door, storage, crafting station, water source refill, farm plot actions (harvest/hoe/axe/water/plant). | `scripts/player/player_interaction.gd` |
-| `cycle_tool` | `Q` | Cycles tool slot order `['', hoe, axe, watering_can, seeds]`. | `player_interaction.gd` |
-| `tool_1`…`tool_5` | `1–5` | Directly select hand / hoe / axe / watering_can / seeds. | `player_interaction.gd` |
+| `hotbar_1`…`hotbar_8` | `1–8` | Select hotbar slots (items/tools). | `player_interaction.gd` |
+| `hotbar_next` / `hotbar_prev` | Mouse wheel up/down | Cycle hotbar selection. | `player_interaction.gd` |
 | `pvp_challenge` | `V` | Finds nearest player ≤5 units and sends PvP challenge. | `player_interaction.gd` |
 | `trade` | `T` | Finds nearest player ≤5 units and requests trade. | `player_interaction.gd` |
 | `open_party` | `P` | Toggle party UI; marks player busy while open. | `scripts/ui/party_ui.gd` |
@@ -36,9 +36,9 @@ Notes:
 
 ## Input flow (per frame)
 1) Client `_input` handles mouse motion and `toggle_mouse` for capture/rotation (yaw/pitch), clamped to ±70° pitch.
-2) Client `_process` samples movement vector + hotkey presses and stores them in replicated vars (`input_direction`, `interact_pressed`, `tool_action_pressed`).
+2) Client `_process` samples movement vector + hotkey presses and stores them in replicated vars (`input_direction`, `interact_pressed`).
 3) `InputSync` pushes those to the server; server-only `_physics_process` applies gravity, speed buffs, and movement, and rotates the mesh toward movement.
-4) Interaction hotkeys (`interact`, `cycle_tool`, number keys, PvP, trade, social/UI toggles) run on the owning client and issue server RPCs where needed; server re-validates everything (farm actions, trades, challenges, etc.).
+4) Interaction hotkeys (`interact`, number keys, PvP, trade, social/UI toggles) run on the owning client and issue server RPCs where needed; server re-validates everything (farm actions, trades, challenges, etc.).
 5) UI actions toggle layers and busy state; busy locks also prevent input handling in `player_interaction.gd` as a client-side guard.
 
 ## Updating controls

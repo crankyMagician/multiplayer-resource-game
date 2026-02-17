@@ -70,6 +70,16 @@ func _on_exit_door_body_entered(body: Node3D, _owner_name: String) -> void:
 # === Teleportation ===
 
 @rpc("any_peer", "reliable")
+func request_exit_restaurant() -> void:
+	if not multiplayer.is_server():
+		return
+	var sender = multiplayer.get_remote_sender_id()
+	var loc = player_location.get(sender, {})
+	if loc.get("zone", "overworld") != "restaurant":
+		return
+	_exit_restaurant(sender)
+
+@rpc("any_peer", "reliable")
 func request_enter_restaurant(owner_name: String) -> void:
 	if not multiplayer.is_server():
 		return

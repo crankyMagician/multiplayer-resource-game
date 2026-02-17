@@ -1,6 +1,6 @@
 extends CanvasLayer
 
-# Pause overlay with minimap. Toggle with Escape or M key.
+# Pause overlay with minimap. Toggle with M key.
 # Client-only. Sets busy state via existing RPC.
 
 var is_open: bool = false
@@ -58,7 +58,7 @@ func _build_ui() -> void:
 
 	# Close hint
 	hint_label = Label.new()
-	hint_label.text = "ESC or M to close  |  Scroll to zoom  |  Click to set target"
+	hint_label.text = "M to close  |  Scroll to zoom  |  Click to set target"
 	hint_label.add_theme_font_size_override("font_size", 14)
 	hint_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
 	hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -72,9 +72,7 @@ func _input(event: InputEvent) -> void:
 		return
 
 	var toggle = false
-	if event.is_action_pressed("ui_cancel") and not _is_other_ui_open():
-		toggle = true
-	elif event.is_action_pressed("open_map") and not _is_other_ui_open():
+	if event.is_action_pressed("open_map") and not _is_other_ui_open():
 		toggle = true
 
 	if toggle:
@@ -110,26 +108,29 @@ func _set_visible(v: bool) -> void:
 		indoor_label.visible = false
 
 func _is_other_ui_open() -> bool:
-	# Check if any other UI overlay is open — if so, let them handle Escape
 	var ui_node = get_node_or_null("/root/Main/GameWorld/UI")
 	if ui_node == null:
 		return false
-	for child in ui_node.get_children():
-		if child == self:
+	var blocking_names := ["BattleUI", "CraftingUI", "InventoryUI", "PartyUI",
+		"StorageUI", "ShopUI", "TradeUI", "DialogueUI", "CalendarUI",
+		"QuestLogUI", "CompendiumUI", "CreatureDestinationUI", "FriendListUI"]
+	for ui_name in blocking_names:
+		var child = ui_node.get_node_or_null(ui_name)
+		if child == null:
 			continue
-		# Check CanvasLayer-based UIs
-		if child is CanvasLayer and child.name != "HUD" and child.name != "CompassUI":
-			# Check if any child of the CanvasLayer is visible
+		if child is CanvasLayer:
+			if not child.visible:
+				continue
 			for sub in child.get_children():
 				if sub is Control and sub.visible:
 					return true
-	# Also check BattleUI directly
-	var battle_ui = get_node_or_null("/root/Main/GameWorld/UI/BattleUI")
-	if battle_ui:
-		for sub in battle_ui.get_children():
-			if sub is Control and sub.visible:
-				return true
+		elif child is Control and child.visible:
+			for sub in child.get_children():
+				if sub is Control and sub.visible:
+					return true
 	return false
 
 func _is_local_client() -> bool:
-	return multiplayer.multiplayer_peer != null and not multiplayer.is_server()
+	if multiplayer.multiplayer_peer == null:
+		return true
+	return not multiplayer.is_server()

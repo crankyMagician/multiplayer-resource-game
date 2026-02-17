@@ -69,6 +69,14 @@ func _try_interact() -> void:
 	if trainer and trainer.has_method("request_challenge"):
 		trainer.request_challenge.rpc_id(1)
 		return
+	# Check for restaurant exit door (E key to leave restaurant)
+	if PlayerData.current_zone == "restaurant":
+		var exit_door = _find_nearest_area("restaurant_exit_door", pos, 3.0)
+		if exit_door:
+			var rm = get_node_or_null("/root/Main/GameWorld/RestaurantManager")
+			if rm:
+				rm.request_exit_restaurant.rpc_id(1)
+			return
 	# Check for restaurant door proximity (interact key as alternative to walk-over)
 	var door = _find_nearest_area("restaurant_door", pos, 3.0)
 	if door:

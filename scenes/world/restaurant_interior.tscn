@@ -110,7 +110,7 @@ material_override = SubResource("wall_mat")
 shape = SubResource("wall_short_shape")
 
 ; === EXIT DOOR (south wall center) ===
-[node name="ExitDoor" type="Area3D" parent="."]
+[node name="ExitDoor" type="Area3D" parent="." groups=["restaurant_exit_door"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 9.5)
 script = ExtResource("3")
 collision_layer = 0

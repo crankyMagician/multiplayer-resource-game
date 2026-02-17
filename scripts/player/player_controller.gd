@@ -16,7 +16,6 @@ var input_direction: Vector2 = Vector2.ZERO
 var camera_yaw: float = 0.0
 var camera_pitch: float = 0.0
 var interact_pressed: bool = false
-var tool_action_pressed: bool = false
 
 # Mouse look
 var mouse_sensitivity: float = 0.003
@@ -127,7 +126,6 @@ func _process(_delta: float) -> void:
 	# Gather input
 	input_direction = Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
 	interact_pressed = Input.is_action_just_pressed("interact")
-	tool_action_pressed = Input.is_action_just_pressed("cycle_tool")
 
 func _physics_process(delta: float) -> void:
 	if not multiplayer.is_server():
