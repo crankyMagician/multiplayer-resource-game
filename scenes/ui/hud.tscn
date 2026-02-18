@@ -5,22 +5,47 @@
 [node name="HUD" type="CanvasLayer"]
 script = ExtResource("1")
 
-[node name="TopBar" type="HBoxContainer" parent="."]
-anchors_preset = 10
-anchor_right = 1.0
-offset_bottom = 40.0
+[node name="TopPanel" type="PanelContainer" parent="."]
+anchors_preset = 0
+offset_left = 8.0
+offset_top = 6.0
+offset_right = 320.0
+offset_bottom = 60.0
+size_flags_horizontal = 0
+size_flags_vertical = 0
 
-[node name="SeasonLabel" type="Label" parent="TopBar"]
+[node name="TopBar" type="HBoxContainer" parent="TopPanel"]
 layout_mode = 2
-text = "Season: Spring"
 
-[node name="Spacer" type="Control" parent="TopBar"]
+[node name="LeftInfo" type="VBoxContainer" parent="TopPanel/TopBar"]
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_horizontal = 0
 
-[node name="DayLabel" type="Label" parent="TopBar"]
+[node name="SeasonLabel" type="Label" parent="TopPanel/TopBar/LeftInfo"]
 layout_mode = 2
-text = "Day 1"
+text = "Spring  Year 1  Day 1"
+
+[node name="WeatherLabel" type="Label" parent="TopPanel/TopBar/LeftInfo"]
+layout_mode = 2
+text = "Sunny"
+
+[node name="Spacer" type="Control" parent="TopPanel/TopBar"]
+layout_mode = 2
+custom_minimum_size = Vector2(20, 0)
+
+[node name="RightInfo" type="VBoxContainer" parent="TopPanel/TopBar"]
+layout_mode = 2
+size_flags_horizontal = 8
+
+[node name="MoneyLabel" type="Label" parent="TopPanel/TopBar/RightInfo"]
+layout_mode = 2
+horizontal_alignment = 2
+text = "$0"
+
+[node name="LocationLabel" type="Label" parent="TopPanel/TopBar/RightInfo"]
+layout_mode = 2
+horizontal_alignment = 2
+text = "Overworld"
 
 [node name="WildZoneLegend" type="Label" parent="."]
 anchors_preset = 10
@@ -50,7 +75,7 @@ visible = false
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-color = Color(0.2, 0.5, 0.2, 0.15)
+color = Color(0.231373, 0.184314, 0.184314, 0.28)
 mouse_filter = 2
 
 [node name="BattleTransition" type="ColorRect" parent="."]
@@ -58,5 +83,5 @@ visible = false
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-color = Color(0, 0, 0, 1)
+color = Color(0.231373, 0.184314, 0.184314, 1)
 mouse_filter = 2

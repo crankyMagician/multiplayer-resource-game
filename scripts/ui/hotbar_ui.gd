@@ -1,8 +1,10 @@
 extends CanvasLayer
 
-const SLOT_SIZE := 56
+const UITokens = preload("res://scripts/ui/ui_tokens.gd")
+
+const SLOT_SIZE := 64
 const SLOT_COUNT := 8
-const SLOT_GAP := 4
+const SLOT_GAP := 0
 const KEY_LABELS = ["1", "2", "3", "4", "5", "6", "7", "8"]
 
 var slots: Array[PanelContainer] = []
@@ -16,29 +18,16 @@ var water_bars: Array[ColorRect] = []
 var _cooldown_ends: Dictionary = {} # slot_index -> end_time_ms
 var _cooldown_durations: Dictionary = {} # slot_index -> duration_ms
 
-var _selected_style: StyleBoxFlat
-var _normal_style: StyleBoxFlat
-var _empty_style: StyleBoxFlat
+var _selected_style: StyleBox
+var _normal_style: StyleBox
+var _empty_style: StyleBox
 
 func _ready() -> void:
 	layer = 2
-	_selected_style = StyleBoxFlat.new()
-	_selected_style.bg_color = Color(0.18, 0.18, 0.18, 0.9)
-	_selected_style.border_color = Color(1.0, 0.85, 0.3)
-	_selected_style.set_border_width_all(2)
-	_selected_style.set_corner_radius_all(6)
-
-	_normal_style = StyleBoxFlat.new()
-	_normal_style.bg_color = Color(0.12, 0.12, 0.12, 0.75)
-	_normal_style.border_color = Color(0.45, 0.45, 0.45)
-	_normal_style.set_border_width_all(1)
-	_normal_style.set_corner_radius_all(6)
-
-	_empty_style = StyleBoxFlat.new()
-	_empty_style.bg_color = Color(0.08, 0.08, 0.08, 0.5)
-	_empty_style.border_color = Color(0.25, 0.25, 0.25)
-	_empty_style.set_border_width_all(1)
-	_empty_style.set_corner_radius_all(6)
+	UITheme.init()
+	_selected_style = _make_hotbar_style(UITokens.PAPER_CREAM, UITokens.STAMP_GOLD, 2)
+	_normal_style = _make_hotbar_style(UITokens.PAPER_BASE, UITokens.STAMP_BROWN, 1)
+	_empty_style = _make_hotbar_style(UITokens.PARCHMENT_DARK, UITokens.INK_LIGHT, 1)
 
 	_build_ui()
 	_refresh_all()
@@ -51,8 +40,12 @@ func _ready() -> void:
 func _build_ui() -> void:
 	var container = Control.new()
 	container.name = "HotbarContainer"
-	container.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	container.offset_top = -70.0
+	container.anchor_left = 0.0
+	container.anchor_right = 1.0
+	container.anchor_top = 1.0
+	container.anchor_bottom = 1.0
+	container.offset_top = -(SLOT_SIZE + 16)
+	container.offset_bottom = -16
 	container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(container)
 
@@ -62,9 +55,10 @@ func _build_ui() -> void:
 	hbox.anchor_left = 0.5
 	hbox.anchor_right = 0.5
 	hbox.anchor_top = 0.0
-	hbox.anchor_bottom = 1.0
+	hbox.anchor_bottom = 0.0
 	hbox.offset_left = -total_width / 2.0
 	hbox.offset_right = total_width / 2.0
+	hbox.offset_bottom = SLOT_SIZE
 	hbox.add_theme_constant_override("separation", SLOT_GAP)
 	hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	container.add_child(hbox)
@@ -76,11 +70,11 @@ func _build_ui() -> void:
 		hbox.add_child(panel)
 		slots.append(panel)
 
-		# Icon color indicator
+		# Icon color indicator (square, centered)
 		var icon = ColorRect.new()
-		icon.custom_minimum_size = Vector2(24, 24)
-		icon.position = Vector2(13, 8)
-		icon.size = Vector2(24, 24)
+		icon.custom_minimum_size = Vector2(32, 32)
+		icon.position = Vector2(16, 6)
+		icon.size = Vector2(32, 32)
 		icon.color = Color.TRANSPARENT
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		panel.add_child(icon)
@@ -89,9 +83,11 @@ func _build_ui() -> void:
 		# Item name label (abbreviation)
 		var label = Label.new()
 		label.text = ""
-		label.add_theme_font_size_override("font_size", 9)
+		UITheme.style_small(label)
+		label.add_theme_font_size_override("font_size", UITokens.FONT_TINY)
+		label.add_theme_color_override("font_color", UITokens.INK_DARK)
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		label.position = Vector2(0, 33)
+		label.position = Vector2(0, 40)
 		label.size = Vector2(SLOT_SIZE, 14)
 		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		panel.add_child(label)
@@ -100,8 +96,9 @@ func _build_ui() -> void:
 		# Key number label (top-left)
 		var key_label = Label.new()
 		key_label.text = KEY_LABELS[i]
-		key_label.add_theme_font_size_override("font_size", 10)
-		key_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
+		UITheme.style_small(key_label)
+		key_label.add_theme_font_size_override("font_size", UITokens.FONT_TINY)
+		key_label.add_theme_color_override("font_color", UITokens.INK_MEDIUM)
 		key_label.position = Vector2(3, 1)
 		key_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		panel.add_child(key_label)
@@ -109,7 +106,7 @@ func _build_ui() -> void:
 
 		# Cooldown overlay (dark bar that shrinks from top)
 		var cd_overlay = ColorRect.new()
-		cd_overlay.color = Color(0, 0, 0, 0.6)
+		cd_overlay.color = UITokens.SCRIM
 		cd_overlay.position = Vector2(0, 0)
 		cd_overlay.size = Vector2(SLOT_SIZE, 0)
 		cd_overlay.visible = false
@@ -119,7 +116,7 @@ func _build_ui() -> void:
 
 		# Water bar (small bar for watering can)
 		var water_bar = ColorRect.new()
-		water_bar.color = Color(0.3, 0.5, 1.0, 0.8)
+		water_bar.color = Color(UITokens.STAMP_BLUE.r, UITokens.STAMP_BLUE.g, UITokens.STAMP_BLUE.b, 0.8)
 		water_bar.position = Vector2(2, SLOT_SIZE - 6)
 		water_bar.size = Vector2(0, 4)
 		water_bar.visible = false
@@ -149,26 +146,26 @@ func _refresh_slot(index: int) -> void:
 			"tool_slot":
 				match item_id:
 					"hoe":
-						icon_color = Color(0.6, 0.4, 0.2)
+						icon_color = UITokens.STAMP_BROWN
 						var tid = PlayerData.equipped_tools.get("hoe", "")
 						label_text = _tool_short_name(tid, "Hoe")
 					"axe":
-						icon_color = Color(0.5, 0.5, 0.5)
+						icon_color = UITokens.INK_MEDIUM
 						var tid = PlayerData.equipped_tools.get("axe", "")
 						label_text = _tool_short_name(tid, "Axe")
 					"watering_can":
-						icon_color = Color(0.3, 0.5, 1.0)
+						icon_color = UITokens.STAMP_BLUE
 						var tid = PlayerData.equipped_tools.get("watering_can", "")
 						label_text = _tool_short_name(tid, "W. Can")
 					"shovel":
-						icon_color = Color(0.45, 0.35, 0.2)
+						icon_color = UITokens.PARCHMENT_DARK
 						var tid = PlayerData.equipped_tools.get("shovel", "")
 						label_text = _tool_short_name(tid, "Shovel")
 					_:
-						icon_color = Color.GRAY
+						icon_color = UITokens.INK_LIGHT
 						label_text = item_id.substr(0, 8).capitalize()
 			"seed":
-				icon_color = Color(0.3, 0.7, 0.2)
+				icon_color = UITokens.STAMP_GREEN
 				if item_id != "" and item_id != "seeds":
 					var info = DataRegistry.get_item_display_info(item_id)
 					label_text = str(info.get("display_name", item_id)).substr(0, 8)
@@ -179,15 +176,15 @@ func _refresh_slot(index: int) -> void:
 					label_text = "Seeds"
 			"food":
 				var info = DataRegistry.get_item_display_info(item_id)
-				icon_color = info.get("icon_color", Color(0.9, 0.6, 0.2))
+				icon_color = info.get("icon_color", UITokens.STAMP_GOLD)
 				label_text = str(info.get("display_name", item_id)).substr(0, 8)
 			"battle_item":
 				var info = DataRegistry.get_item_display_info(item_id)
-				icon_color = info.get("icon_color", Color(0.9, 0.3, 0.3))
+				icon_color = info.get("icon_color", UITokens.STAMP_RED)
 				label_text = str(info.get("display_name", item_id)).substr(0, 8)
 			_:
 				var info = DataRegistry.get_item_display_info(item_id)
-				icon_color = info.get("icon_color", Color.GRAY)
+				icon_color = info.get("icon_color", UITokens.INK_LIGHT)
 				label_text = str(info.get("display_name", item_id)).substr(0, 8)
 
 	slot_icons[index].color = icon_color
@@ -212,6 +209,18 @@ func _tool_short_name(tool_id: String, fallback: String) -> String:
 		var prefix = tier_names[clampi(tool_def.tier, 0, 3)]
 		return prefix + fallback
 	return fallback
+
+func _make_hotbar_style(bg_color: Color, border_color: Color, border_width: int) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = bg_color
+	style.border_color = border_color
+	style.set_corner_radius_all(4)
+	style.set_border_width_all(border_width)
+	style.content_margin_left = 4
+	style.content_margin_top = 4
+	style.content_margin_right = 4
+	style.content_margin_bottom = 4
+	return style
 
 func _update_selection() -> void:
 	for i in SLOT_COUNT:
