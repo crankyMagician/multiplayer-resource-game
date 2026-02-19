@@ -9,8 +9,8 @@ Quick reference for how input is declared and consumed across the project.
 - Interaction gating: `scripts/player/player_interaction.gd` listens for world/action hotkeys and issues server RPCs (calendar, NPCs, farming, PvP, trade, etc.).
 - UI toggles: each UI scene listens for its action and flips visibility + busy state (party, inventory, map, calendar, friend list).
 - Replication: `scenes/player/player.tscn` has two `MultiplayerSynchronizer` nodes:
-  - `InputSync` replicates `input_direction`, `camera_yaw`, `camera_pitch`, `interact_pressed` from client → server.
-  - `StateSync` replicates server-owned state (position, velocity, player_color, player_name_display, mesh_rotation_y, is_busy) out to clients.
+  - `InputSync` replicates `input_direction`, `camera_yaw`, `camera_pitch`, `interact_pressed`, `input_sprint`, `input_crouch`, `input_jump` from client → server.
+  - `StateSync` replicates server-owned state (position, velocity, player_color, player_name_display, mesh_rotation_y, is_busy, movement_state, anim_move_speed, anim_action) out to clients.
 
 ## Keybinds & actions
 | Action | Default key | What it does | Main code path |

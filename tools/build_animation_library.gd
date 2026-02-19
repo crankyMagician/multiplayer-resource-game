@@ -58,6 +58,7 @@ func _initialize() -> void:
 
 		var anim = anim_player.get_animation(anim_list[0]).duplicate()
 		anim.loop_mode = Animation.LOOP_LINEAR if LOOP_CLIPS.has(clip) else Animation.LOOP_NONE
+		_remap_tracks_to_skeleton(anim)
 		library.add_animation(clip, anim)
 
 	var save_path := "res://assets/animations/player_animation_library.tres"
@@ -66,3 +67,24 @@ func _initialize() -> void:
 		push_error("Failed to save AnimationLibrary: %s" % err)
 
 	quit()
+
+
+## Remap Node3D bone paths to Skeleton3D bone paths.
+## Animation GLBs (no mesh) import bones as Node3D children:
+##   RootNode/mixamorig_Hips/mixamorig_Spine/mixamorig_Spine1
+## Player character GLB (with mesh) uses Skeleton3D:
+##   RootNode/Skeleton3D:mixamorig_Spine1
+## This function converts the former to the latter.
+func _remap_tracks_to_skeleton(anim: Animation) -> void:
+	for i in anim.get_track_count():
+		var path := anim.track_get_path(i)
+		var path_str := String(path)
+
+		# Only remap bone tracks (paths starting with RootNode/mixamorig_)
+		if not path_str.begins_with("RootNode/mixamorig_"):
+			continue
+
+		# The last segment after the final "/" is the bone name
+		var bone_name := path_str.get_slice("/", path_str.count("/"))
+		var new_path := NodePath("RootNode/Skeleton3D:" + bone_name)
+		anim.track_set_path(i, new_path)

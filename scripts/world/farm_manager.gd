@@ -113,6 +113,13 @@ func request_farm_action(plot_index: int, action: String, extra: String) -> void
 				# Server-side inventory tracking
 				for item_id in result:
 					NetworkManager.server_add_inventory(sender, item_id, result[item_id])
+	# Trigger tool animation on player if action succeeded
+	if success:
+		var anim_map = {"clear": &"axe", "till": &"hoe", "water": &"water",
+						"plant": &"harvest", "harvest": &"harvest"}
+		var player_node = NetworkManager._get_player_node(sender)
+		if player_node and player_node.has_method("play_tool_action"):
+			player_node.play_tool_action(anim_map.get(action, &"harvest"))
 	_farm_action_result.rpc_id(sender, plot_index, action, success)
 
 @rpc("authority", "reliable")

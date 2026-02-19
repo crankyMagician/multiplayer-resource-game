@@ -87,6 +87,10 @@ func request_craft(recipe_id: String) -> void:
 			NetworkManager.server_equip_tool(sender, tool_def.tool_type, recipe.result_tool_id)
 		_receive_crafted_item.rpc_id(sender, recipe.result_tool_id, result_name)
 
+	# Trigger crafting animation on player
+	var player_node = NetworkManager._get_player_node(sender)
+	if player_node and player_node.has_method("play_tool_action"):
+		player_node.play_tool_action(&"craft")
 	# Track crafting stat
 	StatTracker.increment(sender, "items_crafted")
 	# Sync inventory after crafting

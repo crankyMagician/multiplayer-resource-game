@@ -135,6 +135,10 @@ func request_harvest() -> void:
 	var cd_action = "chop" if harvestable_type == "tree" else ("mine" if harvestable_type == "rock" else "chop")
 	if not NetworkManager.check_tool_cooldown(sender, cd_action, required_tool):
 		return
+	# Trigger tool animation on player
+	var anim_name: StringName = &"axe" if harvestable_type == "tree" else (&"axe" if harvestable_type == "rock" else &"harvest")
+	if player_node.has_method("play_tool_action"):
+		player_node.play_tool_action(anim_name)
 	# Deal damage
 	current_health -= 1
 	if current_health <= 0:

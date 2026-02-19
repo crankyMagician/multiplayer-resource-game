@@ -2,7 +2,7 @@
 
 ## Run Commands
 ```bash
-# GDScript tests (GUT) — 533 tests
+# GDScript tests (GUT) — 767+ tests
 '/Applications/Mechanical Turk.app/Contents/MacOS/Mechanical Turk' --path . --headless -s addons/gut/gut_cmdln.gd -gexit
 
 # Express API tests (Vitest) — 21 tests

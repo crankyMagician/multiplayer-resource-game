@@ -118,7 +118,18 @@ See `docs/docker-build.md` for full build instructions (two-phase engine + game 
 - **Player collision layers**: Players use `collision_layer=2`, `collision_mask=1`. TallGrass and TrainerNPC Area3Ds set `collision_mask=3` (bits 1+2) to detect players.
 - **UI node sharing**: `_setup_ui()` adds HUD, BattleUI, CraftingUI, InventoryUI, PartyUI to the **existing** `$UI` node from `game_world.tscn`. Do NOT create a new "UI" node — Godot will rename it, breaking path lookups.
 - **Player visuals** (color, nameplate): set on the player node server-side **before** `add_child()` in `_spawn_player()`, synced via StateSync spawn-only mode.
-- **StateSync properties** (6 total): `position`, `velocity` (always), `player_color`, `player_name_display` (spawn-only), `mesh_rotation_y` (always), `is_busy` (always).
+- **StateSync properties** (9 total): `position`, `velocity` (always), `player_color`, `player_name_display` (spawn-only), `mesh_rotation_y` (always), `is_busy` (always), `movement_state` (always), `anim_move_speed` (always), `anim_action` (always).
+
+## Animation System
+- **Architecture**: AnimationTree used as standalone AnimationMixer (NOT paired with a separate AnimationPlayer). Animation library loaded directly via `anim_tree.add_animation_library()`, root_node set to `../CharacterModel`.
+- **Why standalone**: In Godot 4.x, AnimationTree with a separate AnimationPlayer via `anim_player` path silently fails to drive Skeleton3D bone poses through blend trees. Using AnimationTree as its own AnimationMixer avoids this.
+- **Animation library**: `assets/animations/player_animation_library.tres` — 18 animations built from standalone animation GLBs via `tools/build_animation_library.gd`. Track paths: `RootNode/Skeleton3D:bone_name`.
+- **GLB structure**: `CharacterModel > RootNode > Skeleton3D` (65 Mixamo bones with `mixamorig_` prefix).
+- **Blend tree**: Two-level state machine — Stance (stand/crouch) → Standing locomotion (Idle/Jog/Run) + Crouch locomotion (CrouchIdle/CrouchWalk). Jump/Fall/Land layered on top.
+- **Sync**: Server sets `movement_state`, `anim_move_speed`, `anim_action` on the player node. StateSync replicates to all clients. Each client's AnimationTree reads these to drive animations locally.
+- **Loop modes**: Locomotion animations (idle, jog, run, walk, crouch, falling) set to `LOOP_LINEAR` at runtime in `_build_animation_tree()`.
+- **Transition request type**: AnimationNodeTransition `transition_request` expects `String`, NOT `StringName` — using StringName causes "Type mismatch" error.
+- **Key files**: `scripts/player/player_controller.gd` (`_build_animation_tree()`, `_update_animation_tree()`), `scenes/player/player.tscn`, `tools/build_animation_library.gd`.
 
 ## Battle System
 - **3 battle modes**: Wild, Trainer (7 NPCs), PvP (V key challenge within 5 units)
@@ -261,6 +272,7 @@ This is a server-authoritative multiplayer game. **Every gameplay change — new
 | Excursion entry/exit | Server (ExcursionManager) | `_enter/_exit_excursion_client` RPCs, seed+season for terrain |
 | Excursion loot | Server (ExcursionManager routes) | `_grant_excursion_battle_rewards` + `_notify_pickup` RPCs per member |
 | Excursion terrain visuals | Client (ExcursionGenerator from seed) | No sync needed |
+| Player animation | Client (AnimationTree blend tree) | Server syncs `movement_state`, `anim_move_speed`, `anim_action` via StateSync |
 
 ### Never do this
 - **Never deduct resources client-side before server confirms.** Always let the server deduct first, then sync to client via RPC. The old planting flow had this bug — client removed seed, then told server, creating desync on disconnect.

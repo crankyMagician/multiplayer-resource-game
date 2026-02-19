@@ -8,6 +8,7 @@
 | Settings | `scripts/ui/tabs/settings_tab.gd` | Font scale + text speed + volume. Persisted to `user://settings.cfg`. |
 | Battle Arena | `scripts/battle/battle_arena.gd`, `scripts/battle/battle_arena_ui.gd` | 3D arena is client-only. Label3D sizes must use `UITheme.scaled()`. |
 | Hotbar | `scripts/ui/hotbar_ui.gd` | CanvasLayer overlay. Font sizes must use `UITheme.scaled()`. |
+| Animation | `scripts/player/player_controller.gd`, `tools/build_animation_library.gd` | AnimationTree as standalone AnimationMixer (no separate AnimationPlayer). See CLAUDE.md Animation System. |
 | Networking | `scripts/autoload/network_manager.gd` | Server-authoritative. See CLAUDE.md Networking Rules. |
 | Battle | `scripts/battle/battle_manager.gd` | Server-authoritative battle state. See `docs/battle-system.md`. |
 | Data Registry | `scripts/autoload/data_registry.gd` | Loads all `.tres` resources. Handles `.remap` in exports. |
@@ -84,7 +85,7 @@ See CLAUDE.md "Networking Rules" for the full authority model table.
 ## Testing
 
 ```bash
-# GDScript tests (GUT) — 761+ tests
+# GDScript tests (GUT) — 767+ tests
 '/Applications/Mechanical Turk.app/Contents/MacOS/Mechanical Turk' --path . --headless -s addons/gut/gut_cmdln.gd -gexit
 
 # Express API tests (Vitest)

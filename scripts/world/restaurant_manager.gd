@@ -427,6 +427,11 @@ func _client_exit_restaurant() -> void:
 	if _client_restaurant_instance != null:
 		_client_restaurant_instance.queue_free()
 		_client_restaurant_instance = null
+	# Reactivate local player camera after leaving restaurant
+	var local_peer = multiplayer.get_unique_id()
+	var player = get_node_or_null("/root/Main/GameWorld/Players/%d" % local_peer)
+	if player and player.has_method("reactivate_camera"):
+		player.reactivate_camera()
 
 func sync_doors_to_client(peer_id: int) -> void:
 	for player_name in door_nodes:

@@ -70,6 +70,7 @@ var waiting_label: Label = null
 var _summary_victory: bool = false
 var _is_animating_log: bool = false
 var _initial_setup: bool = false
+var _battle_starting: bool = false  # Guards against battle_ended during _on_battle_started awaits
 
 
 const TYPE_COLORS = {
@@ -540,7 +541,7 @@ func _get_local_player_camera() -> Camera3D:
 	var local_peer = multiplayer.get_unique_id()
 	var player = get_node_or_null("/root/Main/GameWorld/Players/%d" % local_peer)
 	if player:
-		return player.get_node_or_null("CameraPivot/SpringArm3D/Camera3D")
+		return player.get_node_or_null("Camera3D")
 	return null
 
 func _enter_arena_camera() -> void:
@@ -598,6 +599,7 @@ func _show_move_panel(show: bool) -> void:
 # === BATTLE LIFECYCLE ===
 
 func _on_battle_started() -> void:
+	_battle_starting = true
 	_initial_setup = true
 	_is_animating_log = false
 	_buffered_turn_logs.clear()
@@ -703,8 +705,21 @@ func _on_battle_started() -> void:
 		_buffered_turn_logs.clear()
 		for tl in buffered:
 			_on_turn_result(tl)
+	_battle_starting = false
 
 func _on_battle_ended(victory: bool) -> void:
+	# Wait for _on_battle_started to finish its await chain before tearing down
+	if _battle_starting:
+		while _battle_starting:
+			await get_tree().process_frame
+		# Re-check arena validity after waiting
+		if not is_instance_valid(arena):
+			_restore_player_camera()
+			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+			var hud2 = get_node_or_null("/root/Main/GameWorld/UI/HUD")
+			if hud2:
+				hud2.visible = true
+			return
 	_set_phase(BattlePhase.ENDED)
 	_summary_victory = victory
 	await get_tree().create_timer(0.5).timeout
