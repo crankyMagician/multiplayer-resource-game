@@ -11,6 +11,8 @@ const ANIM_CLIPS := [
 	"crouch_idle",
 	"crouch_walk",
 	"falling",
+	"jump_up",
+	"landing",
 	"turn_left",
 	"turn_right",
 	"hoe_swing",

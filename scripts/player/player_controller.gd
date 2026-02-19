@@ -64,6 +64,11 @@ var peer_id: int = 1
 # Track whether AnimationTree blend graph has been built
 var _anim_tree_ready: bool = false
 
+# Client-local airborne animation tracking
+var _was_airborne: bool = false
+var _landing_timer: float = 0.0
+const LANDING_ANIM_DURATION := 0.3
+
 
 func _update_busy_transparency() -> void:
 	if character_model == null:
@@ -362,7 +367,7 @@ func _physics_process(delta: float) -> void:
 		velocity.z = move_dir.z * gait_speed * speed_mult
 
 		var target_angle = atan2(move_dir.x, move_dir.z)
-		mesh_rotation_y = lerp_angle(mesh_rotation_y, target_angle, 10 * delta)
+		mesh_rotation_y = lerp_angle(mesh_rotation_y, target_angle, 15 * delta)
 
 		anim_move_speed = clamp(Vector2(velocity.x, velocity.z).length() / SPRINT_SPEED, 0.0, 1.0)
 	else:
@@ -419,10 +424,18 @@ func _build_animation_tree() -> void:
 	falling_node.animation = &"falling"
 	blend_tree.add_node(&"Falling", falling_node, Vector2(0, 1000))
 
+	var jump_up_node := AnimationNodeAnimation.new()
+	jump_up_node.animation = &"jump_up"
+	blend_tree.add_node(&"JumpUp", jump_up_node, Vector2(0, 1100))
+
+	var landing_node := AnimationNodeAnimation.new()
+	landing_node.animation = &"landing"
+	blend_tree.add_node(&"Landing", landing_node, Vector2(0, 1200))
+
 	# Tool action animation node
 	var tool_node := AnimationNodeAnimation.new()
 	tool_node.animation = &"hoe_swing"
-	blend_tree.add_node(&"ToolAnim", tool_node, Vector2(0, 1200))
+	blend_tree.add_node(&"ToolAnim", tool_node, Vector2(0, 1400))
 
 	# Standing locomotion transition: Idle / Jog / Run
 	var stand_loco := AnimationNodeTransition.new()
@@ -453,11 +466,22 @@ func _build_animation_tree() -> void:
 	blend_tree.connect_node(&"Stance", 0, &"StandingLoco")
 	blend_tree.connect_node(&"Stance", 1, &"CrouchLoco")
 
-	# InAir blend: 0=locomotion, 1=falling
+	# Airborne state transition: JumpUp / Falling / Landing
+	var airborne_state := AnimationNodeTransition.new()
+	airborne_state.add_input("JumpUp")
+	airborne_state.add_input("Falling")
+	airborne_state.add_input("Landing")
+	airborne_state.xfade_time = 0.15
+	blend_tree.add_node(&"AirborneState", airborne_state, Vector2(600, 1000))
+	blend_tree.connect_node(&"AirborneState", 0, &"JumpUp")
+	blend_tree.connect_node(&"AirborneState", 1, &"Falling")
+	blend_tree.connect_node(&"AirborneState", 2, &"Landing")
+
+	# InAir blend: 0=locomotion, 1=airborne state
 	var in_air := AnimationNodeBlend2.new()
 	blend_tree.add_node(&"InAir", in_air, Vector2(900, 500))
 	blend_tree.connect_node(&"InAir", 0, &"Stance")
-	blend_tree.connect_node(&"InAir", 1, &"Falling")
+	blend_tree.connect_node(&"InAir", 1, &"AirborneState")
 
 	# ToolAction blend: 0=locomotion, 1=tool animation
 	var tool_action := AnimationNodeBlend2.new()
@@ -494,9 +518,26 @@ func _update_animation_tree() -> void:
 	else:
 		anim_tree.set(&"parameters/ToolAction/blend_amount", 0.0)
 
-	# Airborne
-	var in_air := 1.0 if movement_state == MoveState.AIRBORNE else 0.0
-	anim_tree.set(&"parameters/InAir/blend_amount", in_air)
+	# Airborne + landing
+	var is_airborne := movement_state == MoveState.AIRBORNE
+	if is_airborne:
+		if velocity.y > 0.5:
+			anim_tree.set(&"parameters/AirborneState/transition_request", "JumpUp")
+		else:
+			anim_tree.set(&"parameters/AirborneState/transition_request", "Falling")
+		anim_tree.set(&"parameters/InAir/blend_amount", 1.0)
+		_was_airborne = true
+	elif _was_airborne:
+		# Just landed — play landing animation
+		_was_airborne = false
+		_landing_timer = LANDING_ANIM_DURATION
+		anim_tree.set(&"parameters/AirborneState/transition_request", "Landing")
+		anim_tree.set(&"parameters/InAir/blend_amount", 1.0)
+	elif _landing_timer > 0.0:
+		_landing_timer -= get_process_delta_time()
+		anim_tree.set(&"parameters/InAir/blend_amount", 1.0)
+	else:
+		anim_tree.set(&"parameters/InAir/blend_amount", 0.0)
 
 	# Stance (use String, not StringName — transition_request expects String)
 	var is_crouching := movement_state in [MoveState.CROUCH_IDLE, MoveState.CROUCH_WALK]
@@ -539,7 +580,8 @@ func _update_crouch_collision(delta: float) -> void:
 	var is_crouching := movement_state in [MoveState.CROUCH_IDLE, MoveState.CROUCH_WALK]
 	var target_height := CROUCH_CAPSULE_HEIGHT if is_crouching else DEFAULT_CAPSULE_HEIGHT
 	capsule.height = lerp(capsule.height, target_height, delta * CROUCH_LERP_SPEED)
-	capsule.radius = clamp(capsule.height / 4.5, 0.25, 0.4)
+	collision_shape.position.y = lerp(collision_shape.position.y, capsule.height / 2.0, delta * CROUCH_LERP_SPEED)
+	capsule.radius = clamp(capsule.height / 3.6, 0.28, 0.5)
 
 
 # ---------- Tool Action (called by server managers) ----------

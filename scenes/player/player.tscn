@@ -5,7 +5,7 @@
 [ext_resource type="PackedScene" path="res://assets/models/player_character.glb" id="3"]
 
 [sub_resource type="CapsuleShape3D" id="capsule_shape"]
-radius = 0.4
+radius = 0.5
 height = 1.8
 
 [sub_resource type="SceneReplicationConfig" id="input_repl_config"]
