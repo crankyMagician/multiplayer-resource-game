@@ -17,6 +17,13 @@ var active_tab_index: int = 0
 # Tab content nodes
 var tabs: Array[Control] = []
 
+# Status header
+var status_header: PanelContainer = null
+var status_name_label: Label = null
+var status_money_label: Label = null
+var status_season_label: Label = null
+var status_buffs_label: Label = null
+
 # Party invite popup (always-visible, outside content container)
 var invite_popup: PanelContainer
 var invite_label: Label
@@ -135,9 +142,17 @@ func _build_ui() -> void:
 	UITheme.style_card(content_panel)
 	main_hbox.add_child(content_panel)
 
+	var content_vbox := VBoxContainer.new()
+	content_vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	content_panel.add_child(content_vbox)
+
+	# Status header bar (always visible across all tabs)
+	_build_status_header(content_vbox)
+
 	content_container = Control.new()
-	content_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	content_panel.add_child(content_container)
+	content_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	content_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content_vbox.add_child(content_container)
 
 	# Create tab content controls
 	for i in range(TAB_DEFS.size()):
@@ -183,6 +198,91 @@ func _build_invite_popup() -> void:
 	UITheme.style_button(invite_decline_btn, "danger")
 	invite_decline_btn.pressed.connect(_on_invite_decline)
 	hbox.add_child(invite_decline_btn)
+
+func _build_status_header(parent: VBoxContainer) -> void:
+	status_header = PanelContainer.new()
+	status_header.custom_minimum_size.y = UITheme.scaled(36)
+	var header_style := StyleBoxFlat.new()
+	header_style.bg_color = UITokens.PAPER_EDGE
+	header_style.set_corner_radius_all(UITokens.CORNER_RADIUS_SM)
+	header_style.content_margin_left = 10
+	header_style.content_margin_right = 10
+	header_style.content_margin_top = 4
+	header_style.content_margin_bottom = 4
+	status_header.add_theme_stylebox_override("panel", header_style)
+	parent.add_child(status_header)
+
+	var hbox := HBoxContainer.new()
+	hbox.add_theme_constant_override("separation", 16)
+	status_header.add_child(hbox)
+
+	status_name_label = Label.new()
+	status_name_label.text = ""
+	UITheme.style_body(status_name_label)
+	hbox.add_child(status_name_label)
+
+	status_money_label = Label.new()
+	status_money_label.text = "$0"
+	UITheme.style_body(status_money_label)
+	status_money_label.add_theme_color_override("font_color", UITokens.STAMP_GOLD)
+	hbox.add_child(status_money_label)
+
+	var sep := VSeparator.new()
+	hbox.add_child(sep)
+
+	status_season_label = Label.new()
+	status_season_label.text = ""
+	UITheme.style_body(status_season_label)
+	status_season_label.add_theme_color_override("font_color", UITokens.INK_SECONDARY)
+	hbox.add_child(status_season_label)
+
+	var sep2 := VSeparator.new()
+	hbox.add_child(sep2)
+
+	status_buffs_label = Label.new()
+	status_buffs_label.text = ""
+	UITheme.style_caption(status_buffs_label)
+	status_buffs_label.add_theme_color_override("font_color", UITokens.TEXT_INFO)
+	status_buffs_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hbox.add_child(status_buffs_label)
+
+func _refresh_status_header() -> void:
+	if status_name_label == null:
+		return
+	status_name_label.text = PlayerData.player_name
+	status_money_label.text = "$%s" % _format_money(PlayerData.money)
+
+	# Season/day from SeasonManager
+	var season_mgr = get_node_or_null("/root/Main/GameWorld/SeasonManager")
+	if season_mgr:
+		var season_name: String = season_mgr.get_season_name() if season_mgr.has_method("get_season_name") else "???"
+		var month_day: int = ((season_mgr.total_day_count - 1) % 28) + 1
+		status_season_label.text = "%s Day %d" % [season_name.capitalize(), month_day]
+	else:
+		status_season_label.text = ""
+
+	# Active buffs
+	if PlayerData.active_buffs.size() > 0:
+		var buff_parts := []
+		for buff in PlayerData.active_buffs:
+			var btype: String = str(buff.get("buff_type", "")).replace("_", " ").capitalize()
+			buff_parts.append(btype)
+		status_buffs_label.text = "Buffs: " + ", ".join(buff_parts)
+	else:
+		status_buffs_label.text = ""
+
+static func _format_money(amount: int) -> String:
+	var s := str(amount)
+	if amount < 1000:
+		return s
+	var result := ""
+	var count := 0
+	for i in range(s.length() - 1, -1, -1):
+		if count > 0 and count % 3 == 0:
+			result = "," + result
+		result = s[i] + result
+		count += 1
+	return result
 
 func _input(event: InputEvent) -> void:
 	if not _is_local_client():
@@ -258,6 +358,7 @@ func open_to_tab(tab_name: String) -> void:
 
 func _open(tab_index: int = 0) -> void:
 	is_open = true
+	_refresh_status_header()
 	_switch_tab(tab_index)
 	_set_visible(true)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -305,6 +406,8 @@ func _set_visible(v: bool) -> void:
 	# Explicitly toggle each child.
 	bg.visible = v
 	main_hbox.visible = v
+	if status_header:
+		status_header.visible = v
 	if not v:
 		for tab in tabs:
 			tab.visible = false

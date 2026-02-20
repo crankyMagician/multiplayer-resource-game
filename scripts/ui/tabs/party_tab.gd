@@ -191,7 +191,12 @@ func _refresh() -> void:
 func _unequip_item(creature_idx: int) -> void:
 	NetworkManager.request_unequip_held_item.rpc_id(1, creature_idx)
 
+var _equip_panel: PanelContainer = null
+
 func _show_equip_options(creature_idx: int) -> void:
+	if _equip_panel:
+		_equip_panel.queue_free()
+		_equip_panel = null
 	DataRegistry.ensure_loaded()
 	var available_items := []
 	for item_id in PlayerData.inventory:
@@ -200,8 +205,59 @@ func _show_equip_options(creature_idx: int) -> void:
 			available_items.append(item_id)
 	if available_items.size() == 0:
 		return
-	var item_id = available_items[0]
-	NetworkManager.request_equip_held_item.rpc_id(1, creature_idx, item_id)
+
+	_equip_panel = PanelContainer.new()
+	_equip_panel.anchors_preset = Control.PRESET_CENTER
+	_equip_panel.custom_minimum_size = Vector2(400, 0)
+	UITheme.style_modal(_equip_panel)
+
+	var vbox := VBoxContainer.new()
+	_equip_panel.add_child(vbox)
+
+	var title := Label.new()
+	title.text = "Equip Held Item"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	UITheme.style_subheading(title)
+	vbox.add_child(title)
+
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size.y = 200
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox.add_child(scroll)
+
+	var item_list := VBoxContainer.new()
+	item_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(item_list)
+
+	for item_id in available_items:
+		var item = DataRegistry.get_held_item(item_id)
+		if item == null:
+			continue
+		var btn := Button.new()
+		var effect_text := ""
+		if item.description != "":
+			effect_text = " — " + item.description
+		btn.text = "%s (x%d)%s" % [item.display_name, PlayerData.inventory[item_id], effect_text]
+		btn.custom_minimum_size.y = 32
+		UITheme.style_button(btn, "secondary")
+		var captured_id = item_id
+		var cidx = creature_idx
+		btn.pressed.connect(func():
+			NetworkManager.request_equip_held_item.rpc_id(1, cidx, captured_id)
+			_equip_panel.queue_free()
+			_equip_panel = null
+		)
+		item_list.add_child(btn)
+
+	var cancel := Button.new()
+	cancel.text = "Cancel"
+	UITheme.style_button(cancel, "danger")
+	cancel.pressed.connect(func():
+		_equip_panel.queue_free()
+		_equip_panel = null
+	)
+	vbox.add_child(cancel)
+	add_child(_equip_panel)
 
 var _relearn_panel: PanelContainer = null
 

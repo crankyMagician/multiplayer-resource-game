@@ -110,6 +110,14 @@ func _on_decline() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not visible:
 		return
+	# ESC closes/declines the dialogue
+	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+		if is_challenge_mode:
+			_on_decline()
+		else:
+			_on_ok()
+		get_viewport().set_input_as_handled()
+		return
 	# Click-to-skip typewriter
 	if _typewriter_tween and _typewriter_tween.is_valid():
 		if (event is InputEventMouseButton and event.pressed) or (event is InputEventKey and event.pressed and event.keycode != KEY_ESCAPE):

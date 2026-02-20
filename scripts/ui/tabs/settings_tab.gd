@@ -158,6 +158,7 @@ P - Party (Creatures)
 J - Quest Log
 K - Compendium
 F - Friends & Party
+N - NPCs
 
 1-8 - Hotbar slots
 Scroll - Cycle hotbar"""

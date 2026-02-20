@@ -106,7 +106,15 @@ func _push_sync_to_peer(peer_id: int) -> void:
 		if f_peer > 0:
 			f_name = _get_player_name_for_peer(f_peer)
 		friends_out.append({"player_id": str(friend_id), "player_name": f_name, "online": f_peer > 0})
-	_sync_friends_list.rpc_id(peer_id, friends_out, social.get("incoming_requests", []), social.get("outgoing_requests", []), social.get("blocked", []))
+	# Build blocked list with names (resolve online players, offline show ID)
+	var blocked_out: Array = []
+	for blocked_id in social.get("blocked", []):
+		var b_peer = nm.get_peer_for_player_id(str(blocked_id))
+		var b_name = ""
+		if b_peer > 0:
+			b_name = _get_player_name_for_peer(b_peer)
+		blocked_out.append({"player_id": str(blocked_id), "player_name": b_name})
+	_sync_friends_list.rpc_id(peer_id, friends_out, social.get("incoming_requests", []), social.get("outgoing_requests", []), blocked_out)
 
 func _patch_offline(player_id: String, ops: Dictionary) -> void:
 	SaveManager.update_player_social(player_id, ops)
@@ -802,7 +810,8 @@ func _sync_friends_list(friends_arr: Array, incoming: Array, outgoing: Array, bl
 	PlayerData.friends = friends_arr.duplicate(true)
 	PlayerData.incoming_friend_requests = incoming.duplicate(true)
 	PlayerData.outgoing_friend_requests = outgoing.duplicate(true)
-	PlayerData.blocked_players = blocked.duplicate()
+	# blocked is now Array of {player_id, player_name} dicts (backward compat: also handles plain strings)
+	PlayerData.blocked_players = blocked.duplicate(true)
 	PlayerData.player_friends_changed.emit()
 
 @rpc("authority", "reliable")

@@ -79,9 +79,14 @@ func _build_ui() -> void:
 	action_button = Button.new()
 	action_button.text = "Track Quest"
 	UITheme.style_button(action_button, "secondary")
-	action_button.pressed.connect(_on_action_pressed)
 	action_button.visible = false
 	detail_panel.add_child(action_button)
+
+	_abandon_button = Button.new()
+	_abandon_button.text = "Abandon Quest"
+	UITheme.style_button(_abandon_button, "danger")
+	_abandon_button.visible = false
+	detail_panel.add_child(_abandon_button)
 
 func activate() -> void:
 	_showing_npc_quests = false
@@ -146,6 +151,10 @@ func _clear_detail() -> void:
 	detail_desc.text = ""
 	detail_rewards.text = ""
 	action_button.visible = false
+	if _abandon_button:
+		_abandon_button.visible = false
+		for conn in _abandon_button.pressed.get_connections():
+			_abandon_button.pressed.disconnect(conn.callable)
 	for child in detail_objectives.get_children():
 		child.queue_free()
 
@@ -191,17 +200,51 @@ func _show_quest_detail(quest_id: String, is_active: bool) -> void:
 		detail_rewards.text = "Rewards: " + ", ".join(reward_parts)
 
 	if is_active:
-		if qdef.category != "main_story":
-			action_button.text = "Abandon Quest"
-			action_button.visible = true
-			if action_button.pressed.is_connected(_on_action_pressed):
-				action_button.pressed.disconnect(_on_action_pressed)
-			action_button.pressed.connect(_on_abandon.bind(quest_id))
-		else:
-			action_button.visible = false
+		# Disconnect any existing connections to avoid stacking
+		for conn in action_button.pressed.get_connections():
+			action_button.pressed.disconnect(conn.callable)
 
-func _on_action_pressed() -> void:
-	pass
+		if qdef.category == "main_story":
+			# Main story quests can be tracked but not abandoned
+			if tracked_quest_id == quest_id:
+				action_button.text = "Untrack Quest"
+				action_button.visible = true
+				action_button.pressed.connect(_on_untrack.bind(quest_id))
+			else:
+				action_button.text = "Track Quest"
+				action_button.visible = true
+				action_button.pressed.connect(_on_track.bind(quest_id))
+		else:
+			# Non-story quests: show track/untrack + abandon
+			# Use an HBox-like approach: repurpose action_button for tracking
+			if tracked_quest_id == quest_id:
+				action_button.text = "Untrack Quest"
+			else:
+				action_button.text = "Track Quest"
+			action_button.visible = true
+			action_button.pressed.connect(_on_toggle_track.bind(quest_id))
+			# Show abandon button for non-story quests
+			if _abandon_button:
+				_abandon_button.visible = true
+				_abandon_button.pressed.connect(_on_abandon.bind(quest_id))
+
+var _abandon_button: Button = null
+
+func _on_track(quest_id: String) -> void:
+	tracked_quest_id = quest_id
+	_refresh()
+
+func _on_untrack(quest_id: String) -> void:
+	if tracked_quest_id == quest_id:
+		tracked_quest_id = ""
+	_refresh()
+
+func _on_toggle_track(quest_id: String) -> void:
+	if tracked_quest_id == quest_id:
+		tracked_quest_id = ""
+	else:
+		tracked_quest_id = quest_id
+	_refresh()
 
 func _on_abandon(quest_id: String) -> void:
 	var quest_mgr = get_node_or_null("/root/Main/GameWorld/QuestManager")
@@ -277,8 +320,6 @@ func _show_npc_quest_detail(quest_data: Dictionary) -> void:
 				detail_rewards.text = "Rewards: " + ", ".join(reward_parts)
 			action_button.text = "Accept Quest"
 			action_button.visible = true
-			if action_button.pressed.is_connected(_on_action_pressed):
-				action_button.pressed.disconnect(_on_action_pressed)
 			for conn in action_button.pressed.get_connections():
 				action_button.pressed.disconnect(conn.callable)
 			action_button.pressed.connect(_on_accept_quest.bind(str(quest_data.get("quest_id", ""))))

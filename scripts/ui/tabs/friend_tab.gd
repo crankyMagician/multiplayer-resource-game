@@ -219,18 +219,28 @@ func _build_blocked_tab() -> void:
 	if PlayerData.blocked_players.is_empty():
 		_add_label("No blocked players.")
 		return
-	for blocked_id in PlayerData.blocked_players:
+	for entry in PlayerData.blocked_players:
 		var hbox := HBoxContainer.new()
 		content_list.add_child(hbox)
 		var lbl := Label.new()
-		lbl.text = str(blocked_id).substr(0, 12) + "..."
+		# Support both new dict format {player_id, player_name} and old plain string format
+		var blocked_id := ""
+		var display_name := ""
+		if entry is Dictionary:
+			blocked_id = str(entry.get("player_id", ""))
+			display_name = str(entry.get("player_name", ""))
+		else:
+			blocked_id = str(entry)
+		if display_name == "":
+			display_name = blocked_id.substr(0, 8) + "..."
+		lbl.text = display_name
 		lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		UITheme.style_small(lbl)
 		hbox.add_child(lbl)
 		var unblock_btn := Button.new()
 		unblock_btn.text = "Unblock"
 		UITheme.style_button(unblock_btn, "secondary")
-		unblock_btn.pressed.connect(_on_unblock.bind(str(blocked_id)))
+		unblock_btn.pressed.connect(_on_unblock.bind(blocked_id))
 		hbox.add_child(unblock_btn)
 
 # === Helper ===

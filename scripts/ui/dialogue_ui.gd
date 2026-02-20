@@ -2,9 +2,12 @@ extends CanvasLayer
 
 const UITokens = preload("res://scripts/ui/ui_tokens.gd")
 
+var npc_portrait: ColorRect = null
 var npc_name_label: Label = null
+var npc_occupation_label: Label = null
 var friendship_label: Label = null
 var friendship_bar: ProgressBar = null
+var gift_hint_label: Label = null
 var dialogue_text: RichTextLabel = null
 var choices_container: VBoxContainer = null
 var action_container: HBoxContainer = null
@@ -47,12 +50,34 @@ func _build_ui() -> void:
 	var vbox = VBoxContainer.new()
 	margin.add_child(vbox)
 
+	# Header row: portrait + name/occupation
+	var header_row = HBoxContainer.new()
+	header_row.add_theme_constant_override("separation", 10)
+	vbox.add_child(header_row)
+
+	# NPC color portrait (40x40 rounded square)
+	npc_portrait = ColorRect.new()
+	npc_portrait.custom_minimum_size = UITheme.scaled_vec(Vector2(40, 40))
+	npc_portrait.color = Color(0.7, 0.5, 0.8)
+	npc_portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	header_row.add_child(npc_portrait)
+
+	var name_vbox = VBoxContainer.new()
+	name_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header_row.add_child(name_vbox)
+
 	# NPC name
 	npc_name_label = Label.new()
 	npc_name_label.text = "NPC Name"
-	npc_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	UITheme.style_heading(npc_name_label)
-	vbox.add_child(npc_name_label)
+	name_vbox.add_child(npc_name_label)
+
+	# NPC occupation subtitle
+	npc_occupation_label = Label.new()
+	npc_occupation_label.text = ""
+	UITheme.style_caption(npc_occupation_label)
+	npc_occupation_label.add_theme_color_override("font_color", UITokens.INK_SECONDARY)
+	name_vbox.add_child(npc_occupation_label)
 
 	# Friendship bar
 	var friend_row = HBoxContainer.new()
@@ -85,6 +110,14 @@ func _build_ui() -> void:
 	# Choices container
 	choices_container = VBoxContainer.new()
 	vbox.add_child(choices_container)
+
+	# Gift hint line (contextual, hidden by default)
+	gift_hint_label = Label.new()
+	gift_hint_label.text = ""
+	gift_hint_label.visible = false
+	UITheme.style_caption(gift_hint_label)
+	gift_hint_label.add_theme_color_override("font_color", UITokens.STAMP_GOLD)
+	vbox.add_child(gift_hint_label)
 
 	# Action buttons (Give Gift + Close)
 	action_container = HBoxContainer.new()
@@ -155,6 +188,18 @@ func show_dialogue(npc_id: String, text: String, choices: Array, friendship_poin
 	var npc_def = DataRegistry.get_npc(npc_id)
 	npc_name_label.text = npc_def.display_name if npc_def else npc_id
 
+	# Set portrait color and occupation
+	if npc_def:
+		npc_portrait.color = npc_def.visual_color
+		npc_occupation_label.text = npc_def.occupation if npc_def.occupation != "" else ""
+		npc_occupation_label.visible = npc_def.occupation != ""
+	else:
+		npc_portrait.color = Color(0.7, 0.5, 0.8)
+		npc_occupation_label.visible = false
+
+	# Update gift hint
+	_update_gift_hint(npc_def)
+
 	_update_friendship_display(friendship_points, tier)
 	_typewrite(dialogue_text, text)
 
@@ -199,10 +244,17 @@ func show_gift_response(npc_id: String, message: String, points_change: int) -> 
 		_gift_popup_mode = true
 		current_npc_id = npc_id
 
-		# Populate NPC name and friendship bar
+		# Populate NPC name, portrait, and friendship bar
 		DataRegistry.ensure_loaded()
 		var npc_def = DataRegistry.get_npc(npc_id)
 		npc_name_label.text = npc_def.display_name if npc_def else npc_id
+		if npc_def:
+			npc_portrait.color = npc_def.visual_color
+			npc_occupation_label.text = npc_def.occupation if npc_def.occupation != "" else ""
+			npc_occupation_label.visible = npc_def.occupation != ""
+		else:
+			npc_portrait.color = Color(0.7, 0.5, 0.8)
+			npc_occupation_label.visible = false
 
 		var fs = PlayerData.npc_friendships.get(npc_id, {})
 		var pts: int = int(fs.get("points", 0))
@@ -247,7 +299,46 @@ func _update_friendship_display(points: int, tier: String) -> void:
 	var color: Color = tier_colors.get(tier, UITokens.INK_PRIMARY)
 	friendship_label.text = tier.capitalize() + " (" + str(points) + ")"
 	friendship_label.modulate = color
-	friendship_bar.value = points
+	# Tween the friendship bar for smooth animation
+	var old_value: float = friendship_bar.value
+	if abs(old_value - points) > 0.5:
+		var tween := create_tween()
+		tween.tween_property(friendship_bar, "value", float(points), 0.3).set_ease(Tween.EASE_OUT)
+	else:
+		friendship_bar.value = points
+
+func _update_gift_hint(npc_def: Resource) -> void:
+	if gift_hint_label == null:
+		return
+	if npc_def == null:
+		gift_hint_label.visible = false
+		return
+	var prefs: Dictionary = npc_def.gift_preferences
+	# Check player inventory for loved/liked items
+	var best_item_name := ""
+	var best_tier := ""
+	for item_id in PlayerData.inventory:
+		if PlayerData.inventory[item_id] <= 0:
+			continue
+		if not DataRegistry.is_item_giftable(str(item_id)):
+			continue
+		if item_id in prefs.get("loved", []):
+			var info = DataRegistry.get_item_display_info(item_id)
+			best_item_name = info.get("display_name", item_id)
+			best_tier = "love"
+			break # loved is the best, stop looking
+		elif item_id in prefs.get("liked", []) and best_tier != "love":
+			var info = DataRegistry.get_item_display_info(item_id)
+			best_item_name = info.get("display_name", item_id)
+			best_tier = "like"
+	if best_item_name != "":
+		if best_tier == "love":
+			gift_hint_label.text = "They'd love a %s!" % best_item_name
+		else:
+			gift_hint_label.text = "They'd like a %s" % best_item_name
+		gift_hint_label.visible = true
+	else:
+		gift_hint_label.visible = false
 
 func _clear_choices() -> void:
 	for child in choices_container.get_children():
@@ -284,22 +375,31 @@ func _populate_gift_list() -> void:
 	DataRegistry.ensure_loaded()
 	var npc_def = DataRegistry.get_npc(current_npc_id)
 
+	# Collect and sort items by gift tier
+	var tier_order := {"loved": 0, "liked": 1, "neutral": 2, "disliked": 3, "hated": 4}
+	var gift_items := []
 	for item_id in PlayerData.inventory:
 		var count: int = PlayerData.inventory[item_id]
 		if count <= 0:
 			continue
-		# Skip non-giftable items (tools, recipe scrolls, fragments)
 		if not DataRegistry.is_item_giftable(str(item_id)):
 			continue
-		var info = DataRegistry.get_item_display_info(item_id)
-
-		var btn = Button.new()
-		var display_name: String = info.get("display_name", item_id)
 		var gift_tier: String = "neutral"
 		if npc_def:
 			gift_tier = _get_npc_gift_tier(npc_def, item_id)
+		gift_items.append({"item_id": item_id, "count": count, "tier": gift_tier, "sort": tier_order.get(gift_tier, 2)})
 
-		# Use plain text for button (RichTextLabel doesn't work well in buttons)
+	# Sort by tier priority (loved first, hated last)
+	gift_items.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.sort < b.sort)
+
+	for entry in gift_items:
+		var item_id: String = entry.item_id
+		var count: int = entry.count
+		var gift_tier: String = entry.tier
+		var info = DataRegistry.get_item_display_info(item_id)
+		var display_name: String = info.get("display_name", item_id)
+
+		var btn = Button.new()
 		var tier_plain = ""
 		match gift_tier:
 			"loved":

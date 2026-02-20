@@ -22,9 +22,13 @@ layout_mode = 2
 text = "Crafting Table"
 horizontal_alignment = 1
 
-[node name="RecipeList" type="VBoxContainer" parent="Panel/VBox"]
+[node name="RecipeScroll" type="ScrollContainer" parent="Panel/VBox"]
 layout_mode = 2
 size_flags_vertical = 3
+
+[node name="RecipeList" type="VBoxContainer" parent="Panel/VBox/RecipeScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
 
 [node name="CloseButton" type="Button" parent="Panel/VBox"]
 layout_mode = 2
