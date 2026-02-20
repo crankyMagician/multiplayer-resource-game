@@ -57,6 +57,7 @@ func _build_ui() -> void:
 
 func activate() -> void:
 	var fm = get_node_or_null("/root/Main/GameWorld/FriendManager")
+	print("[FM-DEBUG-UI] activate: fm=", fm, " friends=", PlayerData.friends.size(), " incoming=", PlayerData.incoming_friend_requests.size(), " outgoing=", PlayerData.outgoing_friend_requests.size())
 	if fm:
 		fm.request_friends_sync.rpc_id(1)
 	_refresh()
@@ -247,11 +248,14 @@ func _get_my_player_id() -> String:
 
 func _on_send_request() -> void:
 	var target = search_bar.text.strip_edges()
+	print("[FM-DEBUG-UI] _on_send_request: target='", target, "'")
 	if target == "":
 		return
 	var fm = get_node_or_null("/root/Main/GameWorld/FriendManager")
+	print("[FM-DEBUG-UI]   fm=", fm, " path_exists=", fm != null)
 	if fm:
 		fm.request_send_friend_request.rpc_id(1, target)
+		print("[FM-DEBUG-UI]   RPC sent to server")
 	search_bar.text = ""
 
 func _on_accept_request(from_id: String) -> void:

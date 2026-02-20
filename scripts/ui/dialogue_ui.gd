@@ -21,6 +21,8 @@ var current_friendship: int = 0
 var current_tier: String = "neutral"
 var showing_gift_panel: bool = false
 var _typewriter_tween: Tween = null
+var _gift_popup_mode: bool = false
+var _auto_close_tween: Tween = null
 
 func _ready() -> void:
 	UITheme.init()
@@ -191,7 +193,30 @@ func show_choice_result(response: String, new_points: int, new_tier: String) -> 
 	_clear_choices()
 	action_container.visible = true
 
-func show_gift_response(message: String, points_change: int) -> void:
+func show_gift_response(npc_id: String, message: String, points_change: int) -> void:
+	# If DialogueUI is not already open, enter popup mode (direct E-key gift path)
+	if not visible:
+		_gift_popup_mode = true
+		current_npc_id = npc_id
+
+		# Populate NPC name and friendship bar
+		DataRegistry.ensure_loaded()
+		var npc_def = DataRegistry.get_npc(npc_id)
+		npc_name_label.text = npc_def.display_name if npc_def else npc_id
+
+		var fs = PlayerData.npc_friendships.get(npc_id, {})
+		var pts: int = int(fs.get("points", 0))
+		_update_friendship_display(pts, _get_friendship_tier(pts))
+
+		# Hide interactive elements — this is display-only
+		_clear_choices()
+		action_container.visible = false
+		gift_panel.visible = false
+		showing_gift_panel = false
+
+		visible = true
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
 	var full_text := message
 	if points_change > 0:
 		full_text += "\n[color=#%s](+%d friendship)[/color]" % [UITheme.bbcode_color("success"), points_change]
@@ -200,11 +225,14 @@ func show_gift_response(message: String, points_change: int) -> void:
 	_typewrite(dialogue_text, full_text)
 
 	# Update from synced PlayerData
-	var fs = PlayerData.npc_friendships.get(current_npc_id, {})
-	var pts: int = int(fs.get("points", current_friendship))
-	_update_friendship_display(pts, _get_friendship_tier(pts))
+	var fs2 = PlayerData.npc_friendships.get(current_npc_id, {})
+	var pts2: int = int(fs2.get("points", current_friendship))
+	_update_friendship_display(pts2, _get_friendship_tier(pts2))
 
-	_hide_gift_panel()
+	if _gift_popup_mode:
+		_schedule_auto_close(3.5)
+	else:
+		_hide_gift_panel()
 
 # === Internal ===
 
@@ -365,7 +393,32 @@ func _skip_typewriter() -> void:
 		_typewriter_tween = null
 		dialogue_text.visible_characters = -1
 
+func _schedule_auto_close(delay: float) -> void:
+	if _auto_close_tween and _auto_close_tween.is_valid():
+		_auto_close_tween.kill()
+	_auto_close_tween = create_tween()
+	_auto_close_tween.tween_callback(_close_popup).set_delay(delay)
+
+func _close_popup() -> void:
+	if _auto_close_tween and _auto_close_tween.is_valid():
+		_auto_close_tween.kill()
+		_auto_close_tween = null
+	if _typewriter_tween and _typewriter_tween.is_valid():
+		_typewriter_tween.kill()
+		_typewriter_tween = null
+	_gift_popup_mode = false
+	visible = false
+	gift_panel.visible = false
+	showing_gift_panel = false
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
 func _close() -> void:
+	if _auto_close_tween and _auto_close_tween.is_valid():
+		_auto_close_tween.kill()
+		_auto_close_tween = null
+	if _gift_popup_mode:
+		_close_popup()
+		return
 	visible = false
 	gift_panel.visible = false
 	showing_gift_panel = false
@@ -387,4 +440,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	if _typewriter_tween and _typewriter_tween.is_valid():
 		if (event is InputEventMouseButton and event.pressed) or (event is InputEventKey and event.pressed):
 			_skip_typewriter()
+			get_viewport().set_input_as_handled()
+			return
+	# In popup mode, any key/click after typewriter finishes closes it
+	if _gift_popup_mode:
+		if (event is InputEventMouseButton and event.pressed) or (event is InputEventKey and event.pressed):
+			_close_popup()
 			get_viewport().set_input_as_handled()

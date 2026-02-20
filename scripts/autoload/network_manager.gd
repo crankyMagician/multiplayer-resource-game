@@ -485,6 +485,9 @@ func _on_player_created(created_name: String, data: Dictionary, sender_id: int, 
 	_finalize_join(sender_id, expected_name, data)
 
 func _finalize_join(sender_id: int, player_name: String, data: Dictionary) -> void:
+	# Backfill player_id UUID for old saves that lack one
+	if not data.has("player_id") or str(data.get("player_id", "")) == "":
+		data["player_id"] = _generate_uuid()
 	# Backfill creature IDs for old saves
 	_backfill_creature_ids(data)
 	# Migrate renamed ingredient IDs in old saves
@@ -499,6 +502,8 @@ func _finalize_join(sender_id: int, player_name: String, data: Dictionary) -> vo
 		data["equipped_tools"] = {"hoe": "tool_hoe_basic", "axe": "tool_axe_basic", "watering_can": "tool_watering_can_basic", "shovel": "tool_shovel_basic"}
 	elif not data["equipped_tools"].has("shovel"):
 		data["equipped_tools"]["shovel"] = "tool_shovel_basic"
+	if data["equipped_tools"] is Dictionary and not data["equipped_tools"].has("fishing_rod"):
+		data["equipped_tools"]["fishing_rod"] = "tool_fishing_rod_basic"
 	# Backfill known_recipes/active_buffs/storage
 	if not data.has("known_recipes"):
 		data["known_recipes"] = []
@@ -552,9 +557,18 @@ func _finalize_join(sender_id: int, player_name: String, data: Dictionary) -> vo
 	_prune_expired_requests(data)
 	# Backfill basic tools in inventory
 	var inv = data.get("inventory", {})
-	for tool_id in ["tool_hoe_basic", "tool_axe_basic", "tool_watering_can_basic", "tool_shovel_basic"]:
+	for tool_id in ["tool_hoe_basic", "tool_axe_basic", "tool_watering_can_basic", "tool_shovel_basic", "tool_fishing_rod_basic"]:
 		if tool_id not in inv:
 			inv[tool_id] = 1
+	# Grant starter battle items for new players (no battle items yet)
+	var has_any_battle_item := false
+	for bi_id in DataRegistry.battle_items:
+		if bi_id in inv and inv[bi_id] > 0:
+			has_any_battle_item = true
+			break
+	if not has_any_battle_item:
+		inv["herb_poultice"] = 3
+		inv["revival_soup"] = 1
 	data["inventory"] = inv
 	# Allocate restaurant index if needed
 	var rest = data.get("restaurant", {})
@@ -658,6 +672,7 @@ func _create_default_player_data(player_name: String) -> Dictionary:
 		"tool_axe_basic": 1,
 		"tool_watering_can_basic": 1,
 		"tool_shovel_basic": 1,
+		"tool_fishing_rod_basic": 1,
 	}
 	return {
 		"player_name": player_name,
@@ -673,6 +688,7 @@ func _create_default_player_data(player_name: String) -> Dictionary:
 			"axe": "tool_axe_basic",
 			"watering_can": "tool_watering_can_basic",
 			"shovel": "tool_shovel_basic",
+			"fishing_rod": "tool_fishing_rod_basic",
 		},
 		"known_recipes": [],
 		"active_buffs": [],

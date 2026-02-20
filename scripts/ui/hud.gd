@@ -168,6 +168,12 @@ func show_trainer_prompt(trainer_name: String) -> void:
 		trainer_prompt_label.visible = true
 		_trainer_prompt_timer = 6.0
 
+func show_interaction_prompt(text: String) -> void:
+	if trainer_prompt_label:
+		trainer_prompt_label.text = text
+		trainer_prompt_label.visible = true
+		_trainer_prompt_timer = 6.0
+
 func hide_trainer_prompt() -> void:
 	if trainer_prompt_label:
 		trainer_prompt_label.visible = false

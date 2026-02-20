@@ -203,6 +203,11 @@ func handle_gift_request(peer_id: int, npc_id: String, item_id: String) -> void:
 	if peer_id not in NetworkManager.player_data_store:
 		return
 
+	# Set busy state during gift processing
+	var player_node = NetworkManager._get_player_node(peer_id)
+	if player_node:
+		player_node.is_busy = true
+
 	var data = NetworkManager.player_data_store[peer_id]
 	var friendships: Dictionary = data.get("npc_friendships", {})
 
@@ -215,24 +220,32 @@ func handle_gift_request(peer_id: int, npc_id: String, item_id: String) -> void:
 
 	# Check daily gift limit
 	if fs.get("gifted_today", false):
-		_gift_response.rpc_id(peer_id, "You've already given a gift today.", 0)
+		_gift_response.rpc_id(peer_id, npc_id, "You've already given a gift today.", 0)
+		if player_node:
+			player_node.is_busy = false
 		return
 
 	# Validate item in inventory
 	if not NetworkManager.server_has_inventory(peer_id, item_id, 1):
-		_gift_response.rpc_id(peer_id, "You don't have that item.", 0)
+		_gift_response.rpc_id(peer_id, npc_id, "You don't have that item.", 0)
+		if player_node:
+			player_node.is_busy = false
 		return
 
 	# Reject non-giftable items (tools, recipe scrolls, fragments)
 	DataRegistry.ensure_loaded()
 	if not DataRegistry.is_item_giftable(item_id):
-		_gift_response.rpc_id(peer_id, "That item can't be given as a gift.", 0)
+		_gift_response.rpc_id(peer_id, npc_id, "That item can't be given as a gift.", 0)
+		if player_node:
+			player_node.is_busy = false
 		return
 
 	# Determine gift tier
 	DataRegistry.ensure_loaded()
 	var npc_def = DataRegistry.get_npc(npc_id)
 	if npc_def == null:
+		if player_node:
+			player_node.is_busy = false
 		return
 
 	var gift_tier: String = _get_gift_tier(npc_def, item_id)
@@ -269,7 +282,10 @@ func handle_gift_request(peer_id: int, npc_id: String, item_id: String) -> void:
 	# Sync inventory and friendships
 	NetworkManager._sync_inventory_full.rpc_id(peer_id, data.get("inventory", {}))
 	NetworkManager._sync_npc_friendships.rpc_id(peer_id, friendships)
-	_gift_response.rpc_id(peer_id, response_msg, points_change)
+	# Clear busy before sending response — client popup will handle its own close
+	if player_node:
+		player_node.is_busy = false
+	_gift_response.rpc_id(peer_id, npc_id, response_msg, points_change)
 
 	# Check NPC gift thresholds
 	_check_npc_gifts(peer_id, npc_id, int(fs["points"]))
@@ -575,10 +591,10 @@ func _dialogue_choice_result(_response: String, _new_points: int, _new_tier: Str
 		dialogue_ui.show_choice_result(_response, _new_points, _new_tier)
 
 @rpc("authority", "reliable")
-func _gift_response(_message: String, _points_change: int) -> void:
+func _gift_response(_npc_id: String, _message: String, _points_change: int) -> void:
 	var dialogue_ui = get_node_or_null("/root/Main/GameWorld/UI/DialogueUI")
 	if dialogue_ui and dialogue_ui.has_method("show_gift_response"):
-		dialogue_ui.show_gift_response(_message, _points_change)
+		dialogue_ui.show_gift_response(_npc_id, _message, _points_change)
 
 @rpc("authority", "reliable")
 func _notify_npc_gift(_npc_id: String, _item_id: String, _quantity: int, _message: String) -> void:

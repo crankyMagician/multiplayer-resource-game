@@ -42,7 +42,17 @@ func _get_social(peer_id: int) -> Dictionary:
 	var data = nm.player_data_store[peer_id]
 	if not data.has("social"):
 		data["social"] = {"friends": [], "blocked": [], "incoming_requests": [], "outgoing_requests": []}
-	return data["social"]
+	var social = data["social"]
+	# Ensure all expected keys exist (guards against partial saves from MongoDB)
+	if not social.has("friends"):
+		social["friends"] = []
+	if not social.has("blocked"):
+		social["blocked"] = []
+	if not social.has("incoming_requests"):
+		social["incoming_requests"] = []
+	if not social.has("outgoing_requests"):
+		social["outgoing_requests"] = []
+	return social
 
 func _get_player_id(peer_id: int) -> String:
 	var nm = _get_nm()
@@ -79,6 +89,24 @@ func _save_peer(peer_id: int) -> void:
 	if nm == null or peer_id not in nm.player_data_store:
 		return
 	SaveManager.save_player(nm.player_data_store[peer_id])
+
+## Push updated social data to a client so their PlayerData stays in sync.
+func _push_sync_to_peer(peer_id: int) -> void:
+	var nm = _get_nm()
+	if nm == null or peer_id not in nm.player_data_store:
+		return
+	var social = _get_social(peer_id)
+	if social.is_empty():
+		return
+	nm._prune_expired_requests(nm.player_data_store[peer_id])
+	var friends_out: Array = []
+	for friend_id in social.get("friends", []):
+		var f_peer = nm.get_peer_for_player_id(str(friend_id))
+		var f_name = ""
+		if f_peer > 0:
+			f_name = _get_player_name_for_peer(f_peer)
+		friends_out.append({"player_id": str(friend_id), "player_name": f_name, "online": f_peer > 0})
+	_sync_friends_list.rpc_id(peer_id, friends_out, social.get("incoming_requests", []), social.get("outgoing_requests", []), social.get("blocked", []))
 
 func _patch_offline(player_id: String, ops: Dictionary) -> void:
 	SaveManager.update_player_social(player_id, ops)
@@ -206,11 +234,13 @@ func _process_friend_request(sender_peer: int, sender_id: String, sender_name: S
 		target_social.get("incoming_requests", []).append({"from_id": sender_id, "from_name": sender_name, "sent_at": now})
 		_save_peer(target_peer)
 		_notify_friend_request.rpc_id(target_peer, sender_name, sender_id)
+		_push_sync_to_peer(target_peer)
 	else:
 		# Offline target — PATCH MongoDB
 		_patch_offline(target_id, {"add_incoming_request": {"from_id": sender_id, "from_name": sender_name, "sent_at": now}})
 	_save_peer(sender_peer)
 	_friend_action_result.rpc_id(sender_peer, "send_request", true, "Friend request sent to " + target_name + ".")
+	_push_sync_to_peer(sender_peer)
 
 @rpc("any_peer", "reliable")
 func request_accept_friend_request(from_player_id: String) -> void:
@@ -267,6 +297,7 @@ func _do_accept_friend(acceptor_peer: int, acceptor_id: String, acceptor_name: S
 		_remove_outgoing_to(requester_social, acceptor_id)
 		_save_peer(requester_peer)
 		_notify_friend_added.rpc_id(requester_peer, acceptor_name, acceptor_id)
+		_push_sync_to_peer(requester_peer)
 	else:
 		# Offline: PATCH
 		_patch_offline(requester_id, {
@@ -276,6 +307,7 @@ func _do_accept_friend(acceptor_peer: int, acceptor_id: String, acceptor_name: S
 		})
 	_notify_friend_added.rpc_id(acceptor_peer, requester_name, requester_id)
 	_friend_action_result.rpc_id(acceptor_peer, "accept", true, "Now friends with " + requester_name + "!")
+	_push_sync_to_peer(acceptor_peer)
 	_release_lock(lock_key)
 
 @rpc("any_peer", "reliable")
@@ -303,6 +335,9 @@ func request_decline_friend_request(from_player_id: String) -> void:
 	else:
 		_patch_offline(from_player_id, {"remove_outgoing_request_to": sender_id})
 	_friend_action_result.rpc_id(sender_peer, "decline", true, "Request declined.")
+	_push_sync_to_peer(sender_peer)
+	if from_peer > 0:
+		_push_sync_to_peer(from_peer)
 
 @rpc("any_peer", "reliable")
 func request_cancel_friend_request(to_player_id: String) -> void:
@@ -329,6 +364,9 @@ func request_cancel_friend_request(to_player_id: String) -> void:
 	else:
 		_patch_offline(to_player_id, {"remove_incoming_request_from": sender_id})
 	_friend_action_result.rpc_id(sender_peer, "cancel", true, "Request cancelled.")
+	_push_sync_to_peer(sender_peer)
+	if to_peer > 0:
+		_push_sync_to_peer(to_peer)
 
 @rpc("any_peer", "reliable")
 func request_remove_friend(target_player_id: String) -> void:
@@ -362,6 +400,9 @@ func request_remove_friend(target_player_id: String) -> void:
 	else:
 		_patch_offline(target_player_id, {"remove_friend": sender_id})
 	_friend_action_result.rpc_id(sender_peer, "remove", true, "Friend removed.")
+	_push_sync_to_peer(sender_peer)
+	if target_peer > 0:
+		_push_sync_to_peer(target_peer)
 	_release_lock(lock_key)
 
 @rpc("any_peer", "reliable")
@@ -445,6 +486,9 @@ func _process_block(sender_peer: int, sender_id: String, target_peer: int, targe
 	# Auto-kick from party
 	_kick_from_shared_party(sender_id, target_id)
 	_friend_action_result.rpc_id(sender_peer, "block", true, target_name + " has been blocked.")
+	_push_sync_to_peer(sender_peer)
+	if target_peer > 0:
+		_push_sync_to_peer(target_peer)
 
 @rpc("any_peer", "reliable")
 func request_unblock_player(target_player_id: String) -> void:
@@ -461,6 +505,7 @@ func request_unblock_player(target_player_id: String) -> void:
 	sender_social["blocked"].erase(target_player_id)
 	_save_peer(sender_peer)
 	_friend_action_result.rpc_id(sender_peer, "unblock", true, "Player unblocked.")
+	_push_sync_to_peer(sender_peer)
 
 @rpc("any_peer", "reliable")
 func request_friends_sync() -> void:
@@ -470,20 +515,7 @@ func request_friends_sync() -> void:
 	var nm = _get_nm()
 	if nm == null or not nm._check_rate_limit(sender_peer):
 		return
-	var sender_social = _get_social(sender_peer)
-	if sender_social.is_empty():
-		return
-	# Prune expired requests
-	nm._prune_expired_requests(nm.player_data_store[sender_peer])
-	# Build friends list with online status
-	var friends_out: Array = []
-	for friend_id in sender_social.get("friends", []):
-		var f_peer = nm.get_peer_for_player_id(str(friend_id))
-		var f_name = ""
-		if f_peer > 0:
-			f_name = _get_player_name_for_peer(f_peer)
-		friends_out.append({"player_id": str(friend_id), "player_name": f_name, "online": f_peer > 0})
-	_sync_friends_list.rpc_id(sender_peer, friends_out, sender_social.get("incoming_requests", []), sender_social.get("outgoing_requests", []), sender_social.get("blocked", []))
+	_push_sync_to_peer(sender_peer)
 
 # === Request Array Helpers ===
 
@@ -766,6 +798,7 @@ func _sync_party_to_all(party_id: int, extra_msg: String = "") -> void:
 
 @rpc("authority", "reliable")
 func _sync_friends_list(friends_arr: Array, incoming: Array, outgoing: Array, blocked: Array) -> void:
+	print("[FM-DEBUG-CLIENT] _sync_friends_list received: friends=", friends_arr.size(), " incoming=", incoming.size(), " outgoing=", outgoing.size(), " blocked=", blocked.size())
 	PlayerData.friends = friends_arr.duplicate(true)
 	PlayerData.incoming_friend_requests = incoming.duplicate(true)
 	PlayerData.outgoing_friend_requests = outgoing.duplicate(true)
@@ -774,6 +807,7 @@ func _sync_friends_list(friends_arr: Array, incoming: Array, outgoing: Array, bl
 
 @rpc("authority", "reliable")
 func _notify_friend_request(from_name: String, _from_id: String) -> void:
+	print("[FM-DEBUG-CLIENT] _notify_friend_request from '", from_name, "'")
 	# Show HUD toast
 	var hud = get_node_or_null("/root/Main/GameWorld/UI/HUD")
 	if hud and hud.has_method("show_toast"):
@@ -793,7 +827,7 @@ func _notify_friend_removed(_player_id: String) -> void:
 
 @rpc("authority", "reliable")
 func _friend_action_result(action: String, success: bool, message: String) -> void:
-	print("[FriendManager] ", action, ": ", message)
+	print("[FM-DEBUG-CLIENT] _friend_action_result: action='", action, "' success=", success, " msg='", message, "'")
 	var hud = get_node_or_null("/root/Main/GameWorld/UI/HUD")
 	if hud and hud.has_method("show_toast"):
 		hud.show_toast(message)

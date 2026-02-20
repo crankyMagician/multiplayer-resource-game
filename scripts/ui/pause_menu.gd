@@ -187,6 +187,11 @@ func _input(event: InputEvent) -> void:
 	if not _is_local_client():
 		return
 
+	# Skip hotkeys when a text input has focus (e.g., friend search bar)
+	var focused := get_viewport().gui_get_focus_owner()
+	if focused is LineEdit or focused is TextEdit:
+		return
+
 	# Check hotkeys
 	if event.is_action_pressed("open_map"):
 		_handle_hotkey(0)

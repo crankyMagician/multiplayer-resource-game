@@ -21,6 +21,7 @@ const ANIM_CLIPS := [
 	"harvest_pickup",
 	"crafting_interact",
 	"fishing_cast",
+	"fishing_idle",
 ]
 
 const LOOP_CLIPS := {
@@ -35,6 +36,7 @@ const LOOP_CLIPS := {
 	"falling": true,
 	"turn_left": true,
 	"turn_right": true,
+	"fishing_idle": true,
 }
 
 func _initialize() -> void:

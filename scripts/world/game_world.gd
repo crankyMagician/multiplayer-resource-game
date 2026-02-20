@@ -37,6 +37,14 @@ func _ready() -> void:
 	_generate_harvestables()
 	_generate_dig_spots()
 	_spawn_excursion_entrance()
+	_spawn_fishing_spots()
+
+	# Spawn FishingManager on ALL peers (needed for RPC routing; non-server is inert)
+	var fishing_mgr_script = load("res://scripts/world/fishing_manager.gd")
+	var fishing_mgr = Node.new()
+	fishing_mgr.name = "FishingManager"
+	fishing_mgr.set_script(fishing_mgr_script)
+	add_child(fishing_mgr)
 
 	if not multiplayer.is_server():
 		_setup_ui()
@@ -229,6 +237,12 @@ func _setup_ui() -> void:
 
 	var bank_ui = bank_ui_scene.instantiate()
 	ui_node.add_child(bank_ui)
+
+	var fishing_ui_script = load("res://scripts/ui/fishing_ui.gd")
+	var fishing_ui = CanvasLayer.new()
+	fishing_ui.name = "FishingUI"
+	fishing_ui.set_script(fishing_ui_script)
+	ui_node.add_child(fishing_ui)
 
 func _spawn_calendar_board() -> void:
 	var board_script = load("res://scripts/world/calendar_board.gd")
@@ -528,6 +542,10 @@ func _on_player_connected(peer_id: int, _info: Dictionary) -> void:
 	_sync_world_to_client.call_deferred(peer_id)
 
 func _on_player_disconnected(peer_id: int) -> void:
+	# Clean up fishing state
+	var fishing_mgr = get_node_or_null("FishingManager")
+	if fishing_mgr:
+		fishing_mgr.handle_disconnect(peer_id)
 	# Clean up excursion state (restore overworld position before despawn)
 	var excursion_mgr = get_node_or_null("ExcursionManager")
 	if excursion_mgr:
@@ -738,3 +756,52 @@ func _generate_dig_spots() -> void:
 		ds.spot_id = str(spot["id"])
 		ds.loot_table = spot["loot"]
 		digs_node.add_child(ds)
+
+# === Fishing Spots ===
+
+func _spawn_fishing_spots() -> void:
+	var fishing_node = Node3D.new()
+	fishing_node.name = "FishingSpots"
+	add_child(fishing_node)
+
+	var spots = [
+		{"pos": Vector3(-8, 0, 8), "table_id": "pond", "label": "Pond"},
+		{"pos": Vector3(-20, 0, -20), "table_id": "river", "label": "River"},
+		{"pos": Vector3(0, 0, -55), "table_id": "ocean", "label": "Ocean"},
+	]
+
+	var water_mat = StandardMaterial3D.new()
+	water_mat.albedo_color = Color(0.2, 0.4, 0.7, 0.5)
+	water_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+
+	for spot in spots:
+		var spot_node = Node3D.new()
+		spot_node.name = "FishingSpot_" + spot["table_id"]
+		spot_node.position = spot["pos"]
+		spot_node.add_to_group("fishing_spot")
+		spot_node.set_meta("fishing_table_id", spot["table_id"])
+		fishing_node.add_child(spot_node)
+
+		# Water visual (flat disc)
+		var water = MeshInstance3D.new()
+		var disc = CylinderMesh.new()
+		disc.top_radius = 3.0
+		disc.bottom_radius = 3.0
+		disc.height = 0.1
+		water.mesh = disc
+		water.set_surface_override_material(0, water_mat)
+		water.position = Vector3(0, 0.05, 0)
+		spot_node.add_child(water)
+
+		# Label
+		var label = Label3D.new()
+		UITheme.style_label3d(label, spot["label"] + " - Fishing Spot", "station")
+		label.font_size = 28
+		label.position = Vector3(0, 2.5, 0)
+		spot_node.add_child(label)
+
+		# Hint
+		var hint = Label3D.new()
+		UITheme.style_label3d(hint, "Equip Rod + Press E", "interaction_hint")
+		hint.position = Vector3(0, 2.0, 0)
+		spot_node.add_child(hint)

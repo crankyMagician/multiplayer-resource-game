@@ -161,11 +161,11 @@ func request_give_gift(item_id: String) -> void:
 @rpc("authority", "reliable")
 func _show_npc_prompt(_npc_id: String) -> void:
 	var hud = get_node_or_null("/root/Main/GameWorld/UI/HUD")
-	if hud and hud.has_method("show_trainer_prompt"):
+	if hud and hud.has_method("show_interaction_prompt"):
 		DataRegistry.ensure_loaded()
 		var npc_def = DataRegistry.get_npc(_npc_id)
 		var name_text = npc_def.display_name if npc_def else _npc_id
-		hud.show_trainer_prompt(name_text + " (E: Talk)")
+		hud.show_interaction_prompt(name_text + " (E: Talk)")
 
 @rpc("authority", "reliable")
 func _hide_npc_prompt() -> void:

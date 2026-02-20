@@ -16,6 +16,9 @@ static func seed_all() -> void:
 	_seed_locations()
 	_seed_quests()
 	_seed_tools()
+	_seed_fishing_tables()
+	_seed_fish_ingredients()
+	_seed_fishing_rods()
 
 static func clear_all() -> void:
 	DataRegistry.moves.clear()
@@ -34,6 +37,7 @@ static func clear_all() -> void:
 	DataRegistry.npcs.clear()
 	DataRegistry.locations.clear()
 	DataRegistry.quests.clear()
+	DataRegistry.fishing_tables.clear()
 	DataRegistry._loaded = false
 
 static func _seed_moves() -> void:
@@ -460,3 +464,47 @@ static func _add_tool(id: String, display: String, tool_type: String, tier: int,
 	t.tier = tier
 	t.effectiveness = effectiveness
 	DataRegistry.tools[id] = t
+
+static func _seed_fishing_tables() -> void:
+	# Use a plain Dictionary to avoid class_name resolution issues in headless tests.
+	# FishingManager accesses these via dict-like property access (.entries, .table_id, etc.)
+	# which works for both Resource instances and Dictionaries via DataRegistry.get().
+	# For test purposes, we store a Resource with manually set properties.
+	var script = load("res://scripts/data/fishing_table.gd")
+	if script == null:
+		push_warning("[RegistrySeeder] Could not load fishing_table.gd, skipping fishing table seeding")
+		return
+	var table = script.new()
+	table.table_id = "test_pond"
+	table.display_name = "Test Pond"
+	table.entries = [
+		{"fish_id": "sardine", "weight": 40, "difficulty": 1, "min_rod_tier": 0, "movement_type": "smooth", "season": ""},
+		{"fish_id": "bass", "weight": 30, "difficulty": 2, "min_rod_tier": 0, "movement_type": "smooth", "season": ""},
+		{"fish_id": "golden_koi", "weight": 2, "difficulty": 5, "min_rod_tier": 2, "movement_type": "mixed", "season": "autumn"},
+	]
+	table.weather_bonus = {"rainy": "bass"}
+	DataRegistry.fishing_tables["test_pond"] = table
+
+static func _seed_fish_ingredients() -> void:
+	_add_fish("sardine", "Sardine", 5, "")
+	_add_fish("bass", "Bass", 10, "")
+	_add_fish("trout", "Trout", 12, "spring")
+	_add_fish("golden_koi", "Golden Koi", 50, "autumn")
+
+static func _add_fish(id: String, display: String, price: int, season: String) -> void:
+	var ing = IngredientDef.new()
+	ing.ingredient_id = id
+	ing.display_name = display
+	ing.category = "fish"
+	ing.sell_price = price
+	ing.season = season
+	ing.grow_time = 0.0
+	ing.harvest_min = 1
+	ing.harvest_max = 1
+	DataRegistry.ingredients[id] = ing
+
+static func _seed_fishing_rods() -> void:
+	_add_tool("tool_fishing_rod_basic", "Basic Fishing Rod", "fishing_rod", 0, {"bar_bonus": 0.0})
+	_add_tool("tool_fishing_rod_bronze", "Bronze Fishing Rod", "fishing_rod", 1, {"bar_bonus": 0.05})
+	_add_tool("tool_fishing_rod_iron", "Iron Fishing Rod", "fishing_rod", 2, {"bar_bonus": 0.10})
+	_add_tool("tool_fishing_rod_gold", "Gold Fishing Rod", "fishing_rod", 3, {"bar_bonus": 0.15})

@@ -15,7 +15,8 @@ enum MoveState { IDLE, WALK, RUN, SPRINT, CROUCH_IDLE, CROUCH_WALK, AIRBORNE }
 
 const TOOL_ACTION_DURATIONS = {
 	&"hoe": 1.0, &"axe": 0.8, &"water": 0.5,
-	&"harvest": 0.5, &"craft": 1.0, &"fish": 0.8
+	&"harvest": 0.5, &"craft": 1.0, &"fish": 0.8,
+	&"fish_idle": 30.0,
 }
 
 @onready var character_model: Node3D = $CharacterModel
@@ -494,7 +495,7 @@ func _build_animation_tree() -> void:
 
 	# Fix loop modes for locomotion animations
 	var loop_anims := ["idle", "jog_forward", "jog_backward", "run", "walk_forward",
-		"walk_backward", "crouch_idle", "crouch_walk", "falling"]
+		"walk_backward", "crouch_idle", "crouch_walk", "falling", "fishing_idle"]
 	for anim_name in loop_anims:
 		var anim := anim_tree.get_animation(anim_name)
 		if anim:
@@ -568,6 +569,7 @@ func _get_tool_animation_name(action: StringName) -> StringName:
 		&"harvest": return &"harvest_pickup"
 		&"craft":   return &"crafting_interact"
 		&"fish":    return &"fishing_cast"
+		&"fish_idle": return &"fishing_idle"
 		_:          return &"harvest_pickup"
 
 
@@ -593,6 +595,14 @@ func play_tool_action(action: StringName) -> void:
 
 
 func _clear_tool_action() -> void:
+	anim_action = &""
+
+
+func set_persistent_anim(action: StringName) -> void:
+	anim_action = action
+
+
+func clear_persistent_anim() -> void:
 	anim_action = &""
 
 

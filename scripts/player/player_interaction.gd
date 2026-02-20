@@ -4,18 +4,33 @@ extends Node
 var peer_id: int = 0
 var parent_body: CharacterBody3D = null
 var _showing_restaurant_prompt: bool = false
+var _showing_player_prompt: bool = false
 const RESTAURANT_DOOR_RANGE: float = 4.5
+const PLAYER_INTERACT_RANGE: float = 5.0
 
 func _ready() -> void:
 	parent_body = get_parent() as CharacterBody3D
 	if parent_body:
 		peer_id = parent_body.name.to_int()
 
+func _input(event: InputEvent) -> void:
+	if peer_id != multiplayer.get_unique_id():
+		return
+	if event.is_action_pressed("friend_list"):
+		var target_name := _find_nearest_player_name()
+		if target_name != "":
+			var player = get_parent()
+			if player and player.get("is_busy"):
+				return
+			_try_friend_request(target_name)
+			get_viewport().set_input_as_handled()
+
 func _process(_delta: float) -> void:
 	if peer_id != multiplayer.get_unique_id():
 		return
-	# Update restaurant door proximity prompt
+	# Update proximity prompts
 	_update_restaurant_prompt()
+	_update_player_proximity_prompt()
 	# Busy lock: block all interactions (defense-in-depth; server also validates)
 	var player = get_parent()
 	if player and player.get("is_busy"):
@@ -120,6 +135,15 @@ func _try_interact() -> void:
 		if dig_spot and dig_spot.has_method("request_dig"):
 			dig_spot.request_dig.rpc_id(1)
 			return
+	# Check for fishing spots (requires fishing_rod equipped)
+	if PlayerData.current_tool_slot == "fishing_rod":
+		var fishing_spot = _find_nearest_in_group("fishing_spot", pos, 5.0)
+		if fishing_spot:
+			var table_id: String = fishing_spot.get_meta("fishing_table_id", "pond") if fishing_spot.has_meta("fishing_table_id") else "pond"
+			var fishing_mgr = get_node_or_null("/root/Main/GameWorld/FishingManager")
+			if fishing_mgr:
+				fishing_mgr.request_cast_line.rpc_id(1, table_id)
+			return
 	# Check for water source — find nearest FarmManager (works for both community and restaurant farms)
 	var water_source = _find_nearest_area("water_source", pos, 3.0)
 	if water_source:
@@ -182,6 +206,61 @@ func _update_restaurant_prompt() -> void:
 
 func _hide_restaurant_prompt() -> void:
 	_showing_restaurant_prompt = false
+	var hud = get_node_or_null("/root/Main/GameWorld/UI/HUD")
+	if hud and hud.has_method("hide_trainer_prompt"):
+		hud.hide_trainer_prompt()
+
+func _find_nearest_player_name() -> String:
+	if parent_body == null:
+		return ""
+	var players_node = get_node_or_null("/root/Main/GameWorld/Players")
+	if players_node == null:
+		return ""
+	var my_pos = parent_body.global_position
+	var closest_name: String = ""
+	var closest_dist: float = PLAYER_INTERACT_RANGE
+	for child in players_node.get_children():
+		if child is CharacterBody3D:
+			var other_peer = child.name.to_int()
+			if other_peer == peer_id or other_peer <= 0:
+				continue
+			var dist = child.global_position.distance_to(my_pos)
+			if dist < closest_dist:
+				closest_dist = dist
+				closest_name = child.get("player_name_display") if child.get("player_name_display") else ""
+	return closest_name
+
+func _try_friend_request(target_name: String) -> void:
+	var friend_mgr = get_node_or_null("/root/Main/GameWorld/FriendManager")
+	if friend_mgr:
+		friend_mgr.request_send_friend_request.rpc_id(1, target_name)
+
+func _update_player_proximity_prompt() -> void:
+	if parent_body == null:
+		return
+	# Don't override restaurant prompt
+	if _showing_restaurant_prompt:
+		if _showing_player_prompt:
+			_showing_player_prompt = false
+		return
+	var player = get_parent()
+	var is_busy: bool = player and player.get("is_busy")
+	if is_busy:
+		if _showing_player_prompt:
+			_hide_player_prompt()
+		return
+	var target_name := _find_nearest_player_name()
+	if target_name != "":
+		if not _showing_player_prompt:
+			var hud = get_node_or_null("/root/Main/GameWorld/UI/HUD")
+			if hud and hud.has_method("show_interaction_prompt"):
+				hud.show_interaction_prompt("F: Add Friend | T: Trade | V: Battle")
+				_showing_player_prompt = true
+	elif _showing_player_prompt:
+		_hide_player_prompt()
+
+func _hide_player_prompt() -> void:
+	_showing_player_prompt = false
 	var hud = get_node_or_null("/root/Main/GameWorld/UI/HUD")
 	if hud and hud.has_method("hide_trainer_prompt"):
 		hud.hide_trainer_prompt()
