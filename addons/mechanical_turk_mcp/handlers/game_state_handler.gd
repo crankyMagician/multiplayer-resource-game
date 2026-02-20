@@ -31,7 +31,7 @@ func _collect_state_deferred(params) -> void:
 
 	var result := {}
 
-	# Game engine state from RuleEngine singleton
+	# Game engine state — try RuleEngine singleton first, then scan generically
 	var rule_engine = root.get_node_or_null("RuleEngine")
 	if rule_engine:
 		result["score"] = rule_engine.get("score")
@@ -50,9 +50,16 @@ func _collect_state_deferred(params) -> void:
 		if rule_engine.has_method("get_config"):
 			result["config"] = rule_engine.get_config()
 	else:
-		result["score"] = null
-		result["health"] = null
-		result["game_active"] = null
+		# Generic scan: look for common game state properties in autoloads and current scene
+		var game_vars := _scan_game_state_generic(root, tree.current_scene)
+		result.merge(game_vars)
+		# Ensure standard keys exist even if not found
+		if not result.has("score"):
+			result["score"] = null
+		if not result.has("health"):
+			result["health"] = null
+		if not result.has("game_active"):
+			result["game_active"] = null
 
 	# Find the player node
 	var player_data := _find_player(root)
@@ -73,23 +80,56 @@ func _collect_state_deferred(params) -> void:
 	game_state_ready.emit(result)
 
 
+func _scan_game_state_generic(root: Node, current_scene: Node) -> Dictionary:
+	var result := {}
+	# Known state property names to look for
+	var state_keys := ["score", "health", "lives", "level", "game_active", "game_over",
+		"game_won", "game_lost", "coins", "time_left", "enemies_remaining"]
+
+	# Scan autoload singletons (direct children of root)
+	for child in root.get_children():
+		if child == current_scene:
+			continue
+		for key in state_keys:
+			var val = child.get(key)
+			if val != null and not result.has(key):
+				result[key] = val
+
+	# Scan current scene root for state properties
+	if current_scene:
+		for key in state_keys:
+			var val = current_scene.get(key)
+			if val != null and not result.has(key):
+				result[key] = val
+
+	return result
+
+
 func _find_player(root: Node) -> Dictionary:
 	# Look for common player node patterns
 	var player: Node = null
+	var tree := get_tree()
+	var current_scene := tree.current_scene if tree else null
 
-	# Try direct paths first
-	for path in ["GameLoader/Game", ""]:
-		var base: Node = root.get_node_or_null(path) if not path.is_empty() else root
-		if base == null:
-			continue
-		# Search for node with "player" in name or a CharacterBody2D
+	# Search bases: current scene first, then known game loader paths, then root
+	var bases: Array[Node] = []
+	if current_scene:
+		bases.append(current_scene)
+	var game_loader := root.get_node_or_null("GameLoader/Game")
+	if game_loader and game_loader != current_scene:
+		bases.append(game_loader)
+	if root not in bases:
+		bases.append(root)
+
+	for base in bases:
 		player = _find_node_recursive(base, func(n: Node) -> bool:
 			if n.name.to_lower().contains("player"):
 				return true
 			# Check if it's a CharacterBody with no "enemy" meta
 			if n is CharacterBody2D and not n.has_meta("enemy"):
-				# Likely the player if it's the first non-enemy CharacterBody2D
-				return n.get_parent() is Node2D or n.get_parent() == root.get_node_or_null("GameLoader/Game") or n.get_parent() == root
+				return true
+			if n is CharacterBody3D and not n.has_meta("enemy"):
+				return true
 			return false
 		)
 		if player:
@@ -121,16 +161,20 @@ func _find_player(root: Node) -> Dictionary:
 
 func _collect_objects(root: Node, include_metadata: bool) -> Array:
 	var objects: Array = []
-	var game_root: Node = null
+	var tree := get_tree()
 
-	# Find the game scene root
-	for path in ["GameLoader/Game", ""]:
-		if path.is_empty():
-			game_root = root
-		else:
-			game_root = root.get_node_or_null(path)
-		if game_root:
-			break
+	# Prefer current scene as game root, fall back to known paths, then viewport root
+	var game_root: Node = null
+	if tree and tree.current_scene:
+		game_root = tree.current_scene
+	else:
+		for path in ["GameLoader/Game", ""]:
+			if path.is_empty():
+				game_root = root
+			else:
+				game_root = root.get_node_or_null(path)
+			if game_root:
+				break
 
 	if game_root == null:
 		return objects

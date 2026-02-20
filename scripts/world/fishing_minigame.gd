@@ -8,14 +8,14 @@ extends RefCounted
 const SIM_FPS: int = 60
 const SIM_DT: float = 1.0 / 60.0
 
-const BAR_GRAVITY: float = -2.0
+const BAR_GRAVITY: float = -2.8
 const BAR_LIFT: float = 5.0
 const BAR_DAMPING: float = 0.85
 const BAR_BOUNCE: float = 0.3
 
-const CATCH_FILL_RATE: float = 0.55
-const CATCH_DRAIN_RATE: float = 0.18
-const INITIAL_CATCH_METER: float = 0.45
+const CATCH_FILL_RATE: float = 0.35
+const CATCH_DRAIN_RATE: float = 0.28
+const INITIAL_CATCH_METER: float = 0.25
 
 
 # --- Seeded PRNG (linear congruential) ---

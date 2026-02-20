@@ -27,6 +27,10 @@ var _juice_handler: Node = null
 var _ui_theme_handler: Node = null
 var _postfx_handler: Node = null
 var _vfx_handler: Node = null
+var _tween_handler: Node = null
+var _animation_handler: Node = null
+var _debug_handler: Node = null
+var _noise_handler: Node = null
 
 
 func _ready() -> void:
@@ -45,6 +49,10 @@ func _ready() -> void:
 	_ui_theme_handler = preload("res://addons/mechanical_turk_mcp/handlers/ui_theme_handler.gd").new()
 	_postfx_handler = preload("res://addons/mechanical_turk_mcp/handlers/postfx_handler.gd").new()
 	_vfx_handler = preload("res://addons/mechanical_turk_mcp/handlers/vfx_handler.gd").new()
+	_tween_handler = preload("res://addons/mechanical_turk_mcp/handlers/tween_handler.gd").new()
+	_animation_handler = preload("res://addons/mechanical_turk_mcp/handlers/animation_handler.gd").new()
+	_debug_handler = preload("res://addons/mechanical_turk_mcp/handlers/debug_handler.gd").new()
+	_noise_handler = preload("res://addons/mechanical_turk_mcp/handlers/noise_handler.gd").new()
 	add_child(_screenshot_handler)
 	add_child(_input_handler)
 	add_child(_scene_tree_handler)
@@ -60,6 +68,10 @@ func _ready() -> void:
 	add_child(_ui_theme_handler)
 	add_child(_postfx_handler)
 	add_child(_vfx_handler)
+	add_child(_tween_handler)
+	add_child(_animation_handler)
+	add_child(_debug_handler)
+	add_child(_noise_handler)
 
 	# Register method handlers — existing
 	_handlers["ping"] = _handle_ping
@@ -126,12 +138,55 @@ func _ready() -> void:
 	_handlers["ui_add_transition"] = _ui_theme_handler.handle_add_transition
 	_handlers["ui_grab_focus"] = _ui_theme_handler.handle_grab_focus
 
+	# Group handlers
+	_handlers["add_to_group"] = _level_handler.handle_add_to_group
+	_handlers["remove_from_group"] = _level_handler.handle_remove_from_group
+	_handlers["get_nodes_in_group"] = _level_handler.handle_get_nodes_in_group
+
+	# Scene transition handlers
+	_handlers["change_scene"] = _level_handler.handle_change_scene
+	_handlers["get_current_scene"] = _level_handler.handle_get_current_scene
+
+	# Scene instantiation handler
+	_handlers["instantiate_scene"] = _level_handler.handle_instantiate_scene
+
 	# Shader live parameter handler
 	_handlers["set_shader_parameter_live"] = _level_handler.handle_set_shader_parameter_live
 	_handlers["batch_shader_updates"] = _level_handler.handle_batch_shader_updates
 
 	# VFX composition handlers
 	_handlers["apply_spring_animation"] = _vfx_handler.handle_spring_animation
+
+	# Tween handlers
+	_handlers["create_tween"] = _tween_handler.handle_create_tween
+	_handlers["kill_tweens"] = _tween_handler.handle_kill_tweens
+
+	# Animation handlers
+	_handlers["play_animation"] = _animation_handler.handle_play_animation
+	_handlers["stop_animation"] = _animation_handler.handle_stop_animation
+	_handlers["get_animation_state"] = _animation_handler.handle_get_animation_state
+
+	# Audio bus handlers
+	_handlers["set_bus_volume"] = _audio_handler.handle_set_bus_volume
+	_handlers["set_bus_mute"] = _audio_handler.handle_set_bus_mute
+
+	# Debug handlers
+	_handlers["get_runtime_errors"] = _debug_handler.handle_get_runtime_errors
+	_handlers["get_runtime_log"] = _debug_handler.handle_get_runtime_log
+	_handlers["get_class_info"] = _debug_handler.handle_get_class_info
+	_handlers["get_script_source"] = _debug_handler.handle_get_script_source
+
+	# Navigation 2D bridge handlers
+	_handlers["bake_navigation_2d"] = _level_handler.handle_bake_navigation_2d
+	_handlers["set_navigation_target"] = _level_handler.handle_set_navigation_target
+
+	# Procedural generation handlers
+	_handlers["generate_noise_map"] = _noise_handler.handle_generate_noise_map
+	_handlers["fill_tilemap_from_noise"] = _noise_handler.handle_fill_tilemap_from_noise
+	_handlers["scatter_objects"] = _noise_handler.handle_scatter_objects
+
+	# Scene tree inspection extensions
+	_handlers["inspect_node_recursive"] = _scene_tree_handler.handle_inspect_recursive
 
 	# Post-processing handlers
 	_handlers["postfx_2d_apply"] = _postfx_handler.handle_postfx_2d_apply

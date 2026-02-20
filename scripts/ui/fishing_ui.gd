@@ -78,6 +78,7 @@ var _quit_button: Button = null
 var _bg: ColorRect = null
 var _bar_bg: Panel = null
 var _esc_label: Label = null
+var _bar_top_y: float = 65.0  # Scaled in _build_ui
 
 const BAR_WIDTH: int = 60
 const BAR_HEIGHT: int = 400
@@ -109,24 +110,35 @@ func _build_ui() -> void:
 	_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_bg)
 
-	# Center panel
+	# Center panel (anchor-based centering)
 	_panel = Panel.new()
 	_panel.name = "FishingPanel"
-	_panel.custom_minimum_size = Vector2(PANEL_WIDTH, PANEL_HEIGHT)
-	_panel.set_anchors_preset(Control.PRESET_CENTER)
-	_panel.position = Vector2(-PANEL_WIDTH / 2.0, -PANEL_HEIGHT / 2.0)
-	_panel.size = Vector2(PANEL_WIDTH, PANEL_HEIGHT)
+	_panel.anchor_left = 0.5
+	_panel.anchor_right = 0.5
+	_panel.anchor_top = 0.5
+	_panel.anchor_bottom = 0.5
+	_panel.offset_left = -PANEL_WIDTH / 2.0
+	_panel.offset_right = PANEL_WIDTH / 2.0
+	_panel.offset_top = -PANEL_HEIGHT / 2.0
+	_panel.offset_bottom = PANEL_HEIGHT / 2.0
 	var panel_bg_color := Color(UITokens.PAPER_CARD.r, UITokens.PAPER_CARD.g, UITokens.PAPER_CARD.b, 0.92)
 	var style := UITheme.make_panel_style(panel_bg_color, UITokens.ACCENT_OCEAN, UITokens.CORNER_RADIUS_LG, UITokens.BORDER_WIDTH)
 	_panel.add_theme_stylebox_override("panel", style)
 	add_child(_panel)
 
+	# Scaled Y offsets for internal panel layout
+	var fs: float = UITheme._font_scale
+	var header_y: float = 8.0 * fs
+	var timer_y: float = 32.0 * fs
+	var bar_top_y: float = 65.0 * fs
+	_bar_top_y = bar_top_y
+
 	# Fish name label at top
 	_fish_label = Label.new()
 	_fish_label.name = "FishLabel"
 	_fish_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_fish_label.position = Vector2(0, 8)
-	_fish_label.size = Vector2(PANEL_WIDTH, 30)
+	_fish_label.position = Vector2(0, header_y)
+	_fish_label.size = Vector2(PANEL_WIDTH, 30.0 * fs)
 	UITheme.style_emphasis(_fish_label)
 	_panel.add_child(_fish_label)
 
@@ -134,15 +146,15 @@ func _build_ui() -> void:
 	_timer_label = Label.new()
 	_timer_label.name = "TimerLabel"
 	_timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_timer_label.position = Vector2(0, 32)
-	_timer_label.size = Vector2(PANEL_WIDTH, 25)
+	_timer_label.position = Vector2(0, timer_y)
+	_timer_label.size = Vector2(PANEL_WIDTH, 25.0 * fs)
 	UITheme.style_caption(_timer_label)
 	_panel.add_child(_timer_label)
 
 	# Catch meter background (left side)
 	_meter_bg = Panel.new()
 	_meter_bg.name = "MeterBG"
-	_meter_bg.position = Vector2(15, 65)
+	_meter_bg.position = Vector2(15, bar_top_y)
 	_meter_bg.size = Vector2(20, BAR_HEIGHT)
 	var meter_bg_style := StyleBoxFlat.new()
 	meter_bg_style.bg_color = Color(UITokens.PAPER_EDGE.r, UITokens.PAPER_EDGE.g, UITokens.PAPER_EDGE.b, 0.8)
@@ -153,7 +165,7 @@ func _build_ui() -> void:
 	# Meter tick marks
 	_meter_ticks = Control.new()
 	_meter_ticks.name = "MeterTicks"
-	_meter_ticks.position = Vector2(15, 65)
+	_meter_ticks.position = Vector2(15, bar_top_y)
 	_meter_ticks.size = Vector2(20, BAR_HEIGHT)
 	_meter_ticks.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_panel.add_child(_meter_ticks)
@@ -161,7 +173,7 @@ func _build_ui() -> void:
 	# Catch meter fill
 	_meter_bar = Panel.new()
 	_meter_bar.name = "MeterFill"
-	_meter_bar.position = Vector2(15, 65 + BAR_HEIGHT)
+	_meter_bar.position = Vector2(15, bar_top_y + BAR_HEIGHT)
 	_meter_bar.size = Vector2(20, 0)
 	var meter_fill_style := StyleBoxFlat.new()
 	meter_fill_style.bg_color = UITokens.ACCENT_BASIL
@@ -172,7 +184,7 @@ func _build_ui() -> void:
 	# Main bar area (the fishing column)
 	_bar_area = Control.new()
 	_bar_area.name = "BarArea"
-	_bar_area.position = Vector2(55, 65)
+	_bar_area.position = Vector2(55, bar_top_y)
 	_bar_area.size = Vector2(BAR_WIDTH, BAR_HEIGHT)
 	_panel.add_child(_bar_area)
 
@@ -215,51 +227,62 @@ func _build_ui() -> void:
 	_fish_indicator.add_theme_stylebox_override("panel", fish_style)
 	_bar_area.add_child(_fish_indicator)
 
-	# Instruction label
+	# Instruction label (scaled offset from bottom)
 	_instruction_label = Label.new()
 	_instruction_label.name = "InstructionLabel"
 	_instruction_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_instruction_label.position = Vector2(0, PANEL_HEIGHT - 55)
-	_instruction_label.size = Vector2(PANEL_WIDTH, 25)
+	_instruction_label.position = Vector2(0, PANEL_HEIGHT - 55.0 * fs)
+	_instruction_label.size = Vector2(PANEL_WIDTH, 25.0 * fs)
 	UITheme.style_caption(_instruction_label)
 	_instruction_label.add_theme_color_override("font_color", UITokens.INK_SECONDARY)
 	_panel.add_child(_instruction_label)
 
-	# Esc hint
+	# Esc hint (scaled offset from bottom)
 	_esc_label = Label.new()
 	_esc_label.name = "EscLabel"
 	_esc_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_esc_label.position = Vector2(0, PANEL_HEIGHT - 30)
-	_esc_label.size = Vector2(PANEL_WIDTH, 20)
+	_esc_label.position = Vector2(0, PANEL_HEIGHT - 30.0 * fs)
+	_esc_label.size = Vector2(PANEL_WIDTH, 20.0 * fs)
 	_esc_label.text = "[Esc] Release line"
 	UITheme.style_caption(_esc_label)
 	_esc_label.add_theme_color_override("font_color", UITokens.INK_DISABLED)
 	_esc_label.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_TINY))
 	_panel.add_child(_esc_label)
 
-	# Casting label (shown during wait phase)
+	# Casting label (shown during wait phase — anchor-based centering)
 	_casting_label = Label.new()
 	_casting_label.name = "CastingLabel"
 	_casting_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_casting_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_casting_label.set_anchors_preset(Control.PRESET_CENTER)
-	_casting_label.position = Vector2(-150, -30)
-	_casting_label.size = Vector2(300, 60)
+	_casting_label.anchor_left = 0.25
+	_casting_label.anchor_right = 0.75
+	_casting_label.anchor_top = 0.4
+	_casting_label.anchor_bottom = 0.6
+	_casting_label.offset_left = 0
+	_casting_label.offset_right = 0
+	_casting_label.offset_top = 0
+	_casting_label.offset_bottom = 0
+	_casting_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 	_casting_label.text = "Casting..."
 	UITheme.style_title(_casting_label)
 	_casting_label.add_theme_color_override("font_color", UITokens.ACCENT_HONEY)
 	_casting_label.visible = false
 	add_child(_casting_label)
 
-	# Hook alert label
+	# Hook alert label (anchor-based centering)
 	_hook_alert_label = Label.new()
 	_hook_alert_label.name = "HookAlertLabel"
 	_hook_alert_label.text = "Bite!"
 	_hook_alert_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_hook_alert_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_hook_alert_label.set_anchors_preset(Control.PRESET_CENTER)
-	_hook_alert_label.position = Vector2(-200, -50)
-	_hook_alert_label.size = Vector2(400, 100)
+	_hook_alert_label.anchor_left = 0.2
+	_hook_alert_label.anchor_right = 0.8
+	_hook_alert_label.anchor_top = 0.35
+	_hook_alert_label.anchor_bottom = 0.65
+	_hook_alert_label.offset_left = 0
+	_hook_alert_label.offset_right = 0
+	_hook_alert_label.offset_top = 0
+	_hook_alert_label.offset_bottom = 0
 	UITheme.style_title(_hook_alert_label)
 	_hook_alert_label.add_theme_font_size_override("font_size", UITheme.scaled(48))
 	_hook_alert_label.add_theme_color_override("font_color", UITokens.ACCENT_TOMATO)
@@ -271,24 +294,34 @@ func _build_ui() -> void:
 	_hook_alert_label.visible = false
 	add_child(_hook_alert_label)
 
-	# Quit button (floating, bottom-center)
+	# Quit button (floating, bottom-center — anchor-based)
 	_quit_button = Button.new()
 	_quit_button.name = "QuitButton"
 	_quit_button.text = "Reel In"
-	_quit_button.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	_quit_button.position = Vector2(-60, -60)
-	_quit_button.size = Vector2(120, 38)
+	_quit_button.anchor_left = 0.4
+	_quit_button.anchor_right = 0.6
+	_quit_button.anchor_top = 0.9
+	_quit_button.anchor_bottom = 0.95
+	_quit_button.offset_left = 0
+	_quit_button.offset_right = 0
+	_quit_button.offset_top = 0
+	_quit_button.offset_bottom = 0
 	UITheme.style_button(_quit_button, "danger")
 	_quit_button.pressed.connect(_on_quit_pressed)
 	_quit_button.visible = false
 	add_child(_quit_button)
 
-	# Result panel (shown after catch/fail)
+	# Result panel (shown after catch/fail — anchor-based centering)
 	_result_panel = Panel.new()
 	_result_panel.name = "ResultPanel"
-	_result_panel.set_anchors_preset(Control.PRESET_CENTER)
-	_result_panel.position = Vector2(-175, -85)
-	_result_panel.size = Vector2(350, 170)
+	_result_panel.anchor_left = 0.5
+	_result_panel.anchor_right = 0.5
+	_result_panel.anchor_top = 0.5
+	_result_panel.anchor_bottom = 0.5
+	_result_panel.offset_left = -175
+	_result_panel.offset_right = 175
+	_result_panel.offset_top = -85
+	_result_panel.offset_bottom = 85
 	var result_style := UITheme.make_panel_style(UITokens.PAPER_BASE, UITokens.ACCENT_CHESTNUT, UITokens.CORNER_RADIUS_LG, UITokens.BORDER_WIDTH)
 	_result_panel.add_theme_stylebox_override("panel", result_style)
 	_result_panel.visible = false
@@ -355,12 +388,17 @@ func _build_ui() -> void:
 	_result_dismiss_label.visible = false
 	_result_panel.add_child(_result_dismiss_label)
 
-	# Difficulty preview card (shown briefly before minigame activates)
+	# Difficulty preview card (shown briefly before minigame activates — anchor-based)
 	_difficulty_card = Panel.new()
 	_difficulty_card.name = "DifficultyCard"
-	_difficulty_card.set_anchors_preset(Control.PRESET_CENTER)
-	_difficulty_card.position = Vector2(-120, -50)
-	_difficulty_card.size = Vector2(240, 100)
+	_difficulty_card.anchor_left = 0.5
+	_difficulty_card.anchor_right = 0.5
+	_difficulty_card.anchor_top = 0.5
+	_difficulty_card.anchor_bottom = 0.5
+	_difficulty_card.offset_left = -120
+	_difficulty_card.offset_right = 120
+	_difficulty_card.offset_top = -50
+	_difficulty_card.offset_bottom = 50
 	var diff_style := UITheme.make_panel_style(
 		Color(UITokens.PAPER_CARD.r, UITokens.PAPER_CARD.g, UITokens.PAPER_CARD.b, 0.95),
 		UITokens.ACCENT_OCEAN, UITokens.CORNER_RADIUS_LG, UITokens.BORDER_WIDTH)
@@ -432,11 +470,15 @@ func show_casting() -> void:
 	_set_hotbar_visible(false)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
-	# Casting label entrance tween
+	# Casting label entrance tween (offset-based for anchor layout)
+	_casting_label.offset_top = 0
+	_casting_label.offset_bottom = 0
 	var tween := create_tween()
 	tween.tween_property(_casting_label, "modulate:a", 1.0, 0.4).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
-	tween.parallel().tween_property(_casting_label, "position:y", _casting_label.position.y, 0.4)\
-		.from(_casting_label.position.y - 20.0).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	tween.parallel().tween_property(_casting_label, "offset_top", 0.0, 0.4)\
+		.from(-20.0).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	tween.parallel().tween_property(_casting_label, "offset_bottom", 0.0, 0.4)\
+		.from(-20.0).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 
 
 func show_hook_alert() -> void:
@@ -492,17 +534,17 @@ func start_minigame(seed_val: int, difficulty: int, movement_type: String,
 	_result_panel.visible = false
 	_quit_button.visible = true
 
-	_fish_label.text = fish_name
+	_fish_label.text = ""  # Don't reveal fish species during minigame
 	_instruction_label.text = _get_reel_hint()
 	_esc_label.text = "[Esc] Release line"
 
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
-	# Show difficulty preview card first
-	_show_difficulty_preview(fish_name, difficulty, movement_type)
+	# Show difficulty preview card first (no fish name — species is a surprise)
+	_show_difficulty_preview(difficulty, movement_type)
 
 
-func _show_difficulty_preview(fish_name: String, difficulty: int, movement_type: String) -> void:
+func _show_difficulty_preview(difficulty: int, movement_type: String) -> void:
 	_difficulty_preview_active = true
 	_difficulty_preview_timer = 0.0
 	_active = false
@@ -510,7 +552,7 @@ func _show_difficulty_preview(fish_name: String, difficulty: int, movement_type:
 	_casting_label.visible = false
 	_hook_alert_label.visible = false
 
-	# Build card contents
+	# Build card contents (no fish name — species revealed on catch)
 	for child in _difficulty_card.get_children():
 		child.queue_free()
 
@@ -518,11 +560,6 @@ func _show_difficulty_preview(fish_name: String, difficulty: int, movement_type:
 	vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	vbox.add_theme_constant_override("separation", 4)
 	_difficulty_card.add_child(vbox)
-
-	var name_label := Label.new()
-	UITheme.style_emphasis(name_label, fish_name)
-	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(name_label)
 
 	var stars_text := ""
 	for i in 5:
@@ -556,13 +593,16 @@ func _activate_minigame() -> void:
 	_active = true
 	visible = true
 
-	# Panel entrance tween (slide from right)
+	# Panel entrance tween (slide from right, offset-based)
 	_panel.visible = true
 	_panel.modulate.a = 0.0
-	var target_x: float = _panel.position.x
-	_panel.position.x = target_x + 40.0
+	var target_left: float = -PANEL_WIDTH / 2.0
+	var target_right: float = PANEL_WIDTH / 2.0
+	_panel.offset_left = target_left + 40.0
+	_panel.offset_right = target_right + 40.0
 	var tween := create_tween()
-	tween.tween_property(_panel, "position:x", target_x, 0.35).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	tween.tween_property(_panel, "offset_left", target_left, 0.35).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	tween.parallel().tween_property(_panel, "offset_right", target_right, 0.35).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 	tween.parallel().tween_property(_panel, "modulate:a", 1.0, 0.35).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 
 
@@ -686,12 +726,16 @@ func show_result(success: bool, fish_id: String, fish_display_name: String,
 		var tween := create_tween()
 		tween.tween_property(_result_panel, "modulate:a", 1.0, 0.2).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 
-		# Panel shake on failure
+		# Panel shake on failure (offset-based)
+		var base_offset_left: float = _result_panel.offset_left
+		var base_offset_right: float = _result_panel.offset_right
 		var shake_tween := create_tween()
 		for i in 4:
-			var offset_x: float = randf_range(-3.0, 3.0)
-			shake_tween.tween_property(_result_panel, "position:x", _result_panel.position.x + offset_x, 0.03)
-		shake_tween.tween_property(_result_panel, "position:x", _result_panel.position.x, 0.03)
+			var shake_x: float = randf_range(-3.0, 3.0)
+			shake_tween.tween_property(_result_panel, "offset_left", base_offset_left + shake_x, 0.03)
+			shake_tween.parallel().tween_property(_result_panel, "offset_right", base_offset_right + shake_x, 0.03)
+		shake_tween.tween_property(_result_panel, "offset_left", base_offset_left, 0.03)
+		shake_tween.parallel().tween_property(_result_panel, "offset_right", base_offset_right, 0.03)
 
 	# Position dismiss label
 	_result_dismiss_label.position.y = next_y + 5.0
@@ -748,8 +792,9 @@ func _process(delta: float) -> void:
 		for i in dots:
 			dot_str += "."
 		_casting_label.text = "Casting" + dot_str
-		# Gentle Y bob
-		_casting_label.position.y = -30.0 + sin(_casting_anim_time * 1.5) * 4.0
+		# Gentle Y bob via offset (anchors handle base position)
+		_casting_label.offset_top = sin(_casting_anim_time * 1.5) * 4.0
+		_casting_label.offset_bottom = sin(_casting_anim_time * 1.5) * 4.0
 
 	# Hook window alert animation
 	if _hook_window and _hook_alert_label.visible:
@@ -891,7 +936,7 @@ func _update_visuals(fish_pos: float) -> void:
 
 	# Catch meter (fills from bottom)
 	var meter_height: float = _catch_meter * BAR_HEIGHT
-	_meter_bar.position.y = 65 + BAR_HEIGHT - meter_height
+	_meter_bar.position.y = _bar_top_y + BAR_HEIGHT - meter_height
 	_meter_bar.size.y = meter_height
 
 	# Meter color matches catch bar thresholds

@@ -750,6 +750,215 @@ func handle_batch_shader_updates(params) -> Dictionary:
 	return {"status": "ok", "node": node_path, "updated_count": count, "parameters": parameters.keys()}
 
 
+## --- Group management ---
+
+func handle_add_to_group(params) -> Dictionary:
+	if not params is Dictionary:
+		return {"error": "Invalid params"}
+	var node_path: String = params.get("node_path", "")
+	var group: String = params.get("group", "")
+	if node_path.is_empty() or group.is_empty():
+		return {"error": "node_path and group are required"}
+	var node := _safe_get_node_by_path(node_path)
+	if node == null:
+		return {"error": "Node not found: %s" % node_path}
+	var persistent: bool = params.get("persistent", false)
+	node.add_to_group(group, persistent)
+	return {"status": "ok", "node": node_path, "group": group, "persistent": persistent}
+
+
+func handle_remove_from_group(params) -> Dictionary:
+	if not params is Dictionary:
+		return {"error": "Invalid params"}
+	var node_path: String = params.get("node_path", "")
+	var group: String = params.get("group", "")
+	if node_path.is_empty() or group.is_empty():
+		return {"error": "node_path and group are required"}
+	var node := _safe_get_node_by_path(node_path)
+	if node == null:
+		return {"error": "Node not found: %s" % node_path}
+	if not node.is_in_group(group):
+		return {"error": "Node is not in group '%s'" % group}
+	node.remove_from_group(group)
+	return {"status": "ok", "node": node_path, "group": group}
+
+
+func handle_get_nodes_in_group(params) -> Dictionary:
+	if not params is Dictionary:
+		return {"error": "Invalid params"}
+	var group: String = params.get("group", "")
+	if group.is_empty():
+		return {"error": "group is required"}
+	var tree := get_tree()
+	if tree == null:
+		return {"error": "No scene tree available"}
+	var nodes: Array = []
+	for node in tree.get_nodes_in_group(group):
+		nodes.append({
+			"path": str(node.get_path()),
+			"name": node.name,
+			"class": node.get_class(),
+		})
+	return {"status": "ok", "group": group, "nodes": nodes, "count": nodes.size()}
+
+
+## --- Scene transitions ---
+
+signal scene_changed(result: Dictionary)
+
+func handle_change_scene(params) -> Dictionary:
+	_change_scene_deferred(params)
+	return {"_deferred": scene_changed}
+
+
+func _change_scene_deferred(params) -> void:
+	await get_tree().process_frame
+	if not params is Dictionary:
+		scene_changed.emit({"error": "Invalid params"})
+		return
+	var scene_path: String = params.get("scene_path", "")
+	if scene_path.is_empty():
+		scene_changed.emit({"error": "scene_path is required"})
+		return
+	var tree := get_tree()
+	if tree == null:
+		scene_changed.emit({"error": "No scene tree available"})
+		return
+	if not ResourceLoader.exists(scene_path):
+		scene_changed.emit({"error": "Scene file not found: %s" % scene_path})
+		return
+	var err := tree.change_scene_to_file(scene_path)
+	if err != OK:
+		scene_changed.emit({"error": "Failed to change scene: %s" % error_string(err)})
+		return
+	# Wait for scene to load
+	await tree.process_frame
+	await tree.process_frame
+	var new_scene := tree.current_scene
+	scene_changed.emit({
+		"status": "ok",
+		"scene_path": scene_path,
+		"root_node": new_scene.name if new_scene else "unknown",
+		"root_class": new_scene.get_class() if new_scene else "unknown",
+	})
+
+
+func handle_get_current_scene(params) -> Dictionary:
+	var tree := get_tree()
+	if tree == null:
+		return {"error": "No scene tree available"}
+	var scene := tree.current_scene
+	if scene == null:
+		return {"error": "No current scene"}
+	return {
+		"status": "ok",
+		"scene_path": scene.scene_file_path,
+		"root_name": scene.name,
+		"root_class": scene.get_class(),
+		"child_count": scene.get_child_count(),
+	}
+
+
+## --- Scene instantiation ---
+
+signal instance_ready(result: Dictionary)
+
+func handle_instantiate_scene(params) -> Dictionary:
+	_instantiate_scene_deferred(params)
+	return {"_deferred": instance_ready}
+
+
+func _instantiate_scene_deferred(params) -> void:
+	await get_tree().process_frame
+	if not params is Dictionary:
+		instance_ready.emit({"error": "Invalid params"})
+		return
+	var scene_path: String = params.get("scene_path", "")
+	if scene_path.is_empty():
+		instance_ready.emit({"error": "scene_path is required"})
+		return
+	if not ResourceLoader.exists(scene_path):
+		instance_ready.emit({"error": "Scene file not found: %s" % scene_path})
+		return
+	var packed: PackedScene = load(scene_path) as PackedScene
+	if packed == null:
+		instance_ready.emit({"error": "Failed to load scene: %s" % scene_path})
+		return
+
+	var tree := get_tree()
+	var parent_path: String = params.get("parent_path", "")
+	var parent: Node = null
+	if not parent_path.is_empty():
+		parent = _safe_get_node_by_path(parent_path)
+	if parent == null:
+		parent = tree.current_scene if tree.current_scene else tree.root
+
+	var count: int = max(1, int(params.get("count", 1)))
+	var instance_name: String = params.get("name", "")
+	var pos = params.get("position", null)
+	var props = params.get("properties", {})
+	var instances: Array = []
+
+	for i in range(count):
+		var inst: Node = packed.instantiate()
+		if not instance_name.is_empty():
+			inst.name = instance_name if count == 1 else "%s_%d" % [instance_name, i]
+		if pos is Dictionary and inst is Node2D:
+			(inst as Node2D).position = Vector2(float(pos.get("x", 0)), float(pos.get("y", 0)))
+		elif pos is Dictionary and inst is Node3D:
+			(inst as Node3D).position = Vector3(float(pos.get("x", 0)), float(pos.get("y", 0)), float(pos.get("z", 0)))
+		# Apply additional properties
+		if props is Dictionary:
+			for key in props:
+				var val = _convert_typed_value(props[key])
+				inst.set(key, val)
+		parent.add_child(inst)
+		instances.append({
+			"path": str(inst.get_path()),
+			"name": inst.name,
+			"class": inst.get_class(),
+		})
+
+	instance_ready.emit({
+		"status": "ok",
+		"scene_path": scene_path,
+		"instances": instances,
+		"count": instances.size(),
+	})
+
+
+## --- Navigation 2D bridge ---
+
+func handle_bake_navigation_2d(params) -> Dictionary:
+	if not params is Dictionary:
+		return {"error": "Invalid params"}
+	var node_path: String = params.get("node_path", "")
+	if node_path.is_empty():
+		return {"error": "node_path is required"}
+	var node := _safe_get_node_by_path(node_path)
+	if node == null or not node is NavigationRegion2D:
+		return {"error": "NavigationRegion2D not found: %s" % node_path}
+	var region := node as NavigationRegion2D
+	region.bake_navigation_polygon()
+	return {"status": "ok", "node": node_path}
+
+
+func handle_set_navigation_target(params) -> Dictionary:
+	if not params is Dictionary:
+		return {"error": "Invalid params"}
+	var node_path: String = params.get("node_path", "")
+	var pos = params.get("position", {})
+	if node_path.is_empty():
+		return {"error": "node_path is required"}
+	var node := _safe_get_node_by_path(node_path)
+	if node == null or not node is NavigationAgent2D:
+		return {"error": "NavigationAgent2D not found: %s" % node_path}
+	var agent := node as NavigationAgent2D
+	var target := Vector2(float(pos.get("x", 0)), float(pos.get("y", 0)))
+	agent.target_position = target
+	return {"status": "ok", "node": node_path, "target": {"x": target.x, "y": target.y}}
+
+
 func handle_capture_performance_snapshot(params) -> Dictionary:
 	var include_raw := false
 	if params is Dictionary:

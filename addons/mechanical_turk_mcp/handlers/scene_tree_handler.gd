@@ -185,3 +185,60 @@ func _serialize_value(value) -> Variant:
 			return dict
 		_:
 			return value
+
+
+func handle_inspect_recursive(params) -> Dictionary:
+	if not params is Dictionary:
+		return {"error": "Invalid params"}
+	var node_path: String = params.get("node_path", "")
+	var max_depth: int = int(params.get("depth", 3))
+	if node_path.is_empty():
+		return {"error": "node_path is required"}
+	var tree := get_tree()
+	if tree == null:
+		return {"error": "No scene tree"}
+	var node: Node = tree.root.get_node_or_null(node_path.trim_prefix("/root"))
+	if node_path == "/root":
+		node = tree.root
+	if node == null:
+		return {"error": "Node not found: %s" % node_path}
+	return {"status": "ok", "tree": _inspect_recursive(node, 0, max_depth)}
+
+
+func _inspect_recursive(node: Node, depth: int, max_depth: int) -> Dictionary:
+	var info := {
+		"name": node.name,
+		"class": node.get_class(),
+		"path": str(node.get_path()),
+	}
+	# Add spatial info
+	if node is Node2D:
+		var n2 := node as Node2D
+		info["position"] = {"x": n2.position.x, "y": n2.position.y}
+		info["visible"] = n2.visible
+	elif node is Node3D:
+		var n3 := node as Node3D
+		info["position"] = {"x": n3.position.x, "y": n3.position.y, "z": n3.position.z}
+		info["visible"] = n3.visible
+	elif node is Control:
+		var c := node as Control
+		info["position"] = {"x": c.position.x, "y": c.position.y}
+		info["size"] = {"x": c.size.x, "y": c.size.y}
+		info["visible"] = c.visible
+	# Groups
+	var groups := node.get_groups()
+	if not groups.is_empty():
+		info["groups"] = Array(groups)
+	# Script
+	var script = node.get_script()
+	if script:
+		info["script"] = script.resource_path
+	# Children
+	if depth < max_depth and node.get_child_count() > 0:
+		var children: Array = []
+		for child in node.get_children():
+			children.append(_inspect_recursive(child, depth + 1, max_depth))
+		info["children"] = children
+	elif node.get_child_count() > 0:
+		info["child_count"] = node.get_child_count()
+	return info

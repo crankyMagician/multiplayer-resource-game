@@ -15,6 +15,9 @@ var parties: Dictionary = {}           # party_id -> {party_id, leader_id, membe
 var player_party_map: Dictionary = {}  # player_id -> party_id
 var _next_party_id: int = 1
 
+# === Player name cache (player_id -> player_name, survives disconnects) ===
+var _player_name_cache: Dictionary = {}
+
 # === Pair-lock for friend mutations ===
 var _friend_locks: Dictionary = {}
 
@@ -90,6 +93,30 @@ func _save_peer(peer_id: int) -> void:
 		return
 	SaveManager.save_player(nm.player_data_store[peer_id])
 
+## Cache player_id -> player_name from all online players and their social request data.
+func _refresh_name_cache() -> void:
+	var nm = _get_nm()
+	if nm == null:
+		return
+	for pid in nm.player_data_store:
+		var data = nm.player_data_store[pid]
+		var player_id = str(data.get("player_id", ""))
+		var pname = str(data.get("player_name", ""))
+		if player_id != "" and pname != "":
+			_player_name_cache[player_id] = pname
+		# Also extract names from this player's friend requests
+		var social = data.get("social", {})
+		for req in social.get("incoming_requests", []):
+			var rid = str(req.get("from_id", ""))
+			var rname = str(req.get("from_name", ""))
+			if rid != "" and rname != "":
+				_player_name_cache[rid] = rname
+		for req in social.get("outgoing_requests", []):
+			var rid = str(req.get("to_id", ""))
+			var rname = str(req.get("to_name", ""))
+			if rid != "" and rname != "":
+				_player_name_cache[rid] = rname
+
 ## Push updated social data to a client so their PlayerData stays in sync.
 func _push_sync_to_peer(peer_id: int) -> void:
 	var nm = _get_nm()
@@ -99,12 +126,15 @@ func _push_sync_to_peer(peer_id: int) -> void:
 	if social.is_empty():
 		return
 	nm._prune_expired_requests(nm.player_data_store[peer_id])
+	_refresh_name_cache()
 	var friends_out: Array = []
 	for friend_id in social.get("friends", []):
 		var f_peer = nm.get_peer_for_player_id(str(friend_id))
 		var f_name = ""
 		if f_peer > 0:
 			f_name = _get_player_name_for_peer(f_peer)
+		elif _player_name_cache.has(str(friend_id)):
+			f_name = _player_name_cache[str(friend_id)]
 		friends_out.append({"player_id": str(friend_id), "player_name": f_name, "online": f_peer > 0})
 	# Build blocked list with names (resolve online players, offline show ID)
 	var blocked_out: Array = []
@@ -113,6 +143,8 @@ func _push_sync_to_peer(peer_id: int) -> void:
 		var b_name = ""
 		if b_peer > 0:
 			b_name = _get_player_name_for_peer(b_peer)
+		elif _player_name_cache.has(str(blocked_id)):
+			b_name = _player_name_cache[str(blocked_id)]
 		blocked_out.append({"player_id": str(blocked_id), "player_name": b_name})
 	_sync_friends_list.rpc_id(peer_id, friends_out, social.get("incoming_requests", []), social.get("outgoing_requests", []), blocked_out)
 
@@ -289,6 +321,11 @@ func _do_accept_friend(acceptor_peer: int, acceptor_id: String, acceptor_name: S
 	if not _acquire_lock(lock_key):
 		_friend_action_result.rpc_id(acceptor_peer, "accept", false, "Please wait and try again.")
 		return
+	# Cache both names so offline friends show their name, not their UUID
+	if acceptor_id != "" and acceptor_name != "":
+		_player_name_cache[acceptor_id] = acceptor_name
+	if requester_id != "" and requester_name != "":
+		_player_name_cache[requester_id] = requester_name
 	# Add to both friends lists
 	var acceptor_social = _get_social(acceptor_peer)
 	if requester_id not in acceptor_social.get("friends", []):

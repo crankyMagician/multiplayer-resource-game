@@ -92,11 +92,15 @@ func _play_audio_deferred(params) -> void:
 	parent.add_child(player)
 	player.call("play")
 
-	# Auto-free non-looping audio after playback
+	# Auto-free non-looping audio after playback (both AudioStreamPlayer and AudioStreamPlayer2D)
 	var loop_setting: bool = params.get("loop", false)
 	if not loop_setting:
-		if player.has_signal("finished"):
+		if player is AudioStreamPlayer:
 			(player as AudioStreamPlayer).finished.connect(func() -> void:
+				player.queue_free()
+			)
+		elif player is AudioStreamPlayer2D:
+			(player as AudioStreamPlayer2D).finished.connect(func() -> void:
 				player.queue_free()
 			)
 
@@ -134,6 +138,30 @@ func handle_stop_audio(params) -> Dictionary:
 		node.queue_free()
 
 	return {"status": "ok", "node": node_path, "removed": remove_node}
+
+
+func handle_set_bus_volume(params) -> Dictionary:
+	if not params is Dictionary:
+		return {"error": "Invalid params"}
+	var bus_name: String = params.get("bus_name", "Master")
+	var volume_db: float = float(params.get("volume_db", 0.0))
+	var idx := AudioServer.get_bus_index(bus_name)
+	if idx == -1:
+		return {"error": "Audio bus not found: %s" % bus_name}
+	AudioServer.set_bus_volume_db(idx, volume_db)
+	return {"status": "ok", "bus": bus_name, "volume_db": volume_db}
+
+
+func handle_set_bus_mute(params) -> Dictionary:
+	if not params is Dictionary:
+		return {"error": "Invalid params"}
+	var bus_name: String = params.get("bus_name", "Master")
+	var mute: bool = params.get("mute", true)
+	var idx := AudioServer.get_bus_index(bus_name)
+	if idx == -1:
+		return {"error": "Audio bus not found: %s" % bus_name}
+	AudioServer.set_bus_mute(idx, mute)
+	return {"status": "ok", "bus": bus_name, "mute": mute}
 
 
 func _generate_audio(waveform: String, frequency: float, duration: float, loop: bool) -> AudioStream:

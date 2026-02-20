@@ -202,8 +202,8 @@ func test_fish_sell_prices():
 # --- Physics bar tests ---
 
 func test_initial_catch_meter():
-	assert_almost_eq(FishingMinigame.INITIAL_CATCH_METER, 0.45, 0.001,
-		"Initial catch meter should be 0.45")
+	assert_almost_eq(FishingMinigame.INITIAL_CATCH_METER, 0.25, 0.001,
+		"Initial catch meter should be 0.25")
 
 func test_bar_bounce():
 	var input_log := PackedFloat32Array()
