@@ -35,6 +35,10 @@ func _process(_delta: float) -> void:
 	var player = get_parent()
 	if player and player.get("is_busy"):
 		return
+	# Client-side fishing guard — is_busy has network latency, so also check FishingUI
+	var fishing_ui = get_node_or_null("/root/Main/GameWorld/UI/FishingUI")
+	if fishing_ui and fishing_ui.is_fishing():
+		return
 	if Input.is_action_just_pressed("interact"):
 		_try_interact()
 	# PvP challenge (V key)
@@ -59,9 +63,11 @@ func _try_interact() -> void:
 	if parent_body == null:
 		return
 	var pos = parent_body.global_position
+	print("[Fishing Debug] E pressed, current_tool_slot=", PlayerData.current_tool_slot, " pos=", pos)
 	# Check for calendar board proximity (E key to view)
 	var calendar = _find_nearest_area("calendar_board", pos, 3.0)
 	if calendar and calendar.has_method("request_open_calendar"):
+		print("[Fishing Debug] INTERCEPTED by: calendar_board")
 		calendar.request_open_calendar.rpc_id(1)
 		return
 	# Check for social NPC proximity (E key to talk, or gift equipped item)
@@ -69,30 +75,36 @@ func _try_interact() -> void:
 	if social_npc:
 		var gift_item_id := _get_equipped_giftable_item()
 		if gift_item_id != "" and social_npc.has_method("request_give_gift"):
+			print("[Fishing Debug] INTERCEPTED by: social_npc gift")
 			social_npc.request_give_gift.rpc_id(1, gift_item_id)
 			return
 		elif social_npc.has_method("request_talk"):
+			print("[Fishing Debug] INTERCEPTED by: social_npc talk")
 			social_npc.request_talk.rpc_id(1)
 			return
 	# Check for shop NPC proximity (E key to open shop)
 	var shop = _find_nearest_area("shop_npc", pos, 3.0)
 	if shop and shop.has_method("request_open_shop"):
+		print("[Fishing Debug] INTERCEPTED by: shop_npc")
 		shop.request_open_shop.rpc_id(1)
 		return
 	# Check for bank NPC proximity (E key to open bank)
 	var bank = _find_nearest_area("bank_npc", pos, 3.0)
 	if bank and bank.has_method("request_open_bank"):
+		print("[Fishing Debug] INTERCEPTED by: bank_npc")
 		bank.request_open_bank.rpc_id(1)
 		return
 	# Check for trainer NPC proximity (E key to challenge)
 	var trainer = _find_nearest_area("trainer_npc", pos, 4.0)
 	if trainer and trainer.has_method("request_challenge"):
+		print("[Fishing Debug] INTERCEPTED by: trainer_npc")
 		trainer.request_challenge.rpc_id(1)
 		return
 	# Check for restaurant exit door (E key to leave restaurant)
 	if PlayerData.current_zone == "restaurant":
 		var exit_door = _find_nearest_area("restaurant_exit_door", pos, 3.0)
 		if exit_door:
+			print("[Fishing Debug] INTERCEPTED by: restaurant_exit_door")
 			var rm = get_node_or_null("/root/Main/GameWorld/RestaurantManager")
 			if rm:
 				rm.request_exit_restaurant.rpc_id(1)
@@ -103,6 +115,7 @@ func _try_interact() -> void:
 	if door:
 		var door_owner = door.get_meta("owner_name", "") if door.has_meta("owner_name") else ""
 		if door_owner != "":
+			print("[Fishing Debug] INTERCEPTED by: restaurant_door (owner=", door_owner, ")")
 			var rm = get_node_or_null("/root/Main/GameWorld/RestaurantManager")
 			if rm:
 				rm.request_enter_restaurant.rpc_id(1, door_owner)
@@ -110,6 +123,7 @@ func _try_interact() -> void:
 	# Check for excursion portal proximity (E key to enter)
 	var portal = _find_nearest_in_group("excursion_portal", pos, 4.0)
 	if portal:
+		print("[Fishing Debug] INTERCEPTED by: excursion_portal")
 		var excursion_mgr = get_node_or_null("/root/Main/GameWorld/ExcursionManager")
 		if excursion_mgr:
 			excursion_mgr.request_enter_excursion.rpc_id(1)
@@ -117,33 +131,47 @@ func _try_interact() -> void:
 	# Check for storage station proximity
 	var storage = _find_nearest_area("storage_station", pos, 3.0)
 	if storage:
+		print("[Fishing Debug] INTERCEPTED by: storage_station")
 		_open_storage_ui()
 		return
 	# Check for crafting station proximity
 	var station = _find_nearest_crafting_station(pos, 3.0)
 	if station:
+		print("[Fishing Debug] INTERCEPTED by: crafting_station")
 		_open_crafting_ui(station)
 		return
 	# Check for harvestable world objects (trees, rocks, bushes)
 	var harvestable = _find_nearest_in_group("harvestable_object", pos, 3.5)
 	if harvestable and not harvestable.get("is_harvested"):
+		print("[Fishing Debug] INTERCEPTED by: harvestable_object")
 		harvestable.request_harvest.rpc_id(1)
 		return
 	# Check for dig spots (requires shovel equipped)
 	if PlayerData.current_tool_slot == "shovel":
 		var dig_spot = _find_nearest_area("dig_spot", pos, 3.0)
 		if dig_spot and dig_spot.has_method("request_dig"):
+			print("[Fishing Debug] INTERCEPTED by: dig_spot")
 			dig_spot.request_dig.rpc_id(1)
 			return
 	# Check for fishing spots (requires fishing_rod equipped)
+	print("[Fishing Debug] Reached fishing check, tool=", PlayerData.current_tool_slot)
 	if PlayerData.current_tool_slot == "fishing_rod":
 		var fishing_spot = _find_nearest_in_group("fishing_spot", pos, 5.0)
+		print("[Fishing Debug] Nearest fishing_spot=", fishing_spot, " (null=", fishing_spot == null, ")")
 		if fishing_spot:
 			var table_id: String = fishing_spot.get_meta("fishing_table_id", "pond") if fishing_spot.has_meta("fishing_table_id") else "pond"
 			var fishing_mgr = get_node_or_null("/root/Main/GameWorld/FishingManager")
+			print("[Fishing Debug] FishingManager=", fishing_mgr, " (null=", fishing_mgr == null, ")")
 			if fishing_mgr:
+				print("[Fishing Debug] Calling request_cast_line, table_id=", table_id)
 				fishing_mgr.request_cast_line.rpc_id(1, table_id)
+			else:
+				print("[Fishing Debug] FAILED: FishingManager not found!")
 			return
+		else:
+			print("[Fishing Debug] No fishing_spot in range (5.0)")
+	else:
+		print("[Fishing Debug] Tool is not fishing_rod, skipping fishing")
 	# Check for water source — find nearest FarmManager (works for both community and restaurant farms)
 	var water_source = _find_nearest_area("water_source", pos, 3.0)
 	if water_source:

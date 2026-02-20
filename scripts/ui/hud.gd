@@ -193,6 +193,28 @@ func show_toast(message: String) -> void:
 	tween.tween_property(toast, "modulate:a", 0.0, 2.0).set_delay(1.0)
 	tween.tween_callback(toast.queue_free)
 
+func show_new_fish_toast(fish_name: String) -> void:
+	var toast := Label.new()
+	toast.text = "New: %s!" % fish_name
+	UITheme.style_toast(toast)
+	toast.add_theme_color_override("font_color", UITokens.ACCENT_HONEY)
+	toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	toast.anchor_left = 0.3
+	toast.anchor_right = 0.7
+	toast.anchor_top = 0.6
+	toast.anchor_bottom = 0.65
+	toast.modulate.a = 0.0
+	add_child(toast)
+	var tween := create_tween()
+	# Slide in + fade in
+	tween.tween_property(toast, "modulate:a", 1.0, 0.3).set_ease(Tween.EASE_OUT)
+	# Hold
+	tween.tween_interval(2.0)
+	# Fade out
+	tween.tween_property(toast, "modulate:a", 0.0, 0.5)
+	tween.tween_callback(toast.queue_free)
+
+
 func show_grass_indicator(visible_state: bool) -> void:
 	grass_indicator.visible = visible_state
 	grass_hint_label.visible = visible_state

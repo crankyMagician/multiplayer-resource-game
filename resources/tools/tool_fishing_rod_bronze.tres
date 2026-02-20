@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ToolDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/tool_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+tool_id = "tool_fishing_rod_bronze"
+display_name = "Bronze Fishing Rod"
+description = "A sturdier rod with a wider catch bar."
+tool_type = "fishing_rod"
+tier = 1
+icon_color = Color(0.7, 0.5, 0.25, 1)
+effectiveness = {"bar_bonus": 0.05}

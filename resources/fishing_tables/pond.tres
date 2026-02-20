@@ -1,0 +1,38 @@
+[gd_resource type="Resource" script_class="FishingTable" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/fishing_table.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+table_id = "pond"
+display_name = "Hub Pond"
+entries = [{
+"fish_id": "sardine",
+"weight": 40,
+"difficulty": 1,
+"min_rod_tier": 0,
+"movement_type": "smooth",
+"season": ""
+}, {
+"fish_id": "bass",
+"weight": 30,
+"difficulty": 2,
+"min_rod_tier": 0,
+"movement_type": "smooth",
+"season": ""
+}, {
+"fish_id": "trout",
+"weight": 20,
+"difficulty": 2,
+"min_rod_tier": 0,
+"movement_type": "dart",
+"season": "spring"
+}, {
+"fish_id": "golden_koi",
+"weight": 2,
+"difficulty": 5,
+"min_rod_tier": 2,
+"movement_type": "mixed",
+"season": "autumn"
+}]
+weather_bonus = {"rainy": "bass"}

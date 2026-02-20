@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="RecipeDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/recipe_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+recipe_id = "fishing_rod_iron"
+display_name = "Forge Iron Fishing Rod"
+result_tool_id = "tool_fishing_rod_iron"
+requires_tool_ingredient = "tool_fishing_rod_bronze"
+ingredients = {"chili_powder": 5, "stone": 8}
+description = "Upgrade your fishing rod with tempered iron."
+station = "workbench"

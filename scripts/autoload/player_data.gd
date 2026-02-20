@@ -17,6 +17,7 @@ signal player_friends_changed()
 signal player_party_updated()  # player-to-player party (not creature party)
 signal hotbar_changed()
 signal hotbar_selection_changed(slot_index: int)
+signal fishing_log_changed()
 
 # Location tracking (client-side mirror of server state)
 var current_zone: String = "overworld"
@@ -81,6 +82,9 @@ var unlock_flags: Array = []
 # Compendium & Stats (client-side mirror, synced on demand via RPC)
 var stats: Dictionary = {}
 var compendium: Dictionary = {"items": [], "creatures_seen": [], "creatures_owned": []}
+
+# Fishing log (client-side mirror, synced via FishingManager RPCs)
+var fishing_log: Dictionary = {}  # {catches: {fish_id: {count, perfect_count, first_caught_day}}}
 
 # Player-to-player social
 var friends: Array = [] # [{player_id, player_name, online}]
@@ -210,6 +214,8 @@ func load_from_server(data: Dictionary) -> void:
 	# Load compendium & stats
 	stats = data.get("stats", {}).duplicate(true)
 	compendium = data.get("compendium", {"items": [], "creatures_seen": [], "creatures_owned": []}).duplicate(true)
+	# Load fishing log
+	fishing_log = data.get("fishing_log", {}).duplicate(true)
 	# Load player social (friends are synced separately via FriendManager, but incoming/outgoing stored in save)
 	# Social data is synced on-demand via FriendManager.request_friends_sync()
 	# Load hotbar
@@ -227,6 +233,12 @@ func load_from_server(data: Dictionary) -> void:
 	current_tool_slot = ""
 	selected_seed_id = ""
 	compass_target_id = ""
+	print("[Hotbar Debug] load_from_server: hotbar=", hotbar)
+	print("[Hotbar Debug] load_from_server: selected_hotbar_slot=", selected_hotbar_slot)
+	print("[Hotbar Debug] load_from_server: current_tool_slot RESET to ''")
+	# NOTE: current_tool_slot stays "" until user presses a hotbar key.
+	# selected_hotbar_slot is restored but select_hotbar_slot() is NOT called,
+	# so the tool isn't actually activated after login.
 	# Reset party group (ephemeral, not persisted)
 	group_party_id = -1
 	group_party_leader_id = ""
@@ -241,6 +253,7 @@ func load_from_server(data: Dictionary) -> void:
 	quests_changed.emit()
 	stats_changed.emit()
 	compendium_changed.emit()
+	fishing_log_changed.emit()
 
 func to_dict() -> Dictionary:
 	return {
@@ -266,6 +279,7 @@ func to_dict() -> Dictionary:
 		},
 		"stats": stats.duplicate(true),
 		"compendium": compendium.duplicate(true),
+		"fishing_log": fishing_log.duplicate(true),
 		"hotbar": hotbar.duplicate(true),
 		"selected_hotbar_slot": selected_hotbar_slot,
 	}
@@ -302,6 +316,7 @@ func reset() -> void:
 	unlock_flags.clear()
 	stats.clear()
 	compendium = {"items": [], "creatures_seen": [], "creatures_owned": []}
+	fishing_log.clear()
 	friends.clear()
 	blocked_players.clear()
 	incoming_friend_requests.clear()
@@ -322,6 +337,7 @@ func reset() -> void:
 	quests_changed.emit()
 	stats_changed.emit()
 	compendium_changed.emit()
+	fishing_log_changed.emit()
 
 func add_to_inventory(item_id: String, amount: int = 1) -> void:
 	if item_id in inventory:
@@ -370,6 +386,7 @@ func heal_all_creatures() -> void:
 	party_changed.emit()
 
 func set_tool(tool_slot: String) -> void:
+	print("[Hotbar Debug] set_tool('", tool_slot, "') — current_tool_slot changing from '", current_tool_slot, "' to '", tool_slot, "'")
 	current_tool_slot = tool_slot
 	tool_changed.emit(tool_slot)
 
@@ -398,6 +415,7 @@ func select_hotbar_slot(index: int) -> void:
 		return
 	var item_type: String = str(slot_data.get("item_type", ""))
 	var item_id: String = str(slot_data.get("item_id", ""))
+	print("[Hotbar Debug] select_hotbar_slot(", index, ") slot_data=", slot_data, " -> item_type=", item_type, " item_id=", item_id)
 	match item_type:
 		"tool_slot":
 			set_tool(item_id)
@@ -407,6 +425,7 @@ func select_hotbar_slot(index: int) -> void:
 			set_tool("")
 
 func assign_hotbar_slot(index: int, item_id: String, item_type: String) -> void:
+	print("[Hotbar Debug] assign_hotbar_slot(", index, ", ", item_id, ", ", item_type, ")")
 	if index < 0 or index >= HOTBAR_SIZE:
 		return
 	hotbar[index] = {"item_id": item_id, "item_type": item_type}

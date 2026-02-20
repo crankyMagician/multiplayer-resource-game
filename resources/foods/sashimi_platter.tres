@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="FoodDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/food_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+food_id = "sashimi_platter"
+display_name = "Sashimi Platter"
+description = "A luxurious dish that greatly enhances learning."
+icon_color = Color(0.95, 0.7, 0.5, 1)
+sell_price = 80
+buff_type = "xp_multiplier"
+buff_value = 1.5
+buff_duration_sec = 240.0

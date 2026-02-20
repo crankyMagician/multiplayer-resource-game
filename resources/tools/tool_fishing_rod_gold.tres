@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ToolDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/tool_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+tool_id = "tool_fishing_rod_gold"
+display_name = "Gold Fishing Rod"
+description = "The finest rod money can buy. Master-class catch bar."
+tool_type = "fishing_rod"
+tier = 3
+icon_color = Color(1.0, 0.85, 0.3, 1)
+effectiveness = {"bar_bonus": 0.15}

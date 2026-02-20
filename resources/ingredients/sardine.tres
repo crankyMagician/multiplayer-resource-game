@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="IngredientDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/ingredient_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+ingredient_id = "sardine"
+display_name = "Sardine"
+description = "A small, silvery fish. Common and easy to catch."
+category = "fish"
+icon_color = Color(0.7, 0.75, 0.8, 1)
+sell_price = 5
+season = ""
+grow_time = 0.0
+harvest_min = 1
+harvest_max = 1

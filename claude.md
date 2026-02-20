@@ -119,6 +119,7 @@ See `docs/docker-build.md` for full build instructions (two-phase engine + game 
 - **UI node sharing**: `_setup_ui()` adds HUD, BattleUI, CraftingUI, InventoryUI, PartyUI to the **existing** `$UI` node from `game_world.tscn`. Do NOT create a new "UI" node — Godot will rename it, breaking path lookups.
 - **Player visuals** (color, nameplate): set on the player node server-side **before** `add_child()` in `_spawn_player()`, synced via StateSync spawn-only mode.
 - **StateSync properties** (9 total): `position`, `velocity` (always), `player_color`, `player_name_display` (spawn-only), `mesh_rotation_y` (always), `is_busy` (always), `movement_state` (always), `anim_move_speed` (always), `anim_action` (always).
+- **Character vibration/clipping (DO NOT REVERT)**: `_update_crouch_collision()` in `player_controller.gd` (line ~578) runs every physics frame and lerps BOTH `capsule.height` AND `collision_shape.position.y` (= height/2.0). Without the Y position adjustment, the capsule bottom lifts off the floor → `is_on_floor()` returns false → gravity pulls down → oscillation loop. This affects both crouching AND walking if the collision shape Y drifts. The radius also scales: `clamp(height / 3.6, 0.28, 0.5)`. Scene defaults: height=1.8, radius=0.5, CollisionShape3D y=0.9.
 
 ## Animation System
 - **Architecture**: AnimationTree used as standalone AnimationMixer (NOT paired with a separate AnimationPlayer). Animation library loaded directly via `anim_tree.add_animation_library()`, root_node set to `../CharacterModel`.

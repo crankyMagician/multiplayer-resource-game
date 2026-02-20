@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="IngredientDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/ingredient_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+ingredient_id = "trout"
+display_name = "Trout"
+description = "A speckled freshwater classic, best caught in spring."
+category = "fish"
+icon_color = Color(0.6, 0.5, 0.45, 1)
+sell_price = 12
+season = "spring"
+grow_time = 0.0
+harvest_min = 1
+harvest_max = 1

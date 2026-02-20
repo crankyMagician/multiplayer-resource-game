@@ -31,6 +31,7 @@ const TAB_DEFS: Array = [
 	["Party", "open_party", "res://scripts/ui/tabs/party_tab.gd"],
 	["Quests", "quest_log", "res://scripts/ui/tabs/quest_tab.gd"],
 	["Compendium", "compendium", "res://scripts/ui/tabs/compendium_tab.gd"],
+	["Fishing", "", "res://scripts/ui/tabs/fishing_tab.gd"],
 	["Friends", "friend_list", "res://scripts/ui/tabs/friend_tab.gd"],
 	["NPCs", "open_npcs", "res://scripts/ui/tabs/npc_tab.gd"],
 	["Settings", "", "res://scripts/ui/tabs/settings_tab.gd"],
@@ -219,12 +220,12 @@ func _input(event: InputEvent) -> void:
 		return
 
 	if event.is_action_pressed("friend_list"):
-		_handle_hotkey(5)
+		_handle_hotkey(6)
 		get_viewport().set_input_as_handled()
 		return
 
 	if event.is_action_pressed("open_npcs"):
-		_handle_hotkey(6)
+		_handle_hotkey(7)
 		get_viewport().set_input_as_handled()
 		return
 
