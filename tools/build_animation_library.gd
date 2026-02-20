@@ -1,94 +1,179 @@
 extends SceneTree
 
-const ANIM_CLIPS := [
-	"idle",
-	"walk_forward",
-	"walk_backward",
-	"jog_forward",
-	"jog_backward",
-	"run",
-	"run_to_stop",
-	"crouch_idle",
-	"crouch_walk",
-	"falling",
-	"jump_up",
-	"landing",
-	"turn_left",
-	"turn_right",
-	"hoe_swing",
-	"axe_chop",
-	"watering",
-	"harvest_pickup",
-	"crafting_interact",
-	"fishing_cast",
-	"fishing_idle",
+## Extracts all animations from the Quaternius Universal Animation Library (UAL1 + UAL2)
+## monolithic GLBs and saves them as a single AnimationLibrary resource.
+##
+## Run: '/Applications/Mechanical Turk.app/Contents/MacOS/Mechanical Turk' --path . --script tools/build_animation_library.gd
+##
+## Track format: UAL GLBs use "Armature/Skeleton3D:bone_name" which matches the
+## mannequin_f.glb skeleton structure — no remapping needed.
+
+const UAL_SOURCES := [
+	"res://assets/animations/ual/UAL1.glb",
+	"res://assets/animations/ual/UAL2.glb",
 ]
 
-const LOOP_CLIPS := {
-	"idle": true,
-	"walk_forward": true,
-	"walk_backward": true,
-	"jog_forward": true,
-	"jog_backward": true,
-	"run": true,
-	"crouch_idle": true,
-	"crouch_walk": true,
-	"falling": true,
-	"turn_left": true,
-	"turn_right": true,
-	"fishing_idle": true,
+const SKIP_ANIMATIONS := ["A_TPose"]
+
+## Animations that should loop. UAL doesn't use a _Loop suffix convention,
+## so we maintain an explicit list.
+const LOOP_ANIMATIONS := {
+	# Locomotion
+	"Idle": true,
+	"Idle_LookAround": true,
+	"Idle_Tired": true,
+	"Idle_Torch": true,
+	"Idle_Talking": true,
+	"Idle_FoldArms": true,
+	"Idle_Lantern": true,
+	"Idle_Rail": true,
+	"Idle_Rail_Call": true,
+	"Idle_TalkingPhone": true,
+	"Idle_Shield": true,
+	"Walk": true,
+	"Walk_Formal": true,
+	"Walk_Fwd": true,
+	"Walk_Bwd": true,
+	"Walk_L": true,
+	"Walk_R": true,
+	"Walk_Fwd_L": true,
+	"Walk_Fwd_R": true,
+	"Walk_Bwd_L": true,
+	"Walk_Bwd_R": true,
+	"Walk_Carry": true,
+	"Jog_Fwd": true,
+	"Jog_Bwd": true,
+	"Jog_Left": true,
+	"Jog_Right": true,
+	"Jog_Fwd_L": true,
+	"Jog_Fwd_R": true,
+	"Jog_Bwd_L": true,
+	"Jog_Bwd_R": true,
+	"Jog_Fwd_LeanL": true,
+	"Jog_Fwd_LeanR": true,
+	"Sprint": true,
+	"Sprint_Shield": true,
+	# Crouch
+	"Crouch_Idle": true,
+	"Crouch_Fwd": true,
+	"Crouch_Bwd": true,
+	"Crouch_Left": true,
+	"Crouch_Right": true,
+	"Crouch_Fwd_L": true,
+	"Crouch_Fwd_R": true,
+	"Crouch_Bwd_L": true,
+	"Crouch_Bwd_R": true,
+	# Crawl
+	"Crawl_Fwd": true,
+	"Crawl_Bwd": true,
+	"Crawl_Left": true,
+	"Crawl_Right": true,
+	"Crawl_Idle": true,
+	# Airborne
+	"Jump": true,
+	# Climbing
+	"Climb_Idle": true,
+	"Climb_Up": true,
+	"Climb_Down": true,
+	# Swimming
+	"Swim_Fwd": true,
+	"Swim_Idle": true,
+	# Sitting
+	"Sitting_Idle": true,
+	"Sitting_Idle02": true,
+	"Sitting_Idle03": true,
+	"Sitting_Nodding": true,
+	"Sitting_Talking": true,
+	"GroundSit_Idle": true,
+	# Combat idles
+	"Sword_Idle": true,
+	"Pistol_Idle": true,
+	"PunchKick_Enter": true,
+	"Spell_Simple_Idle": true,
+	"Spell_Double_Idle": true,
+	"Sword_Block": true,
+	"Sword_Aerial_Idle": true,
+	"NinjaJump_Idle": true,
+	# Counter/shop
+	"Counter_Idle": true,
+	# Driving
+	"Driving": true,
+	# Fishing
+	"Fish_Cast_Idle": true,
+	"Fish_OH_Idle": true,
+	# Fixing
+	"Fixing_Kneeling": true,
+	# Farming
+	"TreeChopping": true,
+	"Mining": true,
+	# Dance
+	"Dance": true,
+	"Crying": true,
+	# Zombie
+	"Zombie_Idle": true,
+	"Zombie_Walk_Fwd": true,
+	"Zombie_Walk_Bwd": true,
+	"Zombie_Walk_L": true,
+	"Zombie_Walk_R": true,
+	"Zombie_Walk_Fwd_L": true,
+	"Zombie_Walk_Fwd_R": true,
+	"Zombie_Walk_Bwd_L": true,
+	"Zombie_Walk_Bwd_R": true,
+	"Zombie_Run_Fwd": true,
+	"Zombie_Run_Bwd": true,
+	"Zombie_Run_L": true,
+	"Zombie_Run_R": true,
+	"Zombie_Run_Fwd_L": true,
+	"Zombie_Run_Fwd_R": true,
+	"Zombie_Run_Bwd_L": true,
+	"Zombie_Run_Bwd_R": true,
+	# Air combat
+	"LiftAir_Idle": true,
+	# Wall run
+	"WallRun_L": true,
+	"WallRun_R": true,
 }
 
 func _initialize() -> void:
 	var library = AnimationLibrary.new()
+	var total_count := 0
+	var skipped_dupes := 0
 
-	for clip in ANIM_CLIPS:
-		var path := "res://assets/animations/%s.glb" % clip
-		var scene := load(path)
+	for source_path in UAL_SOURCES:
+		var scene: PackedScene = load(source_path)
 		if scene == null:
-			push_error("Missing animation scene: %s" % path)
+			push_error("Failed to load: %s" % source_path)
 			continue
 
 		var inst = scene.instantiate()
-		var anim_player = inst.find_child("AnimationPlayer", true, false)
+		var anim_player: AnimationPlayer = inst.find_child("AnimationPlayer", true, false)
 		if anim_player == null:
-			push_error("AnimationPlayer not found in %s" % path)
+			push_error("No AnimationPlayer in: %s" % source_path)
+			inst.free()
 			continue
 
 		var anim_list = anim_player.get_animation_list()
-		if anim_list.is_empty():
-			push_error("No animations found in %s" % path)
-			continue
+		print("[BuildAnimLib] %s: %d animations" % [source_path, anim_list.size()])
 
-		var anim = anim_player.get_animation(anim_list[0]).duplicate()
-		anim.loop_mode = Animation.LOOP_LINEAR if LOOP_CLIPS.has(clip) else Animation.LOOP_NONE
-		_remap_tracks_to_skeleton(anim)
-		library.add_animation(clip, anim)
+		for anim_name in anim_list:
+			if anim_name in SKIP_ANIMATIONS:
+				continue
+			if library.has_animation(anim_name):
+				skipped_dupes += 1
+				continue
+
+			var anim = anim_player.get_animation(anim_name).duplicate()
+			anim.loop_mode = Animation.LOOP_LINEAR if LOOP_ANIMATIONS.has(anim_name) else Animation.LOOP_NONE
+			library.add_animation(anim_name, anim)
+			total_count += 1
+
+		inst.free()
 
 	var save_path := "res://assets/animations/player_animation_library.tres"
 	var err := ResourceSaver.save(library, save_path)
 	if err != OK:
 		push_error("Failed to save AnimationLibrary: %s" % err)
+	else:
+		print("[BuildAnimLib] Saved %d animations to %s (skipped %d dupes)" % [total_count, save_path, skipped_dupes])
 
 	quit()
-
-
-## Remap Node3D bone paths to Skeleton3D bone paths.
-## Animation GLBs (no mesh) import bones as Node3D children:
-##   RootNode/mixamorig_Hips/mixamorig_Spine/mixamorig_Spine1
-## Player character GLB (with mesh) uses Skeleton3D:
-##   RootNode/Skeleton3D:mixamorig_Spine1
-## This function converts the former to the latter.
-func _remap_tracks_to_skeleton(anim: Animation) -> void:
-	for i in anim.get_track_count():
-		var path := anim.track_get_path(i)
-		var path_str := String(path)
-
-		# Only remap bone tracks (paths starting with RootNode/mixamorig_)
-		if not path_str.begins_with("RootNode/mixamorig_"):
-			continue
-
-		# The last segment after the final "/" is the bone name
-		var bone_name := path_str.get_slice("/", path_str.count("/"))
-		var new_path := NodePath("RootNode/Skeleton3D:" + bone_name)
-		anim.track_set_path(i, new_path)

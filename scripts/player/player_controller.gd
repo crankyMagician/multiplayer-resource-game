@@ -402,40 +402,40 @@ func _build_animation_tree() -> void:
 
 	# Locomotion animation nodes
 	var idle_node := AnimationNodeAnimation.new()
-	idle_node.animation = &"idle"
+	idle_node.animation = &"Idle"
 	blend_tree.add_node(&"Idle", idle_node, Vector2(0, 0))
 
 	var jog_node := AnimationNodeAnimation.new()
-	jog_node.animation = &"jog_forward"
+	jog_node.animation = &"Jog_Fwd"
 	blend_tree.add_node(&"Jog", jog_node, Vector2(0, 200))
 
 	var run_node := AnimationNodeAnimation.new()
-	run_node.animation = &"run"
+	run_node.animation = &"Sprint"
 	blend_tree.add_node(&"Run", run_node, Vector2(0, 400))
 
 	var crouch_idle_node := AnimationNodeAnimation.new()
-	crouch_idle_node.animation = &"crouch_idle"
+	crouch_idle_node.animation = &"Crouch_Idle"
 	blend_tree.add_node(&"CrouchIdle", crouch_idle_node, Vector2(0, 600))
 
 	var crouch_walk_node := AnimationNodeAnimation.new()
-	crouch_walk_node.animation = &"crouch_walk"
+	crouch_walk_node.animation = &"Crouch_Fwd"
 	blend_tree.add_node(&"CrouchWalk", crouch_walk_node, Vector2(0, 800))
 
 	var falling_node := AnimationNodeAnimation.new()
-	falling_node.animation = &"falling"
+	falling_node.animation = &"Jump"
 	blend_tree.add_node(&"Falling", falling_node, Vector2(0, 1000))
 
 	var jump_up_node := AnimationNodeAnimation.new()
-	jump_up_node.animation = &"jump_up"
+	jump_up_node.animation = &"Jump_Start"
 	blend_tree.add_node(&"JumpUp", jump_up_node, Vector2(0, 1100))
 
 	var landing_node := AnimationNodeAnimation.new()
-	landing_node.animation = &"landing"
+	landing_node.animation = &"Jump_Land"
 	blend_tree.add_node(&"Landing", landing_node, Vector2(0, 1200))
 
 	# Tool action animation node
 	var tool_node := AnimationNodeAnimation.new()
-	tool_node.animation = &"hoe_swing"
+	tool_node.animation = &"Farm_PlantSeed"
 	blend_tree.add_node(&"ToolAnim", tool_node, Vector2(0, 1400))
 
 	# Standing locomotion transition: Idle / Jog / Run
@@ -493,9 +493,10 @@ func _build_animation_tree() -> void:
 	# Connect to output
 	blend_tree.connect_node(&"output", 0, &"ToolAction")
 
-	# Fix loop modes for locomotion animations
-	var loop_anims := ["idle", "jog_forward", "jog_backward", "run", "walk_forward",
-		"walk_backward", "crouch_idle", "crouch_walk", "falling", "fishing_idle"]
+	# Fix loop modes for locomotion animations (safety net — build tool already sets these)
+	var loop_anims := ["Idle", "Jog_Fwd", "Sprint", "Crouch_Idle", "Crouch_Fwd",
+		"Jump", "Fish_Cast_Idle", "TreeChopping", "Mining", "Dance",
+		"Swim_Fwd", "Swim_Idle", "Walk_Fwd", "Walk"]
 	for anim_name in loop_anims:
 		var anim := anim_tree.get_animation(anim_name)
 		if anim:
@@ -563,14 +564,59 @@ func _update_animation_tree() -> void:
 
 func _get_tool_animation_name(action: StringName) -> StringName:
 	match action:
-		&"hoe":     return &"hoe_swing"
-		&"axe":     return &"axe_chop"
-		&"water":   return &"watering"
-		&"harvest": return &"harvest_pickup"
-		&"craft":   return &"crafting_interact"
-		&"fish":    return &"fishing_cast"
-		&"fish_idle": return &"fishing_idle"
-		_:          return &"harvest_pickup"
+		# Farming
+		&"hoe":         return &"Farm_PlantSeed"
+		&"axe":         return &"TreeChopping"
+		&"water":       return &"Farm_Watering"
+		&"harvest":     return &"Farm_Harvest"
+		&"plant":       return &"Farm_ScatteringSeeds"
+		&"pick_tree":   return &"Farm_PickingTree"
+		&"mine":        return &"Mining"
+		# Crafting & interaction
+		&"craft":       return &"Interact"
+		&"interact":    return &"Interact"
+		&"pickup":      return &"PickUp_Kneeling"
+		&"pickup_table": return &"PickUp_Table"
+		&"consume":     return &"Consume"
+		&"drink":       return &"Drink"
+		# Fishing
+		&"fish":        return &"Fish_Cast"
+		&"fish_idle":   return &"Fish_Cast_Idle"
+		&"fish_hook":   return &"Fish_Reel"
+		&"fish_fail":   return &"Fish_Reel_Failed"
+		# Combat
+		&"punch":       return &"Punch_Jab"
+		&"kick":        return &"Kick"
+		&"sword":       return &"Sword_Attack"
+		&"spell":       return &"Spell_Simple_Shoot"
+		&"hit":         return &"Hit_Chest"
+		&"knockback":   return &"Hit_Knockback"
+		&"death":       return &"Death01"
+		&"roll":        return &"Roll"
+		&"dodge_left":  return &"Dodge_Left"
+		&"dodge_right": return &"Dodge_Right"
+		# Emotes & social
+		&"wave":        return &"Yes"
+		&"celebrate":   return &"Celebration"
+		&"dance":       return &"Dance"
+		&"cry":         return &"Crying"
+		&"surprise":    return &"Surprise"
+		&"backflip":    return &"BackFlip"
+		&"sit":         return &"Sitting_Enter"
+		&"push":        return &"Push"
+		&"throw":       return &"OverhandThrow"
+		# Movement transitions
+		&"climb":       return &"Climb_Up"
+		&"climb_enter": return &"Climb_Enter"
+		&"climb_exit":  return &"Climb_Exit"
+		&"slide":       return &"Slide"
+		&"swim":        return &"Swim_Fwd"
+		&"jump_double": return &"DoubleJump"
+		# Counter/shop
+		&"counter_give":  return &"Counter_Give"
+		&"counter_show":  return &"Counter_Show"
+		# Default
+		_:              return &"Farm_Harvest"
 
 
 # ---------- Crouch Collision ----------

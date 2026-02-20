@@ -23,6 +23,8 @@ uniform float cloud_density : hint_range(0.0, 5.0, 0.1) = 0.7;
 uniform float cloud_depth = 2.0;
 uniform float cloud_shape_exponent = 2.0;
 uniform float cloud_occlude_exponent = 1.0;
+uniform int cloud_steps : hint_range(2, 8) = 4;
+uniform vec4 cloud_edge_color : source_color = vec4(0.55, 0.50, 0.60, 1.0);
 
 group_uniforms Stars;
 uniform sampler2D night_noise_01;
@@ -56,6 +58,7 @@ void sky() {
 	vec3 sky_color = vec3(0.0);
 
 	float cloud_value = 0.0;
+	float edge = 0.0;
 	if(t >= 0.0){
 		vec3 wind = vec3(wind_speed.x, 0.0, wind_speed.y) * TIME * 0.1;
 		vec3 tiling = vec3(cloud_tiling.x, 1.0, cloud_tiling.y) * 0.2;
@@ -71,6 +74,15 @@ void sky() {
 		cloud_value = min(height1, height1 * height2);
 
 		cloud_value *= smoothstep(0.0, 0.2, EYEDIR.y);
+
+		// Cel-shade quantization: snap cloud value to discrete bands
+		float raw_cloud = cloud_value;
+		float steps_f = float(cloud_steps);
+		cloud_value = floor(cloud_value * steps_f + 0.5) / steps_f;
+
+		// Detect band edges for outline tint (where quantization jumps)
+		edge = abs(raw_cloud - cloud_value) * steps_f;
+		edge = smoothstep(0.3, 0.5, edge);
 	}
 
 	float sun_distance = clamp(1.0 - distance(EYEDIR, LIGHT0_DIRECTION) - pow(cloud_value,cloud_occlude_exponent),0.0,1.0);
@@ -91,7 +103,8 @@ void sky() {
 	sky_color = mix(sky_night_mix, sky_color, clamp(pow(1.0+blend, 4.0),0.0,1.0)).rgb;
 
 	sky = mix(sky_color, horizon_color, pow(1.0 - abs(EYEDIR.y), horizon_exponent));
-	sky = mix(sky, cloud_color.rgb * 1.0, pow(cloud_value, 0.8));
+	vec3 tinted_cloud = mix(cloud_color.rgb, cloud_edge_color.rgb, edge);
+	sky = mix(sky, tinted_cloud, pow(cloud_value, 0.8));
 
 
 	sky += stars * 1.0;
