@@ -53,7 +53,7 @@ func _refresh() -> void:
 
 func _build_creature_card(creature: Dictionary, idx: int) -> PanelContainer:
 	var card := PanelContainer.new()
-	card.custom_minimum_size.y = UITheme.scaled(180)
+	card.custom_minimum_size.y = UITheme.scaled(240)
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 	var style := StyleBoxFlat.new()
@@ -294,6 +294,9 @@ func _build_moves_panel(creature: Dictionary) -> HBoxContainer:
 	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hbox.add_child(grid)
 
+	var small_fs := UITheme.scaled(UITokens.FONT_SMALL)
+	var tiny_fs := UITheme.scaled(UITokens.FONT_TINY)
+
 	for m in creature_moves:
 		var move = DataRegistry.get_move(m)
 		if move == null:
@@ -313,21 +316,149 @@ func _build_moves_panel(creature: Dictionary) -> HBoxContainer:
 		mvbox.add_theme_constant_override("separation", 2)
 		move_panel.add_child(mvbox)
 
+		# Name + type row
+		var header_row := HBoxContainer.new()
+		mvbox.add_child(header_row)
 		var name_lbl := Label.new()
 		name_lbl.text = move.display_name
+		name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		UITheme.style_small(name_lbl)
-		mvbox.add_child(name_lbl)
+		header_row.add_child(name_lbl)
+		var type_badge := Label.new()
+		type_badge.text = move.type.capitalize()
+		UITheme.style_caption(type_badge)
+		type_badge.add_theme_font_size_override("font_size", tiny_fs)
+		type_badge.add_theme_color_override("font_color", UITokens.ACCENT_HONEY)
+		header_row.add_child(type_badge)
 
-		var detail_lbl := Label.new()
-		var power_text = "Pwr:%d" % move.power if move.power > 0 else "Status"
-		detail_lbl.text = "%s | %s | %s" % [move.type.capitalize(), move.category.capitalize(), power_text]
-		UITheme.style_caption(detail_lbl)
-		detail_lbl.add_theme_color_override("font_color", UITokens.INK_SECONDARY)
-		mvbox.add_child(detail_lbl)
+		# Core stats line: Category | Pwr | Acc | PP
+		var stats_parts: Array = [move.category.capitalize()]
+		if move.power > 0:
+			stats_parts.append("Pwr:%d" % move.power)
+		stats_parts.append("Acc:%d%%" % move.accuracy)
+		stats_parts.append("PP:%d" % move.pp)
+		if move.priority != 0:
+			stats_parts.append("Pri:%+d" % move.priority)
+		var stats_lbl := Label.new()
+		stats_lbl.text = " | ".join(stats_parts)
+		UITheme.style_caption(stats_lbl)
+		stats_lbl.add_theme_font_size_override("font_size", small_fs)
+		stats_lbl.add_theme_color_override("font_color", UITokens.INK_SECONDARY)
+		mvbox.add_child(stats_lbl)
+
+		# Description (if any)
+		if move.description != "":
+			var desc_lbl := Label.new()
+			desc_lbl.text = move.description
+			desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			UITheme.style_caption(desc_lbl)
+			desc_lbl.add_theme_font_size_override("font_size", tiny_fs)
+			desc_lbl.add_theme_color_override("font_color", UITokens.INK_MEDIUM)
+			mvbox.add_child(desc_lbl)
+
+		# Special property tags
+		var tags := _build_move_tags(move)
+		if tags != "":
+			var tags_lbl := Label.new()
+			tags_lbl.text = tags
+			tags_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			UITheme.style_caption(tags_lbl)
+			tags_lbl.add_theme_font_size_override("font_size", tiny_fs)
+			tags_lbl.add_theme_color_override("font_color", UITokens.ACCENT_CHESTNUT)
+			mvbox.add_child(tags_lbl)
 
 		grid.add_child(move_panel)
 
 	return hbox
+
+func _build_move_tags(move: MoveDef) -> String:
+	var tags: Array = []
+
+	# Contact
+	if move.is_contact:
+		tags.append("Contact")
+
+	# Status effect
+	if move.status_effect != "":
+		if move.status_chance > 0 and move.status_chance < 100:
+			tags.append("%d%% %s" % [move.status_chance, move.status_effect.capitalize()])
+		elif move.status_chance >= 100:
+			tags.append(move.status_effect.capitalize())
+
+	# Self stat changes
+	if move.stat_changes.size() > 0:
+		var parts: Array = []
+		for stat in move.stat_changes:
+			var val: int = int(move.stat_changes[stat])
+			parts.append("%s%+d" % [stat.to_upper().left(3), val])
+		tags.append("Self: %s" % ", ".join(parts))
+
+	# Target stat changes
+	if move.target_stat_changes.size() > 0:
+		var parts: Array = []
+		for stat in move.target_stat_changes:
+			var val: int = int(move.target_stat_changes[stat])
+			parts.append("%s%+d" % [stat.to_upper().left(3), val])
+		tags.append("Target: %s" % ", ".join(parts))
+
+	# Heal / Drain / Recoil
+	if move.heal_percent > 0:
+		tags.append("Heal %d%%" % int(move.heal_percent))
+	if move.drain_percent > 0:
+		tags.append("Drain %d%%" % int(move.drain_percent))
+	if move.recoil_percent > 0:
+		tags.append("Recoil %d%%" % int(move.recoil_percent))
+
+	# Multi-hit
+	if move.multi_hit_min > 0:
+		if move.multi_hit_min == move.multi_hit_max:
+			tags.append("%d hits" % move.multi_hit_min)
+		else:
+			tags.append("%d-%d hits" % [move.multi_hit_min, move.multi_hit_max])
+
+	# Protection
+	if move.is_protection:
+		tags.append("Protection")
+
+	# Charging
+	if move.is_charging:
+		tags.append("Charge move")
+
+	# Weather
+	if move.weather_set != "":
+		tags.append("Sets %s" % move.weather_set.capitalize())
+
+	# Hazards
+	if move.hazard_type != "":
+		tags.append("Hazard: %s" % move.hazard_type.capitalize())
+	if move.clears_hazards:
+		tags.append("Clears hazards")
+
+	# Switching
+	if move.switch_after:
+		tags.append("Switch after")
+	if move.force_switch:
+		tags.append("Force switch")
+
+	# Field effects / misc boolean flags
+	if move.trick_room:
+		tags.append("Trick Room")
+	if move.taunt:
+		tags.append("Taunt")
+	if move.encore:
+		tags.append("Encore")
+	if move.substitute:
+		tags.append("Substitute")
+	if move.knock_off:
+		tags.append("Knock Off")
+	if move.sleep_talk:
+		tags.append("Sleep Talk")
+
+	# Crit stage
+	if move.self_crit_stage_change != 0:
+		tags.append("Crit %+d" % move.self_crit_stage_change)
+
+	return " | ".join(tags)
 
 func _build_details_panel(creature: Dictionary, idx: int) -> HBoxContainer:
 	var hbox := HBoxContainer.new()

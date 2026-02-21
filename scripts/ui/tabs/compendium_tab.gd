@@ -119,7 +119,7 @@ func _build_ui() -> void:
 	main_vbox.add_child(content_scroll)
 
 	card_grid = GridContainer.new()
-	card_grid.columns = 6
+	card_grid.columns = 4
 	card_grid.add_theme_constant_override("h_separation", 8)
 	card_grid.add_theme_constant_override("v_separation", 8)
 	card_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -152,13 +152,13 @@ func _refresh() -> void:
 	_rebuild_filter_bar()
 	match _current_tab:
 		0:
-			card_grid.columns = 6
+			card_grid.columns = 4
 			_refresh_items()
 		1:
-			card_grid.columns = 6
+			card_grid.columns = 4
 			_refresh_creatures()
 		2:
-			card_grid.columns = 6
+			card_grid.columns = 4
 			_refresh_fishing()
 		3:
 			card_grid.columns = 1
@@ -195,9 +195,8 @@ func _clear_children(node: Control) -> void:
 
 func _make_card_shell(is_locked: bool, border_color: Color = UITokens.ACCENT_CHESTNUT) -> PanelContainer:
 	var card := PanelContainer.new()
-	var card_w := UITheme.scaled(88)
-	var card_h := UITheme.scaled(100)
-	card.custom_minimum_size = Vector2(card_w, card_h)
+	card.custom_minimum_size.y = UITheme.scaled(140)
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 	var style := StyleBoxFlat.new()
 	if is_locked:
@@ -295,12 +294,12 @@ func _build_item_front(entry: Dictionary, is_unlocked: bool) -> VBoxContainer:
 	vbox.add_theme_constant_override("separation", 2)
 
 	if is_unlocked:
-		var icon := UITheme.create_item_icon(entry.info, 32)
+		var icon := UITheme.create_item_icon(entry.info, 48)
 		icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		vbox.add_child(icon)
 	else:
 		var placeholder := ColorRect.new()
-		placeholder.custom_minimum_size = Vector2(UITheme.scaled(32), UITheme.scaled(32))
+		placeholder.custom_minimum_size = Vector2(UITheme.scaled(48), UITheme.scaled(48))
 		placeholder.color = Color(UITokens.INK_DISABLED.r, UITokens.INK_DISABLED.g, UITokens.INK_DISABLED.b, 0.3)
 		placeholder.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		vbox.add_child(placeholder)
@@ -308,7 +307,7 @@ func _build_item_front(entry: Dictionary, is_unlocked: bool) -> VBoxContainer:
 	var name_lbl := Label.new()
 	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	UITheme.style_caption(name_lbl)
-	name_lbl.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_TINY))
+	name_lbl.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_SMALL))
 	if is_unlocked:
 		name_lbl.text = entry.info.display_name
 	else:
@@ -321,7 +320,7 @@ func _build_item_front(entry: Dictionary, is_unlocked: bool) -> VBoxContainer:
 		cat_lbl.text = entry.info.get("category", "").replace("_", " ").capitalize()
 		cat_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		UITheme.style_caption(cat_lbl)
-		cat_lbl.add_theme_font_size_override("font_size", UITheme.scaled(10))
+		cat_lbl.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_TINY))
 		cat_lbl.add_theme_color_override("font_color", UITokens.INK_SECONDARY)
 		vbox.add_child(cat_lbl)
 
@@ -343,7 +342,7 @@ func _build_card_back_items(entry: Dictionary, is_unlocked: bool) -> VBoxContain
 		return vbox
 
 	# Larger icon
-	var icon := UITheme.create_item_icon(entry.info, 40)
+	var icon := UITheme.create_item_icon(entry.info, 48)
 	icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	vbox.add_child(icon)
 
@@ -352,7 +351,7 @@ func _build_card_back_items(entry: Dictionary, is_unlocked: bool) -> VBoxContain
 	name_lbl.text = entry.info.display_name
 	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	UITheme.style_caption(name_lbl)
-	name_lbl.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_TINY))
+	name_lbl.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_SMALL))
 	vbox.add_child(name_lbl)
 
 	# Category
@@ -360,7 +359,7 @@ func _build_card_back_items(entry: Dictionary, is_unlocked: bool) -> VBoxContain
 	cat_lbl.text = entry.info.get("category", "").replace("_", " ").capitalize()
 	cat_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	UITheme.style_caption(cat_lbl)
-	cat_lbl.add_theme_font_size_override("font_size", UITheme.scaled(9))
+	cat_lbl.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_TINY))
 	cat_lbl.add_theme_color_override("font_color", UITokens.INK_SECONDARY)
 	vbox.add_child(cat_lbl)
 
@@ -371,7 +370,7 @@ func _build_card_back_items(entry: Dictionary, is_unlocked: bool) -> VBoxContain
 		price_lbl.text = "$%d" % price
 		price_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		UITheme.style_caption(price_lbl)
-		price_lbl.add_theme_font_size_override("font_size", UITheme.scaled(9))
+		price_lbl.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_TINY))
 		price_lbl.add_theme_color_override("font_color", UITokens.STAMP_GOLD)
 		vbox.add_child(price_lbl)
 
@@ -429,7 +428,7 @@ func _build_creature_front(sp: CreatureSpecies, is_owned: bool, is_seen: bool) -
 	vbox.add_theme_constant_override("separation", 2)
 
 	var icon_rect := ColorRect.new()
-	icon_rect.custom_minimum_size = Vector2(UITheme.scaled(32), UITheme.scaled(32))
+	icon_rect.custom_minimum_size = Vector2(UITheme.scaled(48), UITheme.scaled(48))
 	icon_rect.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	if is_owned:
 		icon_rect.color = sp.mesh_color if sp.mesh_color else Color.GRAY
@@ -442,7 +441,7 @@ func _build_creature_front(sp: CreatureSpecies, is_owned: bool, is_seen: bool) -
 	var name_lbl := Label.new()
 	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	UITheme.style_caption(name_lbl)
-	name_lbl.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_TINY))
+	name_lbl.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_SMALL))
 	if is_seen or is_owned:
 		name_lbl.text = sp.display_name
 	else:
@@ -458,7 +457,7 @@ func _build_creature_front(sp: CreatureSpecies, is_owned: bool, is_seen: bool) -
 		type_lbl.text = " / ".join(type_parts)
 		type_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		UITheme.style_caption(type_lbl)
-		type_lbl.add_theme_font_size_override("font_size", UITheme.scaled(10))
+		type_lbl.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_TINY))
 		type_lbl.add_theme_color_override("font_color", UITokens.INK_SECONDARY)
 		vbox.add_child(type_lbl)
 
@@ -499,26 +498,26 @@ func _build_card_back_creature(species_id: String, sp: CreatureSpecies, is_owned
 		vbox.add_child(hint)
 		return vbox
 
-	# Owned — show base stats compact grid
-	var tiny_fs := UITheme.scaled(9)
+	# Owned — show base stats in 3-column grid
+	var small_fs := UITheme.scaled(UITokens.FONT_SMALL)
+	var tiny_fs := UITheme.scaled(UITokens.FONT_TINY)
 	var stats_grid := GridContainer.new()
-	stats_grid.columns = 2
-	stats_grid.add_theme_constant_override("h_separation", 2)
-	stats_grid.add_theme_constant_override("v_separation", 0)
+	stats_grid.columns = 3
+	stats_grid.add_theme_constant_override("h_separation", 8)
+	stats_grid.add_theme_constant_override("v_separation", 2)
 	var stat_pairs: Array = [
-		["HP", sp.base_hp], ["ATK", sp.base_attack],
-		["DEF", sp.base_defense], ["SPA", sp.base_sp_attack],
-		["SPD", sp.base_sp_defense], ["SPE", sp.base_speed],
+		["HP", sp.base_hp], ["ATK", sp.base_attack], ["DEF", sp.base_defense],
+		["SPA", sp.base_sp_attack], ["SPD", sp.base_sp_defense], ["SPE", sp.base_speed],
 	]
 	for pair in stat_pairs:
 		var lbl := Label.new()
-		lbl.text = "%s:%d" % [pair[0], pair[1]]
+		lbl.text = "%s: %d" % [pair[0], pair[1]]
 		UITheme.style_caption(lbl)
-		lbl.add_theme_font_size_override("font_size", tiny_fs)
+		lbl.add_theme_font_size_override("font_size", small_fs)
 		stats_grid.add_child(lbl)
 	vbox.add_child(stats_grid)
 
-	# Ability
+	# Ability + description
 	if sp.ability_ids.size() > 0:
 		var ab = DataRegistry.get_ability(sp.ability_ids[0])
 		if ab:
@@ -526,9 +525,18 @@ func _build_card_back_creature(species_id: String, sp: CreatureSpecies, is_owned
 			ab_lbl.text = ab.display_name
 			ab_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			UITheme.style_caption(ab_lbl)
-			ab_lbl.add_theme_font_size_override("font_size", tiny_fs)
+			ab_lbl.add_theme_font_size_override("font_size", small_fs)
 			ab_lbl.add_theme_color_override("font_color", UITokens.STAMP_GOLD)
 			vbox.add_child(ab_lbl)
+			if ab.description != "":
+				var ab_desc := Label.new()
+				ab_desc.text = ab.description
+				ab_desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+				ab_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+				UITheme.style_caption(ab_desc)
+				ab_desc.add_theme_font_size_override("font_size", tiny_fs)
+				ab_desc.add_theme_color_override("font_color", UITokens.INK_SECONDARY)
+				vbox.add_child(ab_desc)
 
 	# Evolution info
 	if sp.evolves_to != "":
@@ -541,6 +549,16 @@ func _build_card_back_creature(species_id: String, sp: CreatureSpecies, is_owned
 		evo_lbl.add_theme_font_size_override("font_size", tiny_fs)
 		evo_lbl.add_theme_color_override("font_color", UITokens.INK_SECONDARY)
 		vbox.add_child(evo_lbl)
+
+	# Rarity
+	if sp.rarity != "" and sp.rarity != "common":
+		var rarity_lbl := Label.new()
+		rarity_lbl.text = sp.rarity.capitalize()
+		rarity_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		UITheme.style_caption(rarity_lbl)
+		rarity_lbl.add_theme_font_size_override("font_size", tiny_fs)
+		rarity_lbl.add_theme_color_override("font_color", UITokens.ACCENT_HONEY)
+		vbox.add_child(rarity_lbl)
 
 	return vbox
 
@@ -608,16 +626,16 @@ func _build_fish_front(fish_id: String, fish_data: Dictionary, is_caught: bool, 
 	if is_caught:
 		var info := DataRegistry.get_item_display_info(fish_id)
 		if not info.is_empty():
-			var icon := UITheme.create_item_icon(info, 32)
+			var icon := UITheme.create_item_icon(info, 48)
 			icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 			vbox.add_child(icon)
 		else:
 			var placeholder := Control.new()
-			placeholder.custom_minimum_size = Vector2(UITheme.scaled(32), UITheme.scaled(32))
+			placeholder.custom_minimum_size = Vector2(UITheme.scaled(48), UITheme.scaled(48))
 			vbox.add_child(placeholder)
 	else:
 		var placeholder := ColorRect.new()
-		placeholder.custom_minimum_size = Vector2(UITheme.scaled(32), UITheme.scaled(32))
+		placeholder.custom_minimum_size = Vector2(UITheme.scaled(48), UITheme.scaled(48))
 		placeholder.color = Color(UITokens.INK_DISABLED.r, UITokens.INK_DISABLED.g, UITokens.INK_DISABLED.b, 0.3)
 		placeholder.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		vbox.add_child(placeholder)
@@ -626,7 +644,7 @@ func _build_fish_front(fish_id: String, fish_data: Dictionary, is_caught: bool, 
 	var name_label := Label.new()
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	UITheme.style_caption(name_label)
-	name_label.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_TINY))
+	name_label.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_SMALL))
 	if is_caught:
 		var fish_def = DataRegistry.get_ingredient(fish_id)
 		name_label.text = fish_def.display_name if fish_def else fish_id.capitalize()
@@ -647,7 +665,7 @@ func _build_fish_front(fish_id: String, fish_data: Dictionary, is_caught: bool, 
 	stars_label.text = stars_text
 	stars_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	UITheme.style_caption(stars_label)
-	stars_label.add_theme_font_size_override("font_size", UITheme.scaled(10))
+	stars_label.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_TINY))
 	if is_caught:
 		stars_label.add_theme_color_override("font_color", UITokens.ACCENT_HONEY)
 	else:
@@ -659,8 +677,9 @@ func _build_fish_front(fish_id: String, fish_data: Dictionary, is_caught: bool, 
 func _build_card_back_fish(fish_id: String, fish_data: Dictionary, is_caught: bool, catch_data: Dictionary) -> VBoxContainer:
 	var vbox := VBoxContainer.new()
 	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	vbox.add_theme_constant_override("separation", 1)
-	var tiny_fs := UITheme.scaled(9)
+	vbox.add_theme_constant_override("separation", 2)
+	var small_fs := UITheme.scaled(UITokens.FONT_SMALL)
+	var tiny_fs := UITheme.scaled(UITokens.FONT_TINY)
 
 	# Stars always shown
 	var difficulty: int = fish_data.get("difficulty", 1)
@@ -674,7 +693,7 @@ func _build_card_back_fish(fish_id: String, fish_data: Dictionary, is_caught: bo
 	stars_label.text = stars_text
 	stars_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	UITheme.style_caption(stars_label)
-	stars_label.add_theme_font_size_override("font_size", UITheme.scaled(10))
+	stars_label.add_theme_font_size_override("font_size", small_fs)
 	if is_caught:
 		stars_label.add_theme_color_override("font_color", UITokens.ACCENT_HONEY)
 	else:
@@ -686,7 +705,7 @@ func _build_card_back_fish(fish_id: String, fish_data: Dictionary, is_caught: bo
 		msg.text = "Not yet\ncaught."
 		msg.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		UITheme.style_caption(msg)
-		msg.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_TINY))
+		msg.add_theme_font_size_override("font_size", small_fs)
 		msg.add_theme_color_override("font_color", UITokens.INK_DISABLED)
 		vbox.add_child(msg)
 		return vbox
@@ -695,27 +714,27 @@ func _build_card_back_fish(fish_id: String, fish_data: Dictionary, is_caught: bo
 	var season: String = fish_data.get("season", "")
 	if season != "":
 		var s_lbl := Label.new()
-		s_lbl.text = season.capitalize()
+		s_lbl.text = "Season: %s" % season.capitalize()
 		s_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		UITheme.style_caption(s_lbl)
-		s_lbl.add_theme_font_size_override("font_size", tiny_fs)
+		s_lbl.add_theme_font_size_override("font_size", small_fs)
 		s_lbl.add_theme_color_override("font_color", UITokens.INK_SECONDARY)
 		vbox.add_child(s_lbl)
 
 	# Movement type
 	var move_type: String = fish_data.get("movement_type", "smooth")
 	var move_lbl := Label.new()
-	move_lbl.text = MOVEMENT_HINTS.get(move_type, move_type.capitalize())
+	move_lbl.text = "Movement: %s" % MOVEMENT_HINTS.get(move_type, move_type.capitalize())
 	move_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	UITheme.style_caption(move_lbl)
-	move_lbl.add_theme_font_size_override("font_size", tiny_fs)
+	move_lbl.add_theme_font_size_override("font_size", small_fs)
 	vbox.add_child(move_lbl)
 
 	# Rod tier
 	var rod_tier: int = fish_data.get("min_rod_tier", 0)
 	if rod_tier > 0:
 		var rod_lbl := Label.new()
-		rod_lbl.text = "Rod T%d+" % rod_tier
+		rod_lbl.text = "Rod Tier %d+" % rod_tier
 		rod_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		UITheme.style_caption(rod_lbl)
 		rod_lbl.add_theme_font_size_override("font_size", tiny_fs)
@@ -725,8 +744,11 @@ func _build_card_back_fish(fish_id: String, fish_data: Dictionary, is_caught: bo
 	# Location
 	var tables: Array = fish_data.get("tables", [])
 	if tables.size() > 0:
+		var loc_parts: Array = []
+		for t in tables:
+			loc_parts.append(str(t).capitalize())
 		var loc_lbl := Label.new()
-		loc_lbl.text = str(tables[0]).capitalize()
+		loc_lbl.text = "Location: %s" % ", ".join(loc_parts)
 		loc_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		UITheme.style_caption(loc_lbl)
 		loc_lbl.add_theme_font_size_override("font_size", tiny_fs)
@@ -737,12 +759,23 @@ func _build_card_back_fish(fish_id: String, fish_data: Dictionary, is_caught: bo
 	var count: int = catch_data.get("count", 0)
 	if count > 0:
 		var count_lbl := Label.new()
-		count_lbl.text = "x%d" % count
+		count_lbl.text = "Caught: x%d" % count
 		count_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		UITheme.style_caption(count_lbl)
-		count_lbl.add_theme_font_size_override("font_size", tiny_fs)
+		count_lbl.add_theme_font_size_override("font_size", small_fs)
 		count_lbl.add_theme_color_override("font_color", UITokens.STAMP_GOLD)
 		vbox.add_child(count_lbl)
+
+	# Sell price
+	var sell_price := DataRegistry.get_sell_price(fish_id)
+	if sell_price > 0:
+		var price_lbl := Label.new()
+		price_lbl.text = "Sell: $%d" % sell_price
+		price_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		UITheme.style_caption(price_lbl)
+		price_lbl.add_theme_font_size_override("font_size", tiny_fs)
+		price_lbl.add_theme_color_override("font_color", UITokens.STAMP_GOLD)
+		vbox.add_child(price_lbl)
 
 	return vbox
 
