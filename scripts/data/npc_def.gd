@@ -34,6 +34,3 @@ extends Resource
 @export var creature_trades: Array = []
 
 @export var occupation: String = ""
-
-# Character appearance for modular AR Kit model (optional — falls back to color-tinted mannequin)
-@export var appearance: CharacterAppearance = null

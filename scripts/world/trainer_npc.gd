@@ -51,13 +51,7 @@ func _create_visual() -> void:
 			"actions": anim_config.get("actions", ["Yes"]),
 			"color": trainer_color,
 		}
-		var trainer_appearance := {}
-		if trainer and trainer.appearance:
-			trainer_appearance = trainer.appearance.to_dict()
-		if not trainer_appearance.is_empty():
-			_anim_state = NpcAnimator.create_character_from_appearance(self, config, trainer_appearance)
-		else:
-			_anim_state = NpcAnimator.create_character(self, config)
+		_anim_state = NpcAnimator.create_character(self, config)
 
 	# Label
 	label_3d = Label3D.new()

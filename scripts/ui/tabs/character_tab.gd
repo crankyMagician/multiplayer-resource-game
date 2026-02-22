@@ -55,15 +55,11 @@ func _update_info() -> void:
 	if app.is_empty() or app.get("needs_customization", false):
 		_appearance_label.text = "No character customized yet.\nClick below to create your character!"
 		return
-	var gender: String = app.get("gender", "unknown").capitalize()
-	var parts: Array[String] = []
-	parts.append("Gender: " + gender)
-	for key in ["head_id", "hair_id", "torso_id", "pants_id", "shoes_id", "hat_id", "glasses_id", "beard_id"]:
-		var val: String = app.get(key, "")
-		if val != "":
-			var cat_name: String = key.replace("_id", "").capitalize()
-			parts.append(cat_name + ": " + val)
-	_appearance_label.text = "\n".join(parts)
+	var pc = app.get("primary_color", {})
+	var ac = app.get("accent_color", {})
+	var primary_text := "Primary: R%.1f G%.1f B%.1f" % [float(pc.get("r", 0)), float(pc.get("g", 0)), float(pc.get("b", 0))]
+	var accent_text := "Accent: R%.1f G%.1f B%.1f" % [float(ac.get("r", 0)), float(ac.get("g", 0)), float(ac.get("b", 0))]
+	_appearance_label.text = primary_text + "\n" + accent_text
 
 
 func _on_customize_pressed() -> void:

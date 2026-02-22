@@ -1,7 +1,7 @@
 extends CanvasLayer
 
 ## Character creation / customization screen.
-## Shows a 3D preview of the character with category tabs and part selection grid.
+## Shows a 3D preview of the character with color palette selection.
 ## Used for first-login customization and from the pause menu.
 
 signal appearance_confirmed(appearance: Dictionary)
@@ -9,7 +9,21 @@ signal cancelled
 
 const UITokens = preload("res://scripts/ui/ui_tokens.gd")
 
-var is_first_time: bool = false # Disables cancel button for first-time creation
+# Curated color palette
+const COLOR_PALETTE: Array[Color] = [
+	# Skin tones
+	Color(0.96, 0.87, 0.77), Color(0.87, 0.72, 0.58), Color(0.76, 0.57, 0.42),
+	Color(0.55, 0.38, 0.26),
+	# Vibrant
+	Color(0.2, 0.5, 0.9), Color(0.9, 0.3, 0.3), Color(0.3, 0.8, 0.4),
+	Color(0.9, 0.7, 0.2), Color(0.7, 0.3, 0.8), Color(0.2, 0.8, 0.8),
+	Color(0.9, 0.5, 0.2), Color(0.8, 0.6, 0.7),
+	# Neutrals
+	Color(0.9, 0.9, 0.9), Color(0.5, 0.5, 0.5), Color(0.2, 0.2, 0.2),
+	Color(0.1, 0.1, 0.15),
+]
+
+var is_first_time: bool = false
 var current_appearance: Dictionary = {}
 var _original_appearance: Dictionary = {}
 
@@ -20,22 +34,11 @@ var preview_viewport: SubViewport
 var preview_camera: Camera3D
 var preview_model: Node3D
 var preview_container: SubViewportContainer
-var preview_root: Node3D  # Node3D container inside SubViewport for CharacterAssembler
-var category_buttons: Array[Button] = []
-var category_container: VBoxContainer # Sidebar for category buttons
-var parts_grid: GridContainer
-var parts_scroll: ScrollContainer
-var gender_female_btn: Button
-var gender_male_btn: Button
+var preview_root: Node3D
 var confirm_btn: Button
 var cancel_btn: Button
-var active_category: String = "head"
-
-# Arrow/cycle navigation
-var _arrow_left_btn: Button
-var _arrow_right_btn: Button
-var _part_label: Label
-var _arrow_container: HBoxContainer
+var _primary_swatches: Array[Button] = []
+var _accent_swatches: Array[Button] = []
 
 # 3D preview rotation & animation
 var _preview_dragging: bool = false
@@ -54,21 +57,14 @@ func open(appearance: Dictionary, first_time: bool = false) -> void:
 	is_first_time = first_time
 	_original_appearance = appearance.duplicate()
 	current_appearance = appearance.duplicate()
-	# Ensure required keys
-	if not current_appearance.has("gender"):
-		current_appearance["gender"] = "female"
-	for key in ["head_id", "pants_id", "shoes_id"]:
-		if not current_appearance.has(key) or current_appearance[key] == "":
-			current_appearance[key] = key.replace("_id", "").to_upper() + "_01_1"
-	if not current_appearance.has("torso_id") or current_appearance["torso_id"] == "":
-		current_appearance["torso_id"] = "TORSO_02_1"
-	if not current_appearance.has("arms_id") or current_appearance["arms_id"] == "":
-		current_appearance["arms_id"] = "HANDS_01_1"
+	# Ensure required color keys
+	if not current_appearance.has("primary_color") or not current_appearance["primary_color"] is Dictionary:
+		current_appearance["primary_color"] = {"r": 0.2, "g": 0.5, "b": 0.9}
+	if not current_appearance.has("accent_color") or not current_appearance["accent_color"] is Dictionary:
+		current_appearance["accent_color"] = {"r": 0.9, "g": 0.9, "b": 0.9}
 	visible = true
 	cancel_btn.visible = not is_first_time
-	_update_gender_buttons()
-	_build_category_buttons()
-	_select_category("head")
+	_update_swatch_highlights()
 	_rebuild_preview()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
@@ -120,7 +116,7 @@ func _build_ui() -> void:
 	preview_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	preview_container.add_child(preview_viewport)
 
-	# Node3D root for character model (assemble() requires Node3D parent)
+	# Node3D root for character model
 	preview_root = Node3D.new()
 	preview_root.name = "PreviewRoot"
 	preview_viewport.add_child(preview_root)
@@ -156,7 +152,7 @@ func _build_ui() -> void:
 	drag_hint.add_theme_color_override("font_color", UITokens.TEXT_MUTED)
 	preview_vbox.add_child(drag_hint)
 
-	# --- Right side: Selection ---
+	# --- Right side: Color Selection ---
 	var right_panel := PanelContainer.new()
 	right_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	right_panel.size_flags_stretch_ratio = 0.6
@@ -164,91 +160,37 @@ func _build_ui() -> void:
 	main_hbox.add_child(right_panel)
 
 	var right_vbox := VBoxContainer.new()
-	right_vbox.add_theme_constant_override("separation", UITheme.scaled(12))
+	right_vbox.add_theme_constant_override("separation", UITheme.scaled(20))
 	right_panel.add_child(right_vbox)
 
-	# Gender toggle
-	var gender_hbox := HBoxContainer.new()
-	gender_hbox.add_theme_constant_override("separation", UITheme.scaled(8))
-	gender_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	right_vbox.add_child(gender_hbox)
+	# Primary color section
+	var primary_label := Label.new()
+	UITheme.style_title(primary_label, "Body Color")
+	right_vbox.add_child(primary_label)
 
-	gender_female_btn = Button.new()
-	gender_female_btn.text = "Female"
-	UITheme.style_button(gender_female_btn, "secondary")
-	gender_female_btn.pressed.connect(_on_gender_selected.bind("female"))
-	gender_female_btn.custom_minimum_size.x = UITheme.scaled(120)
-	gender_hbox.add_child(gender_female_btn)
+	var primary_grid := GridContainer.new()
+	primary_grid.columns = 8
+	primary_grid.add_theme_constant_override("h_separation", UITheme.scaled(6))
+	primary_grid.add_theme_constant_override("v_separation", UITheme.scaled(6))
+	right_vbox.add_child(primary_grid)
+	_build_color_swatches(primary_grid, _primary_swatches, "_on_primary_color_selected")
 
-	gender_male_btn = Button.new()
-	gender_male_btn.text = "Male"
-	UITheme.style_button(gender_male_btn, "secondary")
-	gender_male_btn.pressed.connect(_on_gender_selected.bind("male"))
-	gender_male_btn.custom_minimum_size.x = UITheme.scaled(120)
-	gender_hbox.add_child(gender_male_btn)
+	# Accent color section
+	var accent_label := Label.new()
+	UITheme.style_title(accent_label, "Accent Color")
+	right_vbox.add_child(accent_label)
 
-	# Category + parts area
-	var content_hbox := HBoxContainer.new()
-	content_hbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	content_hbox.add_theme_constant_override("separation", UITheme.scaled(8))
-	right_vbox.add_child(content_hbox)
+	var accent_grid := GridContainer.new()
+	accent_grid.columns = 8
+	accent_grid.add_theme_constant_override("h_separation", UITheme.scaled(6))
+	accent_grid.add_theme_constant_override("v_separation", UITheme.scaled(6))
+	right_vbox.add_child(accent_grid)
+	_build_color_swatches(accent_grid, _accent_swatches, "_on_accent_color_selected")
 
-	# Category sidebar
-	var cat_scroll := ScrollContainer.new()
-	cat_scroll.custom_minimum_size.x = UITheme.scaled(110)
-	cat_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	content_hbox.add_child(cat_scroll)
-
-	category_container = VBoxContainer.new()
-	category_container.name = "CategoryButtons"
-	category_container.add_theme_constant_override("separation", UITheme.scaled(4))
-	cat_scroll.add_child(category_container)
-
-	# Parts area: arrow nav + grid
-	var parts_vbox := VBoxContainer.new()
-	parts_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	parts_vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	parts_vbox.add_theme_constant_override("separation", UITheme.scaled(4))
-	content_hbox.add_child(parts_vbox)
-
-	# Arrow navigation row
-	_arrow_container = HBoxContainer.new()
-	_arrow_container.add_theme_constant_override("separation", UITheme.scaled(4))
-	_arrow_container.alignment = BoxContainer.ALIGNMENT_CENTER
-	parts_vbox.add_child(_arrow_container)
-
-	_arrow_left_btn = Button.new()
-	_arrow_left_btn.text = "<"
-	UITheme.style_button(_arrow_left_btn, "secondary")
-	_arrow_left_btn.custom_minimum_size = Vector2(UITheme.scaled(28), UITheme.scaled(24))
-	_arrow_left_btn.pressed.connect(_cycle_part.bind(-1))
-	_arrow_container.add_child(_arrow_left_btn)
-
-	_part_label = Label.new()
-	_part_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_part_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UITheme.style_body_text(_part_label, "")
-	_arrow_container.add_child(_part_label)
-
-	_arrow_right_btn = Button.new()
-	_arrow_right_btn.text = ">"
-	UITheme.style_button(_arrow_right_btn, "secondary")
-	_arrow_right_btn.custom_minimum_size = Vector2(UITheme.scaled(28), UITheme.scaled(24))
-	_arrow_right_btn.pressed.connect(_cycle_part.bind(1))
-	_arrow_container.add_child(_arrow_right_btn)
-
-	# Parts grid
-	parts_scroll = ScrollContainer.new()
-	parts_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	parts_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	parts_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	parts_vbox.add_child(parts_scroll)
-
-	parts_grid = GridContainer.new()
-	parts_grid.columns = 4
-	parts_grid.add_theme_constant_override("h_separation", UITheme.scaled(8))
-	parts_grid.add_theme_constant_override("v_separation", UITheme.scaled(8))
-	parts_scroll.add_child(parts_grid)
+	# Spacer
+	var spacer := Control.new()
+	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	right_vbox.add_child(spacer)
 
 	# Bottom buttons
 	var bottom_hbox := HBoxContainer.new()
@@ -280,164 +222,71 @@ func _build_ui() -> void:
 	visible = false
 
 
-func _update_gender_buttons() -> void:
-	var gender: String = current_appearance.get("gender", "female")
-	var active_color := UITokens.ACCENT_HONEY
-	var inactive_color := UITokens.PAPER_CARD
-	gender_female_btn.add_theme_color_override("font_color", UITokens.TEXT_INK if gender == "female" else UITokens.TEXT_MUTED)
-	gender_male_btn.add_theme_color_override("font_color", UITokens.TEXT_INK if gender == "male" else UITokens.TEXT_MUTED)
-	# Style active gender button
-	var fem_style := gender_female_btn.get_theme_stylebox("normal").duplicate() as StyleBoxFlat
-	fem_style.bg_color = active_color if gender == "female" else inactive_color
-	gender_female_btn.add_theme_stylebox_override("normal", fem_style)
-	var male_style := gender_male_btn.get_theme_stylebox("normal").duplicate() as StyleBoxFlat
-	male_style.bg_color = active_color if gender == "male" else inactive_color
-	gender_male_btn.add_theme_stylebox_override("normal", male_style)
-
-
-func _build_category_buttons() -> void:
-	for btn in category_buttons:
-		btn.queue_free()
-	category_buttons.clear()
-
-	if category_container == null:
-		return
-
-	var gender: String = current_appearance.get("gender", "female")
-	var categories := CharacterPartRegistry.get_categories(gender)
-
-	for cat in categories:
+func _build_color_swatches(grid: GridContainer, swatch_array: Array[Button], callback: String) -> void:
+	for i in COLOR_PALETTE.size():
 		var btn := Button.new()
-		var display_name := cat.capitalize()
-		btn.text = display_name
-		UITheme.style_button(btn, "secondary")
-		btn.custom_minimum_size = Vector2(UITheme.scaled(100), UITheme.scaled(36))
-		btn.pressed.connect(_select_category.bind(cat))
-		category_container.add_child(btn)
-		category_buttons.append(btn)
+		var swatch_size := UITheme.scaled(44)
+		btn.custom_minimum_size = Vector2(swatch_size, swatch_size)
+		btn.text = ""
+
+		var style := StyleBoxFlat.new()
+		style.bg_color = COLOR_PALETTE[i]
+		style.corner_radius_top_left = 6
+		style.corner_radius_bottom_left = 6
+		style.corner_radius_top_right = 6
+		style.corner_radius_bottom_right = 6
+		btn.add_theme_stylebox_override("normal", style)
+		btn.add_theme_stylebox_override("hover", style.duplicate())
+		btn.add_theme_stylebox_override("pressed", style.duplicate())
+
+		btn.pressed.connect(Callable(self, callback).bind(i))
+		grid.add_child(btn)
+		swatch_array.append(btn)
 
 
-func _select_category(category: String) -> void:
-	active_category = category
-	AudioManager.play_ui_sfx("ui_tab")
-	# Highlight active category button
-	for i in range(category_buttons.size()):
-		var btn := category_buttons[i]
-		var gender: String = current_appearance.get("gender", "female")
-		var categories := CharacterPartRegistry.get_categories(gender)
-		if i < categories.size() and categories[i] == category:
-			var style := btn.get_theme_stylebox("normal").duplicate() as StyleBoxFlat
-			if style:
-				style.bg_color = UITokens.ACCENT_HONEY
-				btn.add_theme_stylebox_override("normal", style)
+func _update_swatch_highlights() -> void:
+	var primary := CharacterAssembler._extract_color(current_appearance, "primary_color", Color(0.2, 0.5, 0.9))
+	var accent := CharacterAssembler._extract_color(current_appearance, "accent_color", Color(0.9, 0.9, 0.9))
+	_highlight_swatches(_primary_swatches, primary)
+	_highlight_swatches(_accent_swatches, accent)
+
+
+func _highlight_swatches(swatches: Array[Button], selected_color: Color) -> void:
+	for i in swatches.size():
+		var btn := swatches[i]
+		var style := btn.get_theme_stylebox("normal").duplicate() as StyleBoxFlat
+		if style == null:
+			continue
+		style.bg_color = COLOR_PALETTE[i]
+		if COLOR_PALETTE[i].is_equal_approx(selected_color):
+			style.border_width_bottom = 3
+			style.border_width_top = 3
+			style.border_width_left = 3
+			style.border_width_right = 3
+			style.border_color = UITokens.ACCENT_HONEY
 		else:
-			var style := btn.get_theme_stylebox("normal").duplicate() as StyleBoxFlat
-			if style:
-				style.bg_color = UITokens.PAPER_CARD
-				btn.add_theme_stylebox_override("normal", style)
-	_build_parts_grid()
+			style.border_width_bottom = 0
+			style.border_width_top = 0
+			style.border_width_left = 0
+			style.border_width_right = 0
+		btn.add_theme_stylebox_override("normal", style)
+		btn.add_theme_stylebox_override("hover", style.duplicate())
+		btn.add_theme_stylebox_override("pressed", style.duplicate())
 
 
-func _build_parts_grid() -> void:
-	# Clear grid
-	for child in parts_grid.get_children():
-		child.queue_free()
-
-	var gender: String = current_appearance.get("gender", "female")
-	var key: String = CharacterPartRegistry.CATEGORY_KEYS.get(active_category, "")
-	var current_part: String = current_appearance.get(key, "")
-	var is_optional: bool = active_category in CharacterPartRegistry.OPTIONAL_CATEGORIES
-
-	# Update arrow label with current selection
-	_update_arrow_label()
-
-	# "None" option for optional categories
-	if is_optional:
-		var none_btn := _create_part_button("None", "", current_part == "")
-		none_btn.pressed.connect(_on_part_selected.bind(""))
-		parts_grid.add_child(none_btn)
-
-	# Available parts
-	var parts := CharacterPartRegistry.get_parts(gender, active_category)
-	for part_id in parts:
-		var is_selected := (part_id == current_part)
-		var btn := _create_part_button(part_id, part_id, is_selected)
-		btn.pressed.connect(_on_part_selected.bind(part_id))
-		parts_grid.add_child(btn)
-
-	# If no parts found, show placeholder
-	if parts.is_empty() and not is_optional:
-		var placeholder := Label.new()
-		UITheme.style_body_text(placeholder, "No parts available.\nImport character assets first.")
-		placeholder.add_theme_color_override("font_color", UITokens.TEXT_MUTED)
-		parts_grid.add_child(placeholder)
-
-
-func _create_part_button(display_name: String, part_id: String, is_selected: bool) -> Button:
-	var btn := Button.new()
-	var size := UITheme.scaled(80)
-	btn.custom_minimum_size = Vector2(size, size + UITheme.scaled(24))
-
-	# Try loading sprite icon
-	var gender: String = current_appearance.get("gender", "female")
-	var icon_path := CharacterPartRegistry.get_icon_path(gender, part_id)
-	var icon_tex: Texture2D = load(icon_path) if part_id != "" else null
-
-	if icon_tex:
-		btn.icon = icon_tex
-		btn.expand_icon = true
-		btn.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	else:
-		btn.text = display_name.substr(0, 12) if display_name.length() > 12 else display_name
-		btn.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_SMALL))
-
-	# Style
-	var style := StyleBoxFlat.new()
-	style.bg_color = UITokens.ACCENT_HONEY if is_selected else UITokens.PAPER_CARD
-	style.corner_radius_top_left = 8
-	style.corner_radius_bottom_left = 8
-	style.corner_radius_top_right = 8
-	style.corner_radius_bottom_right = 8
-	if is_selected:
-		style.border_width_bottom = 3
-		style.border_width_top = 3
-		style.border_width_left = 3
-		style.border_width_right = 3
-		style.border_color = UITokens.ACCENT_HONEY.darkened(0.2)
-	btn.add_theme_stylebox_override("normal", style)
-	btn.add_theme_stylebox_override("hover", style)
-
-	return btn
-
-
-func _on_part_selected(part_id: String) -> void:
-	var key: String = CharacterPartRegistry.CATEGORY_KEYS.get(active_category, "")
-	if key == "":
-		return
-	current_appearance[key] = part_id
+func _on_primary_color_selected(index: int) -> void:
+	var c := COLOR_PALETTE[index]
+	current_appearance["primary_color"] = {"r": c.r, "g": c.g, "b": c.b}
 	AudioManager.play_ui_sfx("ui_click")
-	_build_parts_grid()
+	_update_swatch_highlights()
 	_rebuild_preview()
 
 
-func _on_gender_selected(gender: String) -> void:
-	if current_appearance.get("gender", "") == gender:
-		return
-	AudioManager.play_ui_sfx("ui_tab")
-	current_appearance["gender"] = gender
-	# Reset to defaults for new gender
-	current_appearance["head_id"] = "HEAD_01_1"
-	current_appearance["hair_id"] = "HAIR_01_1"
-	current_appearance["torso_id"] = "TORSO_02_1"
-	current_appearance["pants_id"] = "PANTS_01_1"
-	current_appearance["shoes_id"] = "SHOES_01_1"
-	current_appearance["arms_id"] = "HANDS_01_1"
-	current_appearance["hat_id"] = ""
-	current_appearance["glasses_id"] = ""
-	current_appearance["beard_id"] = ""
-	_update_gender_buttons()
-	_build_category_buttons()
-	_select_category("head")
+func _on_accent_color_selected(index: int) -> void:
+	var c := COLOR_PALETTE[index]
+	current_appearance["accent_color"] = {"r": c.r, "g": c.g, "b": c.b}
+	AudioManager.play_ui_sfx("ui_click")
+	_update_swatch_highlights()
 	_rebuild_preview()
 
 
@@ -455,7 +304,6 @@ func _setup_preview_animation(model: Node3D) -> void:
 	var lib: AnimationLibrary = load("res://assets/animations/player_animation_library.tres")
 	if lib == null:
 		return
-	# Find the idle animation name
 	var idle_name := &"Idle"
 	if not lib.has_animation("Idle"):
 		var found := false
@@ -472,7 +320,6 @@ func _setup_preview_animation(model: Node3D) -> void:
 					break
 		if not found:
 			return
-	# Use AnimationTree as standalone AnimationMixer (same as player_controller.gd)
 	var anim_tree := AnimationTree.new()
 	anim_tree.name = "PreviewAnimTree"
 	anim_tree.anim_player = NodePath("")
@@ -497,40 +344,10 @@ func _clear_preview() -> void:
 
 
 func _on_confirm() -> void:
-	# Validate all required parts are selected
-	var gender: String = current_appearance.get("gender", "female")
-	var categories := CharacterPartRegistry.get_categories(gender)
-	for cat in categories:
-		if cat in CharacterPartRegistry.OPTIONAL_CATEGORIES:
-			continue
-		var key: String = CharacterPartRegistry.CATEGORY_KEYS.get(cat, "")
-		if key == "":
-			continue
-		var val: String = current_appearance.get(key, "")
-		if val == "":
-			_show_validation_warning("Please select all required parts before confirming.")
-			return
 	AudioManager.play_ui_sfx("ui_confirm")
 	current_appearance.erase("needs_customization")
 	appearance_confirmed.emit(current_appearance)
 	close()
-
-
-func _show_validation_warning(text: String) -> void:
-	AudioManager.play_ui_sfx("ui_error")
-	# Find or create a warning label above the confirm button
-	var existing := confirm_btn.get_parent().get_node_or_null("ValidationWarning")
-	if existing:
-		existing.text = text
-		return
-	var warning := Label.new()
-	warning.name = "ValidationWarning"
-	warning.text = text
-	warning.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	warning.add_theme_color_override("font_color", UITokens.TEXT_DANGER)
-	warning.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_SMALL))
-	confirm_btn.get_parent().add_child(warning)
-	confirm_btn.get_parent().move_child(warning, 0)
 
 
 func _on_cancel() -> void:
@@ -540,64 +357,13 @@ func _on_cancel() -> void:
 	close()
 
 
-func _cycle_part(direction: int) -> void:
-	var gender: String = current_appearance.get("gender", "female")
-	var key: String = CharacterPartRegistry.CATEGORY_KEYS.get(active_category, "")
-	if key == "":
-		return
-	var parts := CharacterPartRegistry.get_parts(gender, active_category)
-	var is_optional: bool = active_category in CharacterPartRegistry.OPTIONAL_CATEGORIES
-
-	# Build full list including "None" for optional categories
-	var full_list: Array[String] = []
-	if is_optional:
-		full_list.append("")
-	full_list.append_array(parts)
-
-	if full_list.is_empty():
-		return
-
-	var current_part: String = current_appearance.get(key, "")
-	var idx := full_list.find(current_part)
-	if idx == -1:
-		idx = 0
-	else:
-		idx = (idx + direction) % full_list.size()
-		if idx < 0:
-			idx += full_list.size()
-
-	AudioManager.play_ui_sfx("ui_click")
-	_on_part_selected(full_list[idx])
-
-
-func _update_arrow_label() -> void:
-	if _part_label == null:
-		return
-	var key: String = CharacterPartRegistry.CATEGORY_KEYS.get(active_category, "")
-	var current_part: String = current_appearance.get(key, "")
-	if current_part == "":
-		_part_label.text = "None"
-	else:
-		_part_label.text = current_part
-
-
 func _on_randomize() -> void:
 	AudioManager.play_ui_sfx("ui_click")
-	var gender: String = current_appearance.get("gender", "female")
-	var categories := CharacterPartRegistry.get_categories(gender)
-	for cat in categories:
-		var key: String = CharacterPartRegistry.CATEGORY_KEYS.get(cat, "")
-		if key == "":
-			continue
-		var parts := CharacterPartRegistry.get_parts(gender, cat)
-		if parts.is_empty():
-			continue
-		var is_optional: bool = cat in CharacterPartRegistry.OPTIONAL_CATEGORIES
-		if is_optional and randf() < 0.5:
-			current_appearance[key] = ""
-		else:
-			current_appearance[key] = parts[randi() % parts.size()]
-	_build_parts_grid()
+	var pc := COLOR_PALETTE[randi() % COLOR_PALETTE.size()]
+	var ac := COLOR_PALETTE[randi() % COLOR_PALETTE.size()]
+	current_appearance["primary_color"] = {"r": pc.r, "g": pc.g, "b": pc.b}
+	current_appearance["accent_color"] = {"r": ac.r, "g": ac.g, "b": ac.b}
+	_update_swatch_highlights()
 	_rebuild_preview()
 
 

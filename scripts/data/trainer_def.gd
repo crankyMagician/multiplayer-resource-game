@@ -11,6 +11,3 @@ extends Resource
 @export var reward_money: int = 100
 @export var reward_ingredients: Dictionary = {} # {ingredient_id: amount}
 @export var reward_recipe_scroll_id: String = "" # one-time recipe scroll on first defeat
-
-# Character appearance for modular AR Kit model (optional — falls back to color-tinted mannequin)
-@export var appearance: CharacterAppearance = null

@@ -18,11 +18,8 @@ func test_new_player_needs_customization_true():
 
 func test_returning_player_skips_creator():
 	var app := {
-		"gender": "female",
-		"head_id": "HEAD_01_1",
-		"torso_id": "TORSO_01_1",
-		"pants_id": "PANTS_01_1",
-		"shoes_id": "SHOES_01_1",
+		"primary_color": {"r": 0.5, "g": 0.3, "b": 0.8},
+		"accent_color": {"r": 0.9, "g": 0.9, "b": 0.9},
 	}
 	assert_false(_needs_character_creator(app),
 		"Returning player without needs_customization should skip creator")
@@ -35,7 +32,7 @@ func test_empty_appearance_skips_creator():
 
 
 func test_needs_customization_false_skips_creator():
-	var app := {"needs_customization": false, "gender": "male"}
+	var app := {"needs_customization": false, "primary_color": {"r": 0.5, "g": 0.3, "b": 0.8}}
 	assert_false(_needs_character_creator(app),
 		"Explicit needs_customization=false should skip creator")
 
@@ -52,11 +49,10 @@ func test_old_save_no_appearance_key_backfill():
 func test_appearance_with_extra_keys_and_needs_customization():
 	var app := {
 		"needs_customization": true,
-		"gender": "female",
-		"head_id": "HEAD_01_1",
+		"primary_color": {"r": 0.5, "g": 0.3, "b": 0.8},
 	}
 	assert_true(_needs_character_creator(app),
-		"Even with some parts, needs_customization=true should trigger creator")
+		"Even with colors set, needs_customization=true should trigger creator")
 
 
 func test_confirmed_appearance_clears_needs_customization():
@@ -64,11 +60,8 @@ func test_confirmed_appearance_clears_needs_customization():
 	# needs_customization erased before being sent to the server.
 	var app := {
 		"needs_customization": true,
-		"gender": "female",
-		"head_id": "HEAD_01_1",
-		"torso_id": "TORSO_01_1",
-		"pants_id": "PANTS_01_1",
-		"shoes_id": "SHOES_01_1",
+		"primary_color": {"r": 0.5, "g": 0.3, "b": 0.8},
+		"accent_color": {"r": 0.9, "g": 0.9, "b": 0.9},
 	}
 	# Simulate what _on_creator_confirmed receives (creator erases the flag)
 	app.erase("needs_customization")

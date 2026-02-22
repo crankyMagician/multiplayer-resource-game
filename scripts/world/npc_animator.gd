@@ -53,23 +53,6 @@ const LOOP_ANIMS := [
 
 # --- Factory ---
 
-## Create a character with a custom appearance (AR Kit modular parts).
-## Falls back to mannequin if appearance is empty or assembly fails.
-static func create_character_from_appearance(parent: Node3D, config: Dictionary, appearance: Dictionary) -> Dictionary:
-	var model: Node3D
-	if appearance.is_empty():
-		return create_character(parent, config)
-
-	model = CharacterAssembler.assemble(parent, appearance)
-	if model == null:
-		return create_character(parent, config)
-
-	var face_dir: float = config.get("face_direction", 0.0)
-	model.rotation.y = face_dir
-
-	return _setup_anim_tree(parent, model, config)
-
-
 static func create_character(parent: Node3D, config: Dictionary) -> Dictionary:
 	var idle_anim: String = config.get("idle", "Idle")
 	var action_anims: Array = config.get("actions", ["Yes"])

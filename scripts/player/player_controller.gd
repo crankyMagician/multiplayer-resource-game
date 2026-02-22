@@ -246,21 +246,7 @@ func _resolve_peer_id(local_id: int) -> int:
 
 
 func _assemble_character() -> void:
-	var has_parts := appearance_data.has("head_id") and str(appearance_data.get("head_id", "")) != ""
-	if appearance_data.is_empty() or not has_parts:
-		# No valid parts — show mannequin until character creator completes
-		var fallback_scene: PackedScene = load("res://assets/models/mannequin_f.glb")
-		if fallback_scene:
-			character_model = fallback_scene.instantiate()
-			character_model.name = "CharacterModel"
-			add_child(character_model)
-		else:
-			push_error("[PlayerController] Cannot load fallback mannequin!")
-			character_model = Node3D.new()
-			character_model.name = "CharacterModel"
-			add_child(character_model)
-	else:
-		character_model = CharacterAssembler.assemble(self, appearance_data)
+	character_model = CharacterAssembler.assemble(self, appearance_data, character_model)
 
 	# Re-point AnimationTree root to the new model
 	if anim_tree and character_model:
@@ -268,26 +254,9 @@ func _assemble_character() -> void:
 
 
 func _apply_visuals() -> void:
-	# Apply player color tint only to fallback mannequin (no custom appearance).
-	# Modular characters use the AR Kit atlas texture and don't need color tinting.
-	var has_parts := appearance_data.has("head_id") and str(appearance_data.get("head_id", "")) != ""
-	if character_model and not has_parts:
-		var meshes = _find_mesh_instances(character_model)
-		for mi: MeshInstance3D in meshes:
-			if mi.get_surface_override_material_count() > 0:
-				for surface_idx in mi.get_surface_override_material_count():
-					var base_mat = mi.get_surface_override_material(surface_idx)
-					if base_mat == null:
-						base_mat = mi.mesh.surface_get_material(surface_idx) if mi.mesh else null
-					if base_mat is StandardMaterial3D:
-						var mat = base_mat.duplicate() as StandardMaterial3D
-						mat.albedo_color = player_color
-						mi.set_surface_override_material(surface_idx, mat)
-			elif mi.material_override:
-				var mat = mi.material_override.duplicate() as StandardMaterial3D
-				if mat:
-					mat.albedo_color = player_color
-					mi.material_override = mat
+	# Apply two-color tinting from appearance_data
+	if character_model:
+		CharacterAssembler.apply_colors(character_model, appearance_data)
 	if nameplate:
 		nameplate.text = player_name_display
 		UITheme.style_label3d(nameplate, "", "npc_name")

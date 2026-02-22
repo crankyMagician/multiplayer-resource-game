@@ -477,9 +477,12 @@ func _finalize_join(sender_id: int, player_name: String, data: Dictionary) -> vo
 	# Backfill bank data
 	if not data.has("bank"):
 		data["bank"] = {"balance": 0, "last_interest_day": 0}
-	# Backfill character appearance for old saves
+	# Backfill / migrate character appearance for old saves
 	if not data.has("appearance") or not data["appearance"] is Dictionary:
 		data["appearance"] = {"needs_customization": true}
+	elif data["appearance"].has("head_id"):
+		# Migrate old AR Kit part-based appearance to color palette
+		data["appearance"] = CharacterAppearance.random_default()
 	# Prune expired friend requests on login
 	_prune_expired_requests(data)
 	# Backfill basic tools in inventory
@@ -2726,12 +2729,16 @@ func _handle_debug_action(peer: int, action: String, params: Dictionary) -> Stri
 			return "Unknown action: %s" % action
 
 func _validate_appearance(app: Dictionary) -> bool:
-	var gender: String = app.get("gender", "")
-	if gender != "female" and gender != "male":
-		return false
-	# Required parts: head, torso, pants, shoes
-	for required_key in ["head_id", "torso_id", "pants_id", "shoes_id", "arms_id"]:
-		var val: String = app.get(required_key, "")
-		if val == "":
+	# Validate two-color palette format: {primary_color: {r,g,b}, accent_color: {r,g,b}}
+	for color_key in ["primary_color", "accent_color"]:
+		var color_val = app.get(color_key, null)
+		if color_val == null or not color_val is Dictionary:
 			return false
+		for component in ["r", "g", "b"]:
+			var v = color_val.get(component, null)
+			if v == null:
+				return false
+			var fv := float(v)
+			if fv < 0.0 or fv > 1.0:
+				return false
 	return true

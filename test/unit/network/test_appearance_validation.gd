@@ -5,160 +5,91 @@ extends GutTest
 # methods aren't easily callable in unit tests.
 
 func _validate_appearance(app: Dictionary) -> bool:
-	var gender: String = app.get("gender", "")
-	if gender != "female" and gender != "male":
-		return false
-	for required_key in ["head_id", "torso_id", "pants_id", "shoes_id"]:
-		var val: String = app.get(required_key, "")
-		if val == "":
+	for color_key in ["primary_color", "accent_color"]:
+		var color_val = app.get(color_key, null)
+		if color_val == null or not color_val is Dictionary:
 			return false
+		for component in ["r", "g", "b"]:
+			var v = color_val.get(component, null)
+			if v == null:
+				return false
+			var fv := float(v)
+			if fv < 0.0 or fv > 1.0:
+				return false
 	return true
 
 
-func test_valid_appearance_female():
+func test_valid_appearance():
 	var app := {
-		"gender": "female",
-		"head_id": "HEAD_01_1",
-		"torso_id": "TORSO_01_1",
-		"pants_id": "PANTS_01_1",
-		"shoes_id": "SHOES_01_1",
+		"primary_color": {"r": 0.5, "g": 0.3, "b": 0.8},
+		"accent_color": {"r": 0.9, "g": 0.9, "b": 0.9},
 	}
 	assert_true(_validate_appearance(app))
 
 
-func test_valid_appearance_male():
+func test_missing_primary_color_fails():
 	var app := {
-		"gender": "male",
-		"head_id": "HEAD_02_1",
-		"torso_id": "TORSO_03_1",
-		"pants_id": "PANTS_02_1",
-		"shoes_id": "SHOES_02_1",
+		"accent_color": {"r": 0.9, "g": 0.9, "b": 0.9},
 	}
-	assert_true(_validate_appearance(app))
+	assert_false(_validate_appearance(app), "Missing primary_color should fail")
 
 
-func test_missing_gender_fails():
+func test_missing_accent_color_fails():
 	var app := {
-		"head_id": "HEAD_01_1",
-		"torso_id": "TORSO_01_1",
-		"pants_id": "PANTS_01_1",
-		"shoes_id": "SHOES_01_1",
+		"primary_color": {"r": 0.5, "g": 0.3, "b": 0.8},
 	}
-	assert_false(_validate_appearance(app), "Missing gender should fail")
-
-
-func test_invalid_gender_fails():
-	var app := {
-		"gender": "robot",
-		"head_id": "HEAD_01_1",
-		"torso_id": "TORSO_01_1",
-		"pants_id": "PANTS_01_1",
-		"shoes_id": "SHOES_01_1",
-	}
-	assert_false(_validate_appearance(app), "Invalid gender should fail")
-
-
-func test_empty_gender_fails():
-	var app := {
-		"gender": "",
-		"head_id": "HEAD_01_1",
-		"torso_id": "TORSO_01_1",
-		"pants_id": "PANTS_01_1",
-		"shoes_id": "SHOES_01_1",
-	}
-	assert_false(_validate_appearance(app), "Empty gender should fail")
-
-
-func test_missing_head_id_fails():
-	var app := {
-		"gender": "female",
-		"torso_id": "TORSO_01_1",
-		"pants_id": "PANTS_01_1",
-		"shoes_id": "SHOES_01_1",
-	}
-	assert_false(_validate_appearance(app), "Missing head_id should fail")
-
-
-func test_empty_head_id_fails():
-	var app := {
-		"gender": "female",
-		"head_id": "",
-		"torso_id": "TORSO_01_1",
-		"pants_id": "PANTS_01_1",
-		"shoes_id": "SHOES_01_1",
-	}
-	assert_false(_validate_appearance(app), "Empty head_id should fail")
-
-
-func test_missing_torso_id_fails():
-	var app := {
-		"gender": "female",
-		"head_id": "HEAD_01_1",
-		"pants_id": "PANTS_01_1",
-		"shoes_id": "SHOES_01_1",
-	}
-	assert_false(_validate_appearance(app), "Missing torso_id should fail")
-
-
-func test_missing_pants_id_fails():
-	var app := {
-		"gender": "female",
-		"head_id": "HEAD_01_1",
-		"torso_id": "TORSO_01_1",
-		"shoes_id": "SHOES_01_1",
-	}
-	assert_false(_validate_appearance(app), "Missing pants_id should fail")
-
-
-func test_missing_shoes_id_fails():
-	var app := {
-		"gender": "female",
-		"head_id": "HEAD_01_1",
-		"torso_id": "TORSO_01_1",
-		"pants_id": "PANTS_01_1",
-	}
-	assert_false(_validate_appearance(app), "Missing shoes_id should fail")
-
-
-func test_optional_parts_can_be_empty():
-	var app := {
-		"gender": "female",
-		"head_id": "HEAD_01_1",
-		"torso_id": "TORSO_01_1",
-		"pants_id": "PANTS_01_1",
-		"shoes_id": "SHOES_01_1",
-		"hair_id": "",
-		"arms_id": "",
-		"hat_id": "",
-		"glasses_id": "",
-	}
-	assert_true(_validate_appearance(app), "Optional parts can be empty")
-
-
-func test_male_with_beard_passes():
-	var app := {
-		"gender": "male",
-		"head_id": "HEAD_01_1",
-		"torso_id": "TORSO_01_1",
-		"pants_id": "PANTS_01_1",
-		"shoes_id": "SHOES_01_1",
-		"beard_id": "BEARD_01_1",
-	}
-	assert_true(_validate_appearance(app))
+	assert_false(_validate_appearance(app), "Missing accent_color should fail")
 
 
 func test_empty_dict_fails():
 	assert_false(_validate_appearance({}), "Empty dict should fail")
 
 
+func test_missing_color_component_fails():
+	var app := {
+		"primary_color": {"r": 0.5, "g": 0.3},  # missing b
+		"accent_color": {"r": 0.9, "g": 0.9, "b": 0.9},
+	}
+	assert_false(_validate_appearance(app), "Missing color component should fail")
+
+
+func test_out_of_range_color_fails():
+	var app := {
+		"primary_color": {"r": 1.5, "g": 0.3, "b": 0.8},
+		"accent_color": {"r": 0.9, "g": 0.9, "b": 0.9},
+	}
+	assert_false(_validate_appearance(app), "Color > 1.0 should fail")
+
+
+func test_negative_color_fails():
+	var app := {
+		"primary_color": {"r": -0.1, "g": 0.3, "b": 0.8},
+		"accent_color": {"r": 0.9, "g": 0.9, "b": 0.9},
+	}
+	assert_false(_validate_appearance(app), "Negative color should fail")
+
+
+func test_boundary_values_pass():
+	var app := {
+		"primary_color": {"r": 0.0, "g": 0.0, "b": 0.0},
+		"accent_color": {"r": 1.0, "g": 1.0, "b": 1.0},
+	}
+	assert_true(_validate_appearance(app), "Boundary values 0.0 and 1.0 should pass")
+
+
 func test_extra_keys_ignored():
 	var app := {
-		"gender": "female",
-		"head_id": "HEAD_01_1",
-		"torso_id": "TORSO_01_1",
-		"pants_id": "PANTS_01_1",
-		"shoes_id": "SHOES_01_1",
+		"primary_color": {"r": 0.5, "g": 0.3, "b": 0.8},
+		"accent_color": {"r": 0.9, "g": 0.9, "b": 0.9},
 		"needs_customization": true,
 		"unknown_key": "whatever",
 	}
 	assert_true(_validate_appearance(app), "Extra keys should be ignored")
+
+
+func test_non_dict_color_fails():
+	var app := {
+		"primary_color": "red",
+		"accent_color": {"r": 0.9, "g": 0.9, "b": 0.9},
+	}
+	assert_false(_validate_appearance(app), "Non-dict color should fail")
