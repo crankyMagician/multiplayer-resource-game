@@ -22,22 +22,33 @@ var _saved_player_camera: Camera3D = null
 # 2D action panel (CanvasLayer)
 var action_layer: CanvasLayer
 var battle_log: RichTextLabel
-var log_panel: PanelContainer
+var log_panel: VBoxContainer
+var log_content: RichTextLabel
+var log_toggle_btn: Button
+var _log_expanded: bool = false
 var weather_bar: PanelContainer
 var weather_label: Label
 var prompt_label: Label
 
-# Pokemon-style action menu
-var action_menu_panel: PanelContainer  # The "What will you do?" menu
+# Left panel structure
+var left_panel: PanelContainer
+var main_vbox: VBoxContainer
+var action_menu_section: VBoxContainer
+var move_cards_overlay: Control  # Right-side overlay for move cards
+var back_button: Button  # Back button shown in left panel during ACTION_SELECT
+
+# Action menu buttons
+var action_menu_panel: PanelContainer
 var fight_button: Button
 var item_button: Button
 var switch_button: Button
 var flee_button: Button
-var move_panel: PanelContainer  # Move selection grid (shown when Fight is pressed)
-var move_buttons: Array = []  # Array[Button]
-var action_panel: VBoxContainer  # Legacy container reference for phase show/hide
+var move_panel: PanelContainer  # kept for overlay panels referencing it
+var move_buttons: Array = []  # Array[Button] — now refers to move card containers
+var _move_card_panels: Array = []  # Array[PanelContainer] — the card panels for hover
+var action_panel: VBoxContainer  # Legacy reference for phase show/hide
 
-# Enemy card (top-left)
+# Enemy card
 var enemy_card: PanelContainer
 var enemy_card_name: Label
 var enemy_card_types: Label
@@ -47,7 +58,7 @@ var enemy_card_status: Label
 var enemy_card_hazards: Label
 var enemy_card_stats: Label
 
-# Player card (bottom-right, above action area)
+# Player card
 var player_card: PanelContainer
 var player_card_name: Label
 var player_card_types: Label
@@ -69,6 +80,19 @@ var waiting_label: Label = null
 
 # Screen flash overlay (white flash on crits)
 var _flash_overlay: ColorRect = null
+
+# Status effect overlays on creature cards
+var enemy_card_status_overlay: ColorRect
+var player_card_status_overlay: ColorRect
+var _enemy_status_tween: Tween = null
+var _player_status_tween: Tween = null
+
+# Enemy card shift tween (clears left panel)
+var _enemy_card_tween: Tween = null
+
+# Narration toast system
+var _narration_container: VBoxContainer = null
+var _active_toasts: Array = []
 
 # Summary data accumulator
 var _summary_victory: bool = false
@@ -108,6 +132,10 @@ const STATUS_MAX_TURNS = {
 	"soured": 3,
 	"poisoned": 0,
 	"brined": 4,
+	"fermented": 3,
+	"stuffed": 3,
+	"spiced": 3,
+	"chilled": 4,
 }
 
 const STATUS_COLORS = {
@@ -118,6 +146,10 @@ const STATUS_COLORS = {
 	"wilted": Color(0.5, 0.6, 0.3),
 	"soured": Color(0.8, 0.8, 0.2),
 	"brined": Color(0.2, 0.8, 0.8),
+	"fermented": Color(0.6, 0.4, 0.7),
+	"stuffed": Color(0.7, 0.55, 0.3),
+	"spiced": Color(0.95, 0.4, 0.15),
+	"chilled": Color(0.5, 0.7, 0.9),
 }
 
 func _ready() -> void:
@@ -131,89 +163,93 @@ func _build_action_layer() -> void:
 	action_layer.visible = false
 	add_child(action_layer)
 
-	# Semi-transparent background for bottom portion (35% of screen)
-	var bg = ColorRect.new()
-	bg.name = "ActionBG"
-	bg.color = Color(0.15, 0.12, 0.1, 0.85)
-	bg.anchor_left = 0.0
-	bg.anchor_top = 0.65
-	bg.anchor_right = 1.0
-	bg.anchor_bottom = 1.0
-	bg.offset_left = 0
-	bg.offset_top = 0
-	bg.offset_right = 0
-	bg.offset_bottom = 0
-	action_layer.add_child(bg)
+	# Floating creature cards (direct children of action_layer, over arena)
+	_build_enemy_card()
+	_build_player_card()
 
-	# Weather bar at top of screen
-	weather_bar = PanelContainer.new()
-	weather_bar.name = "WeatherBar"
-	weather_bar.anchor_left = 0.1
-	weather_bar.anchor_top = 0.01
-	weather_bar.anchor_right = 0.9
-	weather_bar.anchor_bottom = 0.05
-	weather_bar.visible = false
-	UITheme.apply_panel(weather_bar)
-	action_layer.add_child(weather_bar)
+	# Left-side vertical panel (20% of screen width, full height)
+	left_panel = PanelContainer.new()
+	left_panel.name = "LeftPanel"
+	left_panel.anchor_left = 0.0
+	left_panel.anchor_top = 0.0
+	left_panel.anchor_right = 0.20
+	left_panel.anchor_bottom = 1.0
+	left_panel.offset_left = 0
+	left_panel.offset_top = 0
+	left_panel.offset_right = 0
+	left_panel.offset_bottom = 0
+	var panel_style = StyleBoxFlat.new()
+	panel_style.bg_color = Color(0.15, 0.12, 0.1, 0.92)
+	panel_style.border_color = Color(0.4, 0.35, 0.25)
+	panel_style.border_width_right = 2
+	panel_style.set_corner_radius_all(0)
+	panel_style.set_content_margin_all(0)
+	left_panel.add_theme_stylebox_override("panel", panel_style)
+	action_layer.add_child(left_panel)
 
-	weather_label = Label.new()
-	weather_label.name = "WeatherLabel"
-	weather_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	UITheme.style_small(weather_label)
-	weather_bar.add_child(weather_label)
+	var scroll = ScrollContainer.new()
+	scroll.name = "ScrollContainer"
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	left_panel.add_child(scroll)
 
-	# Prompt label (centered, above action panel)
+	main_vbox = VBoxContainer.new()
+	main_vbox.name = "MainVBox"
+	main_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	main_vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	main_vbox.add_theme_constant_override("separation", 6)
+	var margin = MarginContainer.new()
+	margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	margin.add_theme_constant_override("margin_left", 12)
+	margin.add_theme_constant_override("margin_right", 12)
+	margin.add_theme_constant_override("margin_top", 8)
+	margin.add_theme_constant_override("margin_bottom", 8)
+	scroll.add_child(margin)
+	margin.add_child(main_vbox)
+
+	# Weather section (inside left panel)
+	_build_weather_section()
+
+	# Prompt label (inside panel)
 	prompt_label = Label.new()
 	prompt_label.name = "PromptLabel"
 	prompt_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	prompt_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	prompt_label.anchor_left = 0.2
-	prompt_label.anchor_top = 0.53
-	prompt_label.anchor_right = 0.8
-	prompt_label.anchor_bottom = 0.59
-	prompt_label.offset_left = 0
-	prompt_label.offset_top = 0
-	prompt_label.offset_right = 0
-	prompt_label.offset_bottom = 0
+	prompt_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 	prompt_label.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_H3))
 	prompt_label.add_theme_color_override("font_color", UITokens.PAPER_CREAM)
 	prompt_label.visible = false
-	action_layer.add_child(prompt_label)
+	main_vbox.add_child(prompt_label)
 
-	# Enemy info card (top-left)
-	_build_enemy_card()
-
-	# Player info card (right side, above action area)
-	_build_player_card()
-
-	# Battle log — left side of bottom area
-	log_panel = PanelContainer.new()
-	log_panel.name = "LogPanel"
-	log_panel.anchor_left = 0.01
-	log_panel.anchor_top = 0.66
-	log_panel.anchor_right = 0.54
-	log_panel.anchor_bottom = 0.99
-	log_panel.offset_left = 0
-	log_panel.offset_top = 0
-	log_panel.offset_right = 0
-	log_panel.offset_bottom = 0
-	UITheme.apply_panel(log_panel)
-	action_layer.add_child(log_panel)
-
-	battle_log = RichTextLabel.new()
-	battle_log.name = "BattleLog"
-	battle_log.bbcode_enabled = true
-	battle_log.scroll_following = true
-	battle_log.add_theme_color_override("default_color", UITokens.INK_DARK)
-	log_panel.add_child(battle_log)
-
-	# Pokemon-style action menu (right side, bottom)
+	# Action menu section (FIGHT / ITEM / SWITCH / FLEE — vertical stack)
+	action_menu_section = VBoxContainer.new()
+	action_menu_section.name = "ActionMenuSection"
+	main_vbox.add_child(action_menu_section)
 	_build_action_menu()
 
-	# Move selection panel (hidden by default, replaces action menu when Fight pressed)
-	_build_move_panel()
+	# Back button (shown during ACTION_SELECT, hidden otherwise)
+	back_button = Button.new()
+	back_button.name = "BackButton"
+	back_button.text = "< Back"
+	back_button.custom_minimum_size.y = 36
+	back_button.visible = false
+	UITheme.style_button(back_button, "danger")
+	back_button.pressed.connect(_on_move_back_pressed)
+	main_vbox.add_child(back_button)
 
-	# Waiting label (PvP)
+	var sep3 = HSeparator.new()
+	sep3.add_theme_constant_override("separation", 4)
+	main_vbox.add_child(sep3)
+
+	# Battle log section (collapsible)
+	_build_log_section()
+
+	# Right-side move cards overlay (fills area right of left panel)
+	_build_move_cards_overlay()
+
+	# Waiting label (PvP) — floating overlay, not in panel
 	waiting_label = Label.new()
 	waiting_label.text = "Waiting for opponent..."
 	UITheme.style_toast(waiting_label)
@@ -230,137 +266,222 @@ func _build_action_layer() -> void:
 	_flash_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	action_layer.add_child(_flash_overlay)
 
-	# Legacy action_panel reference (used by _set_phase for visibility toggling)
+	# Narration toast container (center-top, over arena)
+	_narration_container = VBoxContainer.new()
+	_narration_container.name = "NarrationContainer"
+	_narration_container.anchor_left = 0.25
+	_narration_container.anchor_top = 0.02
+	_narration_container.anchor_right = 0.75
+	_narration_container.anchor_bottom = 0.45
+	_narration_container.offset_left = 0
+	_narration_container.offset_top = 0
+	_narration_container.offset_right = 0
+	_narration_container.offset_bottom = 0
+	_narration_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_narration_container.add_theme_constant_override("separation", 4)
+	_narration_container.alignment = BoxContainer.ALIGNMENT_BEGIN
+	action_layer.add_child(_narration_container)
+
+	# Legacy action_panel reference
 	action_panel = VBoxContainer.new()
 	action_panel.visible = false
+
+	# Legacy move_panel reference (overlay panels check this)
+	move_panel = PanelContainer.new()
+	move_panel.visible = false
+
+func _build_weather_section() -> void:
+	weather_bar = PanelContainer.new()
+	weather_bar.name = "WeatherBar"
+	weather_bar.visible = false
+	weather_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	UITheme.apply_panel(weather_bar)
+	main_vbox.add_child(weather_bar)
+
+	weather_label = Label.new()
+	weather_label.name = "WeatherLabel"
+	weather_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	weather_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	UITheme.style_small(weather_label)
+	weather_bar.add_child(weather_label)
 
 func _build_action_menu() -> void:
 	action_menu_panel = PanelContainer.new()
 	action_menu_panel.name = "ActionMenu"
-	action_menu_panel.anchor_left = 0.56
-	action_menu_panel.anchor_top = 0.66
-	action_menu_panel.anchor_right = 0.99
-	action_menu_panel.anchor_bottom = 0.99
-	action_menu_panel.offset_left = 0
-	action_menu_panel.offset_top = 0
-	action_menu_panel.offset_right = 0
-	action_menu_panel.offset_bottom = 0
-	var style = StyleBoxFlat.new()
-	style.bg_color = Color(0.18, 0.15, 0.12, 0.9)
-	style.border_color = Color(0.5, 0.42, 0.3)
-	style.set_border_width_all(2)
-	style.set_corner_radius_all(8)
-	style.set_content_margin_all(10)
-	action_menu_panel.add_theme_stylebox_override("panel", style)
-	action_layer.add_child(action_menu_panel)
-
-	var grid = GridContainer.new()
-	grid.columns = 2
-	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	grid.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	grid.add_theme_constant_override("h_separation", 8)
-	grid.add_theme_constant_override("v_separation", 8)
-	action_menu_panel.add_child(grid)
-
-	fight_button = Button.new()
-	fight_button.name = "FightButton"
-	fight_button.text = "FIGHT"
-	fight_button.custom_minimum_size = Vector2(0, 50)
-	fight_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	fight_button.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	UITheme.style_button(fight_button, "primary")
-	fight_button.pressed.connect(_on_fight_pressed)
-	grid.add_child(fight_button)
-
-	item_button = Button.new()
-	item_button.name = "ItemButton"
-	item_button.text = "ITEM"
-	item_button.custom_minimum_size = Vector2(0, 50)
-	item_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	item_button.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	UITheme.style_button(item_button, "info")
-	item_button.pressed.connect(_on_item_pressed)
-	grid.add_child(item_button)
-
-	switch_button = Button.new()
-	switch_button.name = "SwitchButton"
-	switch_button.text = "SWITCH"
-	switch_button.custom_minimum_size = Vector2(0, 50)
-	switch_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	switch_button.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	UITheme.style_button(switch_button, "secondary")
-	switch_button.pressed.connect(_on_switch_pressed)
-	grid.add_child(switch_button)
-
-	flee_button = Button.new()
-	flee_button.name = "FleeButton"
-	flee_button.text = "FLEE"
-	flee_button.custom_minimum_size = Vector2(0, 50)
-	flee_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	flee_button.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	UITheme.style_button(flee_button, "danger")
-	flee_button.pressed.connect(_on_flee_pressed)
-	grid.add_child(flee_button)
-
-func _build_move_panel() -> void:
-	move_panel = PanelContainer.new()
-	move_panel.name = "MovePanel"
-	move_panel.anchor_left = 0.56
-	move_panel.anchor_top = 0.66
-	move_panel.anchor_right = 0.99
-	move_panel.anchor_bottom = 0.99
-	move_panel.offset_left = 0
-	move_panel.offset_top = 0
-	move_panel.offset_right = 0
-	move_panel.offset_bottom = 0
-	move_panel.visible = false
+	action_menu_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var style = StyleBoxFlat.new()
 	style.bg_color = Color(0.18, 0.15, 0.12, 0.9)
 	style.border_color = Color(0.5, 0.42, 0.3)
 	style.set_border_width_all(2)
 	style.set_corner_radius_all(8)
 	style.set_content_margin_all(8)
-	move_panel.add_theme_stylebox_override("panel", style)
-	action_layer.add_child(move_panel)
+	action_menu_panel.add_theme_stylebox_override("panel", style)
+	action_menu_section.add_child(action_menu_panel)
 
 	var vbox = VBoxContainer.new()
-	vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	move_panel.add_child(vbox)
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.add_theme_constant_override("separation", 6)
+	action_menu_panel.add_child(vbox)
 
-	var move_grid = GridContainer.new()
-	move_grid.name = "MoveGrid"
-	move_grid.columns = 2
-	move_grid.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	move_grid.add_theme_constant_override("h_separation", 6)
-	move_grid.add_theme_constant_override("v_separation", 6)
-	vbox.add_child(move_grid)
+	fight_button = Button.new()
+	fight_button.name = "FightButton"
+	fight_button.text = "FIGHT"
+	fight_button.custom_minimum_size = Vector2(0, 44)
+	fight_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	UITheme.style_button(fight_button, "primary")
+	fight_button.pressed.connect(_on_fight_pressed)
+	vbox.add_child(fight_button)
+
+	item_button = Button.new()
+	item_button.name = "ItemButton"
+	item_button.text = "ITEM"
+	item_button.custom_minimum_size = Vector2(0, 44)
+	item_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	UITheme.style_button(item_button, "info")
+	item_button.pressed.connect(_on_item_pressed)
+	vbox.add_child(item_button)
+
+	switch_button = Button.new()
+	switch_button.name = "SwitchButton"
+	switch_button.text = "SWITCH"
+	switch_button.custom_minimum_size = Vector2(0, 44)
+	switch_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	UITheme.style_button(switch_button, "secondary")
+	switch_button.pressed.connect(_on_switch_pressed)
+	vbox.add_child(switch_button)
+
+	flee_button = Button.new()
+	flee_button.name = "FleeButton"
+	flee_button.text = "FLEE"
+	flee_button.custom_minimum_size = Vector2(0, 44)
+	flee_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	UITheme.style_button(flee_button, "danger")
+	flee_button.pressed.connect(_on_flee_pressed)
+	vbox.add_child(flee_button)
+
+func _build_move_cards_overlay() -> void:
+	move_cards_overlay = Control.new()
+	move_cards_overlay.name = "MoveCardsOverlay"
+	move_cards_overlay.anchor_left = 0.22
+	move_cards_overlay.anchor_top = 0.15
+	move_cards_overlay.anchor_right = 0.98
+	move_cards_overlay.anchor_bottom = 0.85
+	move_cards_overlay.offset_left = 0
+	move_cards_overlay.offset_top = 0
+	move_cards_overlay.offset_right = 0
+	move_cards_overlay.offset_bottom = 0
+	move_cards_overlay.visible = false
+	action_layer.add_child(move_cards_overlay)
+
+	var grid = GridContainer.new()
+	grid.name = "MoveGrid"
+	grid.columns = 2
+	grid.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	grid.add_theme_constant_override("h_separation", 10)
+	grid.add_theme_constant_override("v_separation", 10)
+	move_cards_overlay.add_child(grid)
+
+	move_buttons.clear()
+	_move_card_panels.clear()
 
 	for i in range(4):
-		var btn = Button.new()
-		btn.name = "Move%d" % (i + 1)
-		btn.text = "Move %d" % (i + 1)
-		btn.custom_minimum_size = Vector2(0, 40)
-		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		UITheme.style_button(btn, "primary")
-		var idx = i
-		btn.pressed.connect(func(): _on_move_pressed(idx))
-		btn.mouse_entered.connect(func(): _on_move_hover(idx, true))
-		btn.mouse_exited.connect(func(): _on_move_hover(idx, false))
-		move_grid.add_child(btn)
-		move_buttons.append(btn)
+		var card = PanelContainer.new()
+		card.name = "MoveCard%d" % (i + 1)
+		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		card.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		var card_style = StyleBoxFlat.new()
+		card_style.bg_color = Color(0.18, 0.15, 0.12, 0.95)
+		card_style.border_color = Color(0.5, 0.42, 0.3)
+		card_style.set_border_width_all(1)
+		card_style.border_width_left = 4
+		card_style.set_corner_radius_all(6)
+		card_style.set_content_margin_all(8)
+		card.add_theme_stylebox_override("panel", card_style)
+		_move_card_panels.append(card)
 
-	var back_btn = Button.new()
-	back_btn.name = "BackButton"
-	back_btn.text = "Back"
-	back_btn.custom_minimum_size.y = 30
-	UITheme.style_button(back_btn, "danger")
-	back_btn.pressed.connect(_on_move_back_pressed)
-	vbox.add_child(back_btn)
+		var card_vbox = VBoxContainer.new()
+		card_vbox.add_theme_constant_override("separation", 2)
+		card.add_child(card_vbox)
+
+		# Header row: move name + effectiveness badge
+		var header = HBoxContainer.new()
+		header.name = "Header"
+		header.add_theme_constant_override("separation", 6)
+		card_vbox.add_child(header)
+
+		var name_label = Label.new()
+		name_label.name = "MoveName"
+		name_label.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_SMALL))
+		name_label.add_theme_color_override("font_color", UITokens.PAPER_CREAM)
+		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		header.add_child(name_label)
+
+		var eff_badge = Label.new()
+		eff_badge.name = "EffBadge"
+		eff_badge.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_TINY))
+		eff_badge.visible = false
+		header.add_child(eff_badge)
+
+		# Info line: Type | Category | Pwr:X | Acc:X%
+		var info_label = Label.new()
+		info_label.name = "InfoLine"
+		info_label.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_TINY))
+		info_label.add_theme_color_override("font_color", Color(0.8, 0.75, 0.65))
+		card_vbox.add_child(info_label)
+
+		# PP line
+		var pp_label = Label.new()
+		pp_label.name = "PPLine"
+		pp_label.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_TINY))
+		pp_label.add_theme_color_override("font_color", Color(0.7, 0.65, 0.55))
+		card_vbox.add_child(pp_label)
+
+		# Description
+		var desc_label = Label.new()
+		desc_label.name = "Description"
+		desc_label.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_TINY))
+		desc_label.add_theme_color_override("font_color", Color(0.65, 0.6, 0.5))
+		desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+		card_vbox.add_child(desc_label)
+
+		# Effect tags container
+		var tags_flow = HFlowContainer.new()
+		tags_flow.name = "EffectTags"
+		tags_flow.add_theme_constant_override("h_separation", 4)
+		tags_flow.add_theme_constant_override("v_separation", 2)
+		card_vbox.add_child(tags_flow)
+
+		# Invisible click button overlaying the card
+		var click_btn = Button.new()
+		click_btn.name = "ClickBtn"
+		click_btn.flat = true
+		click_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		click_btn.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		# Make button transparent
+		var btn_style = StyleBoxEmpty.new()
+		click_btn.add_theme_stylebox_override("normal", btn_style)
+		click_btn.add_theme_stylebox_override("hover", btn_style)
+		click_btn.add_theme_stylebox_override("pressed", btn_style)
+		click_btn.add_theme_stylebox_override("focus", btn_style)
+		click_btn.add_theme_stylebox_override("disabled", StyleBoxEmpty.new())
+		click_btn.add_theme_color_override("font_color", Color(0, 0, 0, 0))
+		click_btn.add_theme_color_override("font_hover_color", Color(0, 0, 0, 0))
+		click_btn.add_theme_color_override("font_pressed_color", Color(0, 0, 0, 0))
+		click_btn.add_theme_color_override("font_disabled_color", Color(0, 0, 0, 0))
+		card.add_child(click_btn)
+
+		var idx = i
+		click_btn.pressed.connect(func(): _on_move_pressed(idx))
+		click_btn.mouse_entered.connect(func(): _on_move_hover(idx, true))
+		click_btn.mouse_exited.connect(func(): _on_move_hover(idx, false))
+		move_buttons.append(click_btn)
+
+		grid.add_child(card)
 
 func _build_enemy_card() -> void:
 	enemy_card = PanelContainer.new()
 	enemy_card.name = "EnemyCard"
+	# Floating overlay: top-left over arena
 	enemy_card.anchor_left = 0.01
 	enemy_card.anchor_top = 0.06
 	enemy_card.anchor_right = 0.28
@@ -373,9 +494,9 @@ func _build_enemy_card() -> void:
 	style.bg_color = Color(0.12, 0.1, 0.08, 0.9)
 	style.border_color = Color(0.4, 0.35, 0.25)
 	style.set_border_width_all(2)
-	style.border_width_left = 4  # Type-colored accent border
+	style.border_width_left = 4
 	style.set_corner_radius_all(6)
-	style.set_content_margin_all(10)
+	style.set_content_margin_all(8)
 	enemy_card.add_theme_stylebox_override("panel", style)
 	action_layer.add_child(enemy_card)
 
@@ -393,7 +514,6 @@ func _build_enemy_card() -> void:
 	enemy_card_types.add_theme_color_override("font_color", Color(0.8, 0.75, 0.65))
 	vbox.add_child(enemy_card_types)
 
-	# HP bar
 	var hp_container = HBoxContainer.new()
 	hp_container.add_theme_constant_override("separation", 6)
 	vbox.add_child(hp_container)
@@ -404,12 +524,13 @@ func _build_enemy_card() -> void:
 	enemy_card_hp_bar.show_percentage = false
 	enemy_card_hp_bar.custom_minimum_size = Vector2(0, 14)
 	enemy_card_hp_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_style_hp_bar(enemy_card_hp_bar)
 	hp_container.add_child(enemy_card_hp_bar)
 
 	enemy_card_hp_text = Label.new()
 	enemy_card_hp_text.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_TINY))
 	enemy_card_hp_text.add_theme_color_override("font_color", UITokens.PAPER_CREAM)
-	enemy_card_hp_text.custom_minimum_size.x = 70
+	enemy_card_hp_text.custom_minimum_size.x = 60
 	hp_container.add_child(enemy_card_hp_text)
 
 	enemy_card_status = Label.new()
@@ -429,9 +550,19 @@ func _build_enemy_card() -> void:
 	enemy_card_stats.autowrap_mode = TextServer.AUTOWRAP_WORD
 	vbox.add_child(enemy_card_stats)
 
+	# Status effect overlay (covers card, hidden by default)
+	enemy_card_status_overlay = ColorRect.new()
+	enemy_card_status_overlay.name = "StatusOverlay"
+	enemy_card_status_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	enemy_card_status_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	enemy_card_status_overlay.color = Color(0, 0, 0, 0)
+	enemy_card_status_overlay.visible = false
+	enemy_card.add_child(enemy_card_status_overlay)
+
 func _build_player_card() -> void:
 	player_card = PanelContainer.new()
 	player_card.name = "PlayerCard"
+	# Floating overlay: right side over arena
 	player_card.anchor_left = 0.70
 	player_card.anchor_top = 0.35
 	player_card.anchor_right = 0.99
@@ -444,9 +575,9 @@ func _build_player_card() -> void:
 	style.bg_color = Color(0.12, 0.1, 0.08, 0.9)
 	style.border_color = Color(0.4, 0.35, 0.25)
 	style.set_border_width_all(2)
-	style.border_width_left = 4  # Type-colored accent border
+	style.border_width_left = 4
 	style.set_corner_radius_all(6)
-	style.set_content_margin_all(10)
+	style.set_content_margin_all(8)
 	player_card.add_theme_stylebox_override("panel", style)
 	action_layer.add_child(player_card)
 
@@ -464,7 +595,6 @@ func _build_player_card() -> void:
 	player_card_types.add_theme_color_override("font_color", Color(0.8, 0.75, 0.65))
 	vbox.add_child(player_card_types)
 
-	# HP bar
 	var hp_container = HBoxContainer.new()
 	hp_container.add_theme_constant_override("separation", 6)
 	vbox.add_child(hp_container)
@@ -481,15 +611,15 @@ func _build_player_card() -> void:
 	player_card_hp_bar.show_percentage = false
 	player_card_hp_bar.custom_minimum_size = Vector2(0, 14)
 	player_card_hp_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_style_hp_bar(player_card_hp_bar)
 	hp_container.add_child(player_card_hp_bar)
 
 	player_card_hp_text = Label.new()
 	player_card_hp_text.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_TINY))
 	player_card_hp_text.add_theme_color_override("font_color", UITokens.PAPER_CREAM)
-	player_card_hp_text.custom_minimum_size.x = 70
+	player_card_hp_text.custom_minimum_size.x = 60
 	hp_container.add_child(player_card_hp_text)
 
-	# XP bar
 	var xp_container = HBoxContainer.new()
 	xp_container.add_theme_constant_override("separation", 6)
 	vbox.add_child(xp_container)
@@ -512,7 +642,7 @@ func _build_player_card() -> void:
 	player_card_xp_text = Label.new()
 	player_card_xp_text.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_TINY))
 	player_card_xp_text.add_theme_color_override("font_color", Color(0.5, 0.6, 0.9))
-	player_card_xp_text.custom_minimum_size.x = 70
+	player_card_xp_text.custom_minimum_size.x = 60
 	xp_container.add_child(player_card_xp_text)
 
 	player_card_ability = Label.new()
@@ -535,6 +665,47 @@ func _build_player_card() -> void:
 	player_card_locked.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_TINY))
 	player_card_locked.add_theme_color_override("font_color", Color(0.9, 0.5, 0.3))
 	vbox.add_child(player_card_locked)
+
+	# Status effect overlay (covers card, hidden by default)
+	player_card_status_overlay = ColorRect.new()
+	player_card_status_overlay.name = "StatusOverlay"
+	player_card_status_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	player_card_status_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	player_card_status_overlay.color = Color(0, 0, 0, 0)
+	player_card_status_overlay.visible = false
+	player_card.add_child(player_card_status_overlay)
+
+func _build_log_section() -> void:
+	log_panel = VBoxContainer.new()
+	log_panel.name = "LogSection"
+	log_panel.add_theme_constant_override("separation", 2)
+	main_vbox.add_child(log_panel)
+
+	log_toggle_btn = Button.new()
+	log_toggle_btn.text = "Log v"
+	log_toggle_btn.custom_minimum_size.y = 24
+	UITheme.style_button(log_toggle_btn, "secondary")
+	log_toggle_btn.pressed.connect(_toggle_log)
+	log_panel.add_child(log_toggle_btn)
+
+	battle_log = RichTextLabel.new()
+	battle_log.name = "BattleLog"
+	battle_log.bbcode_enabled = true
+	battle_log.scroll_following = true
+	battle_log.add_theme_color_override("default_color", UITokens.PAPER_CREAM)
+	battle_log.custom_minimum_size = Vector2(0, 60)
+	battle_log.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	battle_log.add_theme_font_size_override("normal_font_size", UITheme.scaled(UITokens.FONT_TINY))
+	log_panel.add_child(battle_log)
+
+func _toggle_log() -> void:
+	_log_expanded = not _log_expanded
+	if _log_expanded:
+		battle_log.custom_minimum_size.y = 200
+		log_toggle_btn.text = "Log ^"
+	else:
+		battle_log.custom_minimum_size.y = 60
+		log_toggle_btn.text = "Log v"
 
 # === SETUP (called from game_world.gd) ===
 
@@ -577,41 +748,59 @@ func _set_phase(new_phase: int) -> void:
 	_phase = new_phase
 	match new_phase:
 		BattlePhase.INTRO:
-			prompt_label.visible = true
+			left_panel.visible = false
+			_show_move_cards(false)
+			prompt_label.visible = false
 			_show_action_menu(false)
-			_show_move_panel(false)
+			back_button.visible = false
+			_tween_enemy_card_position(false)
 		BattlePhase.PROMPT:
+			left_panel.visible = true
 			prompt_label.text = "What will you do?"
 			prompt_label.visible = true
 			_show_action_menu(true)
-			_show_move_panel(false)
+			back_button.visible = false
+			_show_move_cards(false)
 			_set_menu_buttons_enabled(true)
+			_tween_enemy_card_position(true)
 		BattlePhase.ACTION_SELECT:
+			left_panel.visible = true
 			prompt_label.visible = false
 			_show_action_menu(false)
-			_show_move_panel(true)
+			back_button.visible = true
+			_show_move_cards(true)
+			_tween_enemy_card_position(true)
 		BattlePhase.ANIMATING:
+			left_panel.visible = false
+			_show_move_cards(false)
 			prompt_label.visible = false
 			_show_action_menu(false)
-			_show_move_panel(false)
+			back_button.visible = false
+			_tween_enemy_card_position(false)
 		BattlePhase.WAITING:
+			left_panel.visible = false
+			_show_move_cards(false)
 			prompt_label.visible = false
 			_show_action_menu(false)
-			_show_move_panel(false)
+			back_button.visible = false
 			if waiting_label:
 				waiting_label.visible = true
+			_tween_enemy_card_position(false)
 		BattlePhase.ENDED:
+			left_panel.visible = false
+			_show_move_cards(false)
 			prompt_label.visible = false
 			_show_action_menu(false)
-			_show_move_panel(false)
+			back_button.visible = false
+			_tween_enemy_card_position(false)
 
 func _show_action_menu(show: bool) -> void:
-	if action_menu_panel:
-		action_menu_panel.visible = show
+	if action_menu_section:
+		action_menu_section.visible = show
 
-func _show_move_panel(show: bool) -> void:
-	if move_panel:
-		move_panel.visible = show
+func _show_move_cards(show: bool) -> void:
+	if move_cards_overlay:
+		move_cards_overlay.visible = show
 
 # === BATTLE LIFECYCLE ===
 
@@ -635,6 +824,17 @@ func _on_battle_started() -> void:
 	if hud:
 		hud.visible = false
 
+	# Hide other game world UI elements during battle
+	var compass = get_node_or_null("/root/Main/GameWorld/UI/CompassUI")
+	if compass:
+		compass.visible = false
+	var hotbar = get_node_or_null("/root/Main/GameWorld/UI/HotbarUI")
+	if hotbar:
+		hotbar.visible = false
+	var excursion_hud = get_node_or_null("/root/Main/GameWorld/UI/ExcursionHUD")
+	if excursion_hud:
+		excursion_hud.visible = false
+
 	# Fade to black
 	if hud and hud.has_method("play_battle_transition"):
 		hud.visible = true  # Temporarily show for transition animation
@@ -648,6 +848,7 @@ func _on_battle_started() -> void:
 
 	# Clean up leftover panels
 	_cleanup_panels()
+	_clear_all_toasts()
 
 	# Create 3D arena
 	var mode = battle_mgr.client_battle_mode if battle_mgr else 0
@@ -744,6 +945,7 @@ func _on_battle_ended(victory: bool) -> void:
 			var hud2 = get_node_or_null("/root/Main/GameWorld/UI/HUD")
 			if hud2:
 				hud2.visible = true
+			_restore_game_world_ui()
 			return
 	_set_phase(BattlePhase.ENDED)
 	_summary_victory = victory
@@ -763,6 +965,7 @@ func _dismiss_summary() -> void:
 
 	# Clean up panels
 	_cleanup_panels()
+	_clear_all_toasts()
 	action_layer.visible = false
 
 	# Destroy arena
@@ -777,6 +980,9 @@ func _dismiss_summary() -> void:
 	# Restore HUD visibility
 	if hud:
 		hud.visible = true
+
+	# Restore other game world UI elements
+	_restore_game_world_ui()
 
 	# Restore overworld music + ambience
 	AudioManager.restore_previous_music()
@@ -798,6 +1004,17 @@ func _cleanup_panels() -> void:
 	if move_replace_panel:
 		move_replace_panel.queue_free()
 		move_replace_panel = null
+
+func _restore_game_world_ui() -> void:
+	var compass = get_node_or_null("/root/Main/GameWorld/UI/CompassUI")
+	if compass:
+		compass.visible = true
+	var hotbar = get_node_or_null("/root/Main/GameWorld/UI/HotbarUI")
+	if hotbar:
+		hotbar.visible = true
+	var excursion_hud = get_node_or_null("/root/Main/GameWorld/UI/ExcursionHUD")
+	if excursion_hud:
+		excursion_hud.visible = true
 
 # === DISPLAY HELPERS (ported from battle_ui.gd) ===
 
@@ -902,7 +1119,7 @@ func _update_enemy_card() -> void:
 	enemy_card_hp_bar.max_value = emax
 	enemy_card_hp_bar.value = ehp
 	var pct = float(ehp) / emax if emax > 0 else 0.0
-	enemy_card_hp_bar.modulate = _hp_tint_color(pct)
+	_set_hp_bar_color(enemy_card_hp_bar, _hp_tint_color(pct))
 	enemy_card_hp_text.text = "%d/%d" % [ehp, emax]
 
 	# Status
@@ -918,6 +1135,9 @@ func _update_enemy_card() -> void:
 	if battle_mgr.client_enemy_substitute_hp > 0:
 		enemy_status_parts.append("Sub(%d HP)" % battle_mgr.client_enemy_substitute_hp)
 	enemy_card_status.text = " | ".join(enemy_status_parts)
+	var enemy_status_color = STATUS_COLORS.get(es, Color(1.0, 0.8, 0.3))
+	enemy_card_status.add_theme_color_override("font_color", enemy_status_color)
+	_update_card_status_effect(enemy_card, enemy_card_status_overlay, es, true)
 
 	# Hazards
 	var eh = battle_mgr.client_enemy_hazards
@@ -955,7 +1175,7 @@ func _update_player_card() -> void:
 	player_card_hp_bar.max_value = pmax
 	player_card_hp_bar.value = php
 	var pct = float(php) / pmax if pmax > 0 else 0.0
-	player_card_hp_bar.modulate = _hp_tint_color(pct)
+	_set_hp_bar_color(player_card_hp_bar, _hp_tint_color(pct))
 	player_card_hp_text.text = "%d/%d" % [php, pmax]
 
 	# XP
@@ -994,6 +1214,9 @@ func _update_player_card() -> void:
 	if battle_mgr.client_player_substitute_hp > 0:
 		player_status_parts.append("Sub(%d HP)" % battle_mgr.client_player_substitute_hp)
 	player_card_status.text = " | ".join(player_status_parts)
+	var player_status_color = STATUS_COLORS.get(ps, Color(1.0, 0.8, 0.3))
+	player_card_status.add_theme_color_override("font_color", player_status_color)
+	_update_card_status_effect(player_card, player_card_status_overlay, ps, false)
 
 	# Choice-locked move
 	if battle_mgr.client_player_choice_locked != "":
@@ -1016,10 +1239,62 @@ func _update_card_border(card: PanelContainer, type_id: String) -> void:
 
 func _hp_tint_color(pct: float) -> Color:
 	if pct > 0.5:
-		return UITokens.STAMP_GREEN
+		return Color(0.3, 0.8, 0.3)   # bright green
 	if pct > 0.25:
-		return UITokens.STAMP_GOLD
-	return UITokens.STAMP_RED
+		return Color(0.95, 0.75, 0.1)  # bright amber/yellow
+	return Color(0.9, 0.2, 0.2)        # bright red
+
+func _style_hp_bar(bar: ProgressBar) -> void:
+	var bg_style = StyleBoxFlat.new()
+	bg_style.bg_color = Color(0.15, 0.12, 0.1, 0.8)
+	bg_style.set_corner_radius_all(3)
+	bar.add_theme_stylebox_override("background", bg_style)
+	var fill_style = StyleBoxFlat.new()
+	fill_style.bg_color = Color(0.3, 0.8, 0.3)
+	fill_style.set_corner_radius_all(3)
+	bar.add_theme_stylebox_override("fill", fill_style)
+
+func _set_hp_bar_color(bar: ProgressBar, color: Color) -> void:
+	var fill = bar.get_theme_stylebox("fill") as StyleBoxFlat
+	if fill:
+		fill.bg_color = color
+
+func _update_card_status_effect(card: PanelContainer, overlay: ColorRect, status: String, is_enemy: bool) -> void:
+	# Kill existing pulse tween
+	var tween_ref: Tween = _enemy_status_tween if is_enemy else _player_status_tween
+	if tween_ref and tween_ref.is_valid():
+		tween_ref.kill()
+	if is_enemy:
+		_enemy_status_tween = null
+	else:
+		_player_status_tween = null
+
+	if status == "" or not STATUS_COLORS.has(status):
+		# No status — hide overlay, restore type border
+		overlay.visible = false
+		# Border will be restored by _update_card_border called earlier in the update func
+		return
+
+	var status_color = STATUS_COLORS[status]
+
+	# Tint card border to status color
+	var current_style = card.get_theme_stylebox("panel") as StyleBoxFlat
+	if current_style:
+		current_style.border_color = status_color
+
+	# Show colored overlay
+	overlay.visible = true
+	overlay.color = Color(status_color.r, status_color.g, status_color.b, 0.15)
+
+	# Pulse animation on overlay alpha
+	var pulse = create_tween()
+	pulse.set_loops()
+	pulse.tween_property(overlay, "color:a", 0.08, 0.8).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
+	pulse.tween_property(overlay, "color:a", 0.20, 0.8).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
+	if is_enemy:
+		_enemy_status_tween = pulse
+	else:
+		_player_status_tween = pulse
 
 func _animate_card_hp(side: String, target_hp: int, max_hp: int) -> void:
 	var bar: ProgressBar
@@ -1034,10 +1309,10 @@ func _animate_card_hp(side: String, target_hp: int, max_hp: int) -> void:
 		return
 	bar.max_value = max_hp
 	var pct = float(target_hp) / max_hp if max_hp > 0 else 0.0
-	var color = _hp_tint_color(pct)
+	var target_color = _hp_tint_color(pct)
 	var tween = create_tween()
 	tween.tween_property(bar, "value", float(target_hp), 0.5).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
-	tween.parallel().tween_property(bar, "modulate", color, 0.25)
+	tween.parallel().tween_method(func(c: Color): _set_hp_bar_color(bar, c), _hp_tint_color(float(bar.value) / max_hp if max_hp > 0 else 0.0), target_color, 0.25)
 	if text_label:
 		text_label.text = "%d/%d" % [target_hp, max_hp]
 
@@ -1094,6 +1369,15 @@ func _juice_button(btn: Button) -> void:
 	tween.tween_property(btn, "scale", Vector2(1.15, 1.15), 0.07).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 	tween.tween_property(btn, "scale", Vector2.ONE, 0.08).set_ease(Tween.EASE_OUT)
 
+func _juice_card(card: PanelContainer) -> void:
+	var card_style = card.get_theme_stylebox("panel") as StyleBoxFlat
+	if card_style == null:
+		return
+	var orig_bg = card_style.bg_color
+	card_style.bg_color = Color(0.35, 0.3, 0.22, 0.95)
+	var tween = create_tween()
+	tween.tween_callback(func(): card_style.bg_color = orig_bg).set_delay(0.1)
+
 func _animate_card_hp_from_battle_mgr() -> void:
 	if battle_mgr == null:
 		return
@@ -1107,15 +1391,20 @@ func _animate_card_hp_from_battle_mgr() -> void:
 # === MOVE BUTTON HOVER ===
 
 func _on_move_hover(idx: int, hovering: bool) -> void:
-	if idx >= move_buttons.size():
+	if idx >= _move_card_panels.size():
 		return
-	var btn = move_buttons[idx]
-	btn.pivot_offset = btn.size / 2.0
-	var tween = create_tween()
+	var card = _move_card_panels[idx]
+	var card_style = card.get_theme_stylebox("panel") as StyleBoxFlat
+	if card_style == null:
+		return
 	if hovering:
-		tween.tween_property(btn, "scale", Vector2(1.05, 1.05), 0.1).set_ease(Tween.EASE_OUT)
+		card_style.bg_color = Color(0.24, 0.2, 0.16, 0.95)
+		card_style.set_border_width_all(2)
+		card_style.border_width_left = 4
 	else:
-		tween.tween_property(btn, "scale", Vector2.ONE, 0.1).set_ease(Tween.EASE_OUT)
+		card_style.bg_color = Color(0.18, 0.15, 0.12, 0.95)
+		card_style.set_border_width_all(1)
+		card_style.border_width_left = 4
 
 # === REFRESH UI ===
 
@@ -1139,6 +1428,9 @@ func _refresh_ui() -> void:
 	_refresh_cards()
 
 func _refresh_move_buttons() -> void:
+	_refresh_move_cards()
+
+func _refresh_move_cards() -> void:
 	if battle_mgr == null:
 		return
 	var active_idx = battle_mgr.client_active_creature_idx
@@ -1146,39 +1438,192 @@ func _refresh_move_buttons() -> void:
 		return
 	var creature = PlayerData.party[active_idx]
 	var moves = creature.get("moves", [])
-	var pp = creature.get("pp", [])
+	var pp_arr = creature.get("pp", [])
+
+	# Get enemy types for effectiveness calculation
+	var enemy = battle_mgr.client_enemy
+	var enemy_types: Array = enemy.get("types", [])
+	if enemy_types.is_empty():
+		var species = DataRegistry.get_species(enemy.get("species_id", ""))
+		if species:
+			enemy_types = Array(species.types)
+
 	for i in range(4):
+		var card = _move_card_panels[i] if i < _move_card_panels.size() else null
+		if card == null:
+			continue
 		if i < moves.size():
 			var move = DataRegistry.get_move(moves[i])
-			if move:
-				var pp_current = pp[i] if i < pp.size() else 0
-				var pp_max = move.pp
-				var line1 = move.display_name
-				var line2 = ""
-				if move.power > 0:
-					line2 = "%s | %s | Pwr:%d" % [move.type.capitalize(), "Phys" if move.category == "physical" else "Spec", move.power]
-				elif move.category == "status":
-					line2 = "Status"
-					if move.priority != 0:
-						line2 += " | Pri:%+d" % move.priority
-				else:
-					line2 = "%s | %s" % [move.type.capitalize(), move.category.capitalize()]
-				var line3 = ""
-				if move.accuracy > 0:
-					line3 = "Acc:%d%% | %d/%d PP" % [move.accuracy, pp_current, pp_max]
-				else:
-					line3 = "%d/%d PP" % [pp_current, pp_max]
-				move_buttons[i].text = "%s\n%s\n%s" % [line1, line2, line3]
-				var color = TYPE_COLORS.get(move.type, Color.GRAY)
-				move_buttons[i].modulate = color.lerp(Color.WHITE, 0.5)
-				move_buttons[i].visible = true
-				move_buttons[i].disabled = (i < pp.size() and pp[i] <= 0)
-				move_buttons[i].scale = Vector2.ONE
-				move_buttons[i].pivot_offset = move_buttons[i].size / 2.0
+			if move == null:
+				card.visible = false
+				continue
+			card.visible = true
+			var pp_current = pp_arr[i] if i < pp_arr.size() else 0
+			var pp_max = move.pp
+
+			# Update card border color to match move type
+			var type_color = TYPE_COLORS.get(move.type, Color(0.5, 0.42, 0.3))
+			var card_style = card.get_theme_stylebox("panel") as StyleBoxFlat
+			if card_style:
+				card_style.border_color = type_color.lerp(Color(0.3, 0.25, 0.2), 0.3)
+
+			var card_vbox = card.get_child(0) as VBoxContainer
+			if card_vbox == null:
+				continue
+
+			# Header: name + effectiveness badge
+			var header = card_vbox.get_node("Header") as HBoxContainer
+			var name_label = header.get_node("MoveName") as Label
+			name_label.text = move.display_name
+
+			var eff_badge = header.get_node("EffBadge") as Label
+			if enemy_types.size() > 0 and move.type != "":
+				var eff = BattleCalculator.get_type_effectiveness(move.type, enemy_types)
+				var eff_text = BattleCalculator.get_effectiveness_text(eff)
+				match eff_text:
+					"super_effective":
+						eff_badge.text = "SUPER EFF."
+						eff_badge.add_theme_color_override("font_color", UITokens.STAMP_GREEN)
+						eff_badge.visible = true
+					"not_very_effective":
+						eff_badge.text = "NOT EFF."
+						eff_badge.add_theme_color_override("font_color", UITokens.STAMP_GOLD)
+						eff_badge.visible = true
+					"immune":
+						eff_badge.text = "NO EFFECT"
+						eff_badge.add_theme_color_override("font_color", UITokens.STAMP_RED)
+						eff_badge.visible = true
+					_:
+						eff_badge.visible = false
 			else:
-				move_buttons[i].visible = false
+				eff_badge.visible = false
+
+			# Info line
+			var info_label = card_vbox.get_node("InfoLine") as Label
+			var info_parts: Array = []
+			if move.type != "":
+				info_parts.append(move.type.capitalize())
+			if move.category == "status":
+				info_parts.append("STATUS")
+			else:
+				info_parts.append("Phys" if move.category == "physical" else "Spec")
+				if move.power > 0:
+					info_parts.append("Pwr:%d" % move.power)
+			if move.accuracy > 0:
+				info_parts.append("Acc:%d%%" % move.accuracy)
+			info_label.text = " | ".join(info_parts)
+
+			# PP line
+			var pp_label = card_vbox.get_node("PPLine") as Label
+			pp_label.text = "%d/%d PP" % [pp_current, pp_max]
+			if pp_current <= 0:
+				pp_label.add_theme_color_override("font_color", UITokens.STAMP_RED)
+			else:
+				pp_label.add_theme_color_override("font_color", Color(0.7, 0.65, 0.55))
+
+			# Description
+			var desc_label = card_vbox.get_node("Description") as Label
+			if move.description != "":
+				desc_label.text = move.description
+				desc_label.visible = true
+			else:
+				desc_label.visible = false
+
+			# Effect tags
+			var tags_flow = card_vbox.get_node("EffectTags") as HFlowContainer
+			_build_effect_tags(tags_flow, move)
+
+			# Disabled state for click button
+			var click_btn = card.get_node("ClickBtn") as Button
+			click_btn.disabled = (pp_current <= 0)
+			card.modulate = Color(0.5, 0.5, 0.5) if pp_current <= 0 else Color.WHITE
 		else:
-			move_buttons[i].visible = false
+			card.visible = false
+
+func _build_effect_tags(container: HFlowContainer, move: Resource) -> void:
+	# Clear existing tags
+	for child in container.get_children():
+		child.queue_free()
+
+	var tags: Array = []
+
+	if move.status_effect != "" and move.status_chance > 0:
+		tags.append({"text": "%s %d%%" % [move.status_effect.capitalize(), move.status_chance], "color": Color(0.9, 0.6, 0.2)})
+	if move.heal_percent > 0:
+		tags.append({"text": "Heals %d%%" % int(move.heal_percent * 100), "color": UITokens.STAMP_GREEN})
+	if move.drain_percent > 0:
+		tags.append({"text": "Drains %d%%" % int(move.drain_percent * 100), "color": Color(0.4, 0.8, 0.5)})
+	if move.recoil_percent > 0:
+		tags.append({"text": "Recoil %d%%" % int(move.recoil_percent * 100), "color": UITokens.STAMP_RED})
+	if move.is_contact:
+		tags.append({"text": "Contact", "color": Color(0.7, 0.65, 0.55)})
+	if move.is_protection:
+		tags.append({"text": "Protect", "color": Color(0.4, 0.6, 0.9)})
+	if move.priority != 0:
+		tags.append({"text": "Priority %+d" % move.priority, "color": Color(0.8, 0.7, 0.4)})
+	if move.switch_after:
+		tags.append({"text": "U-Turn", "color": Color(0.5, 0.8, 0.6)})
+	if move.force_switch:
+		tags.append({"text": "Forces Switch", "color": Color(0.8, 0.5, 0.4)})
+	if move.substitute:
+		tags.append({"text": "Substitute", "color": Color(0.6, 0.7, 0.8)})
+	if move.taunt:
+		tags.append({"text": "Taunt", "color": Color(0.9, 0.5, 0.3)})
+	if move.encore:
+		tags.append({"text": "Encore", "color": Color(0.8, 0.6, 0.9)})
+	if move.knock_off:
+		tags.append({"text": "Knock Off", "color": Color(0.7, 0.4, 0.3)})
+	if move.weather_set != "":
+		tags.append({"text": "Sets Weather", "color": Color(0.5, 0.7, 0.9)})
+	if move.hazard_type != "":
+		tags.append({"text": "Sets Hazard", "color": Color(0.8, 0.5, 0.3)})
+	if move.clears_hazards:
+		tags.append({"text": "Clears Hazards", "color": UITokens.STAMP_GREEN})
+	if move.trick_room:
+		tags.append({"text": "Trick Room", "color": Color(0.7, 0.5, 0.9)})
+
+	# Stat changes (self)
+	if move.stat_changes.size() > 0:
+		var stat_abbrev = {"attack": "ATK", "defense": "DEF", "sp_attack": "SPA", "sp_defense": "SPD", "speed": "SPE", "accuracy": "ACC", "evasion": "EVA"}
+		for stat_key in move.stat_changes:
+			var val = int(move.stat_changes[stat_key])
+			if val != 0:
+				var abbr = stat_abbrev.get(stat_key, stat_key.to_upper())
+				var color = UITokens.STAMP_GREEN if val > 0 else UITokens.STAMP_RED
+				tags.append({"text": "Self %+d %s" % [val, abbr], "color": color})
+
+	# Target stat changes
+	if move.target_stat_changes.size() > 0:
+		var stat_abbrev = {"attack": "ATK", "defense": "DEF", "sp_attack": "SPA", "sp_defense": "SPD", "speed": "SPE", "accuracy": "ACC", "evasion": "EVA"}
+		for stat_key in move.target_stat_changes:
+			var val = int(move.target_stat_changes[stat_key])
+			if val != 0:
+				var abbr = stat_abbrev.get(stat_key, stat_key.to_upper())
+				var color = UITokens.STAMP_GREEN if val < 0 else UITokens.STAMP_RED  # Foe debuff is green for player
+				tags.append({"text": "Foe %+d %s" % [val, abbr], "color": color})
+
+	if move.multi_hit_min > 0:
+		if move.multi_hit_min == move.multi_hit_max:
+			tags.append({"text": "Hits %dx" % move.multi_hit_min, "color": Color(0.7, 0.65, 0.55)})
+		else:
+			tags.append({"text": "Hits %d-%dx" % [move.multi_hit_min, move.multi_hit_max], "color": Color(0.7, 0.65, 0.55)})
+
+	# Create tag labels
+	for tag in tags:
+		var lbl = Label.new()
+		lbl.text = tag.text
+		lbl.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_TINY))
+		lbl.add_theme_color_override("font_color", tag.color)
+		# Add a small background
+		var tag_style = StyleBoxFlat.new()
+		tag_style.bg_color = tag.color.lerp(Color.BLACK, 0.7)
+		tag_style.bg_color.a = 0.5
+		tag_style.set_corner_radius_all(3)
+		tag_style.set_content_margin_all(2)
+		tag_style.content_margin_left = 4
+		tag_style.content_margin_right = 4
+		lbl.add_theme_stylebox_override("normal", tag_style)
+		container.add_child(lbl)
 
 # === POKEMON-STYLE ACTION MENU HANDLERS ===
 
@@ -1202,8 +1647,8 @@ func _on_move_pressed(idx: int) -> void:
 		return
 	if _phase != BattlePhase.ACTION_SELECT:
 		return
-	if idx < move_buttons.size():
-		_juice_button(move_buttons[idx])
+	if idx < _move_card_panels.size():
+		_juice_card(_move_card_panels[idx])
 	var active_idx = battle_mgr.client_active_creature_idx
 	if active_idx >= PlayerData.party.size():
 		return
@@ -1718,9 +2163,10 @@ func _animate_turn_log(turn_log: Array) -> void:
 				BattleEffects.spawn_move_effect(arena, effect_pos, move_type)
 				BattleVFX.spawn_move_vfx(arena, effect_pos, move_type, move_category)
 
-			# Log text
+			# Log text + narration toasts
 			if msg != "":
 				battle_log.append_text(msg + "\n")
+				_narrate_entry(entry)
 				await get_tree().create_timer(0.3).timeout
 
 			# Damage dealt — hit VFX + knockback + damage number + flash + card HP update
@@ -1819,6 +2265,7 @@ func _animate_turn_log(turn_log: Array) -> void:
 				arena.cut_camera(cam_preset, 0.35)
 			if msg != "":
 				battle_log.append_text(msg + "\n")
+				_narrate_entry(entry)
 			if entry.has("damage") and entry.damage > 0 and arena:
 				effect_pos = arena.get_creature_position(actor_side)
 				BattleEffects.spawn_hit_effect(arena, effect_pos, "")
@@ -1837,6 +2284,7 @@ func _animate_turn_log(turn_log: Array) -> void:
 				BattleEffects.spawn_heal_effect(arena, effect_pos)
 			if msg != "":
 				battle_log.append_text(msg + "\n")
+				_narrate_entry(entry)
 			_animate_card_hp_from_battle_mgr()
 			if msg != "":
 				await get_tree().create_timer(0.3).timeout
@@ -1860,6 +2308,7 @@ func _animate_turn_log(turn_log: Array) -> void:
 					arena.swap_creature_animation(side, creature_data)
 			if msg != "":
 				battle_log.append_text(msg + "\n")
+				_narrate_entry(entry)
 				await get_tree().create_timer(0.5).timeout
 			_refresh_cards()
 			# Restart idle bob after swap
@@ -1870,6 +2319,7 @@ func _animate_turn_log(turn_log: Array) -> void:
 			# All other entry types (weather, taunt, encore, etc.)
 			if msg != "":
 				battle_log.append_text(msg + "\n")
+				_narrate_entry(entry)
 				await get_tree().create_timer(0.3).timeout
 
 		# Return camera to neutral after each entry
@@ -1894,9 +2344,11 @@ func _on_xp_result(results: Dictionary) -> void:
 		if xp > 0:
 			AudioManager.play_sfx("xp_gain")
 			battle_log.append_text("[color=#5B7EA6]+%d XP[/color]\n" % xp)
+			_show_narration_toast("+%d XP" % xp, Color(0.36, 0.49, 0.65), 1.2)
 		for lvl in r.get("level_ups", []):
 			AudioManager.play_sfx("level_up")
 			battle_log.append_text("[color=#D4A843]Level up! Now Lv.%d![/color]\n" % lvl)
+			_show_narration_toast("Level up! Lv.%d!" % lvl, Color(0.83, 0.66, 0.26), 2.0)
 		for m in r.get("new_moves", []):
 			battle_mgr.summary_new_moves.append(m)
 			var move_def = DataRegistry.get_move(m.get("move_id", ""))
@@ -1949,6 +2401,8 @@ func _format_log_entry(entry: Dictionary) -> String:
 				return text + " But it missed!"
 			if entry.get("skipped", false):
 				return "%s %s" % [actor_name, entry.get("message", "can't move!")]
+			if entry.has("confused_self_hit"):
+				return "[color=#9966BB]%s is tipsy and hurt itself for %d damage![/color]" % [actor_name, entry.confused_self_hit]
 			if entry.get("charging", false):
 				return "%s %s" % [actor_name, entry.get("message", "is charging up!")]
 			if entry.get("protecting", false):
@@ -1977,6 +2431,8 @@ func _format_log_entry(entry: Dictionary) -> String:
 				text += " Absorbed %d HP!" % entry.ability_heal
 			if entry.has("status_applied"):
 				text += " Inflicted %s!" % StatusEffects.get_status_display_name(entry.status_applied)
+			if entry.get("heal_blocked", false):
+				text += " [color=#B38C4D]Too stuffed to heal![/color]"
 			if entry.has("heal"):
 				text += " Healed %d HP!" % entry.heal
 			if entry.has("stat_changes"):
@@ -2105,6 +2561,234 @@ func _format_log_entry(entry: Dictionary) -> String:
 			return "Switched creature!"
 	return ""
 
+# === ENEMY CARD SHIFT ===
+
+func _tween_enemy_card_position(shifted: bool) -> void:
+	if _enemy_card_tween and _enemy_card_tween.is_valid():
+		_enemy_card_tween.kill()
+	_enemy_card_tween = create_tween().set_parallel(true)
+	var target_left = 0.22 if shifted else 0.01
+	var target_right = 0.49 if shifted else 0.28
+	_enemy_card_tween.tween_property(enemy_card, "anchor_left", target_left, 0.25) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	_enemy_card_tween.tween_property(enemy_card, "anchor_right", target_right, 0.25) \
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+
+# === NARRATION TOAST SYSTEM ===
+
+func _show_narration_toast(text: String, color: Color, linger: float) -> void:
+	if _narration_container == null:
+		return
+	# Evict oldest if at max
+	while _active_toasts.size() >= 3:
+		var oldest = _active_toasts.pop_front()
+		if is_instance_valid(oldest):
+			var evict_tween = create_tween()
+			evict_tween.tween_property(oldest, "modulate:a", 0.0, 0.15).set_ease(Tween.EASE_IN)
+			evict_tween.tween_callback(oldest.queue_free)
+
+	# Build toast panel
+	var panel = PanelContainer.new()
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.08, 0.06, 0.05, 0.85)
+	style.border_color = Color(0.4, 0.35, 0.25, 0.6)
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(4)
+	style.set_content_margin_all(8)
+	panel.add_theme_stylebox_override("panel", style)
+
+	var label = Label.new()
+	label.text = text
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_BODY))
+	label.add_theme_color_override("font_color", color)
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(label)
+
+	# Start invisible + offset for slide-in
+	panel.modulate = Color(1, 1, 1, 0)
+	panel.position.y = -20
+	_narration_container.add_child(panel)
+	_active_toasts.append(panel)
+
+	# Fade in + slide down
+	var tw = create_tween().set_parallel(true)
+	tw.tween_property(panel, "modulate:a", 1.0, 0.2).set_ease(Tween.EASE_OUT)
+	tw.tween_property(panel, "position:y", 0.0, 0.2).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	await tw.finished
+
+	# Linger
+	await get_tree().create_timer(linger).timeout
+
+	# Fade out (check still valid — battle may have ended)
+	if not is_instance_valid(panel):
+		return
+	var fade = create_tween()
+	fade.tween_property(panel, "modulate:a", 0.0, 0.4).set_ease(Tween.EASE_IN)
+	await fade.finished
+	if is_instance_valid(panel):
+		_active_toasts.erase(panel)
+		panel.queue_free()
+
+func _clear_all_toasts() -> void:
+	for toast in _active_toasts:
+		if is_instance_valid(toast):
+			toast.queue_free()
+	_active_toasts.clear()
+
+func _narrate_entry(entry: Dictionary) -> void:
+	var actor = entry.get("actor", "")
+	var entry_type = entry.get("type", "move")
+	var is_player = (actor == "player")
+	var actor_name = "You" if is_player else "Enemy"
+	var cream = Color(0.96, 0.94, 0.88)
+	var warm_peach = Color(0.95, 0.78, 0.65)
+
+	match entry_type:
+		"move":
+			var move_name = entry.get("move", "???")
+
+			# Special cases that produce a single toast
+			if entry.has("confused_self_hit"):
+				_show_narration_toast("Hurt itself — %d damage!" % entry.confused_self_hit, STATUS_COLORS.get("fermented", Color(0.6, 0.4, 0.7)), 2.0)
+				return
+			if entry.get("missed", false):
+				_show_narration_toast("%s used %s — missed!" % [actor_name, move_name], Color(0.83, 0.66, 0.26), 1.5)
+				return
+			if entry.get("skipped", false):
+				_show_narration_toast("%s can't move!" % actor_name, Color(0.83, 0.66, 0.26), 1.5)
+				return
+			if entry.get("charging", false):
+				_show_narration_toast("%s is charging up!" % actor_name, cream if is_player else warm_peach, 1.5)
+				return
+			if entry.get("protecting", false):
+				_show_narration_toast("%s protected itself!" % actor_name, cream if is_player else warm_peach, 1.5)
+				return
+			if entry.get("blocked", false):
+				_show_narration_toast("Attack was blocked!", Color(0.83, 0.66, 0.26), 1.5)
+				return
+			if entry.get("immune", false):
+				_show_narration_toast("%s used %s — no effect!" % [actor_name, move_name], Color(0.61, 0.55, 0.48), 1.5)
+				return
+
+			# Move used toast
+			var move_color = cream if is_player else warm_peach
+			_show_narration_toast("%s used %s!" % [actor_name, move_name], move_color, 1.8)
+
+			# Damage + effectiveness combined toast
+			if entry.has("damage") and entry.damage > 0:
+				var dmg_text = "%d damage!" % entry.damage
+				var dmg_color = cream
+				var dmg_linger = 1.2
+				var effectiveness = entry.get("effectiveness", "")
+				if effectiveness == "super_effective":
+					dmg_text += " Super effective!"
+					dmg_color = Color(0.36, 0.55, 0.35)
+					dmg_linger = 1.5
+				elif effectiveness == "not_very_effective":
+					dmg_text += " Not very effective..."
+					dmg_color = Color(0.83, 0.66, 0.26)
+					dmg_linger = 1.5
+				if entry.get("critical", false):
+					dmg_text += " Critical hit!"
+					dmg_color = Color(1.0, 0.85, 0.2)
+					dmg_linger = 1.5
+				_show_narration_toast(dmg_text, dmg_color, dmg_linger)
+
+			# Status applied toast
+			if entry.has("status_applied"):
+				var status_name = StatusEffects.get_status_display_name(entry.status_applied)
+				var status_color = STATUS_COLORS.get(entry.status_applied, Color(1.0, 0.8, 0.3))
+				_show_narration_toast("Inflicted %s!" % status_name, status_color, 2.0)
+
+			# Stat changes toast
+			if entry.has("stat_changes"):
+				for stat in entry.stat_changes:
+					var change = entry.stat_changes[stat]
+					var direction = "rose" if change > 0 else "fell"
+					var amount = "sharply " if abs(change) >= 2 else ""
+					var sc_color = Color(0.36, 0.49, 0.65) if change > 0 else Color(0.85, 0.4, 0.3)
+					_show_narration_toast("%s %s%s!" % [stat.capitalize(), amount, direction], sc_color, 1.5)
+			if entry.has("target_stat_changes"):
+				for stat in entry.target_stat_changes:
+					var change = entry.target_stat_changes[stat]
+					var direction = "rose" if change > 0 else "fell"
+					var sc_color = Color(0.36, 0.49, 0.65) if change > 0 else Color(0.85, 0.4, 0.3)
+					_show_narration_toast("Foe's %s %s!" % [stat.capitalize(), direction], sc_color, 1.5)
+
+			# Heal toast
+			if entry.has("heal"):
+				_show_narration_toast("Healed %d HP!" % entry.heal, Color(0.36, 0.55, 0.35), 1.5)
+			if entry.has("drain_heal"):
+				_show_narration_toast("Drained %d HP!" % entry.drain_heal, Color(0.36, 0.55, 0.35), 1.5)
+
+			# Heal blocked toast
+			if entry.get("heal_blocked", false):
+				_show_narration_toast("Too stuffed to heal!", STATUS_COLORS.get("stuffed", Color(0.7, 0.55, 0.3)), 1.8)
+
+			# Weather set toast
+			if entry.has("weather_set"):
+				var wname = WEATHER_NAMES.get(entry.weather_set, entry.weather_set)
+				_show_narration_toast("%s started!" % wname, Color(0.7, 0.65, 0.85), 2.0)
+
+			# Faint check
+			if entry.has("target_fainted") and entry.target_fainted:
+				var target_name = "Enemy" if is_player else "Your creature"
+				_show_narration_toast("%s fainted!" % target_name, Color(0.76, 0.33, 0.31), 2.5)
+
+		"status_damage":
+			var dmg = entry.get("damage", 0)
+			_show_narration_toast("%s took %d status damage!" % [actor_name, dmg], STATUS_COLORS.get(entry.get("status", ""), cream), 1.5)
+
+		"hazard_damage":
+			var dmg = entry.get("damage", 0)
+			var hazard = entry.get("hazard", "hazards")
+			_show_narration_toast("Hurt by %s! %d damage!" % [hazard, dmg], Color(0.9, 0.5, 0.3), 1.5)
+
+		"ability_heal", "item_heal":
+			var heal = entry.get("heal", 0)
+			_show_narration_toast("Healed %d HP!" % heal, Color(0.36, 0.55, 0.35), 1.5)
+
+		"ability_trigger":
+			var ability_msg = entry.get("message", "")
+			_show_narration_toast(ability_msg, Color(0.55, 0.42, 0.29), 1.8)
+
+		"weather_cleared":
+			var wname = WEATHER_NAMES.get(entry.get("weather", ""), "weather")
+			_show_narration_toast("%s subsided." % wname, Color(0.7, 0.65, 0.85), 2.0)
+
+		"switch", "trainer_switch", "forced_switch":
+			_show_narration_toast("Switched creature!", cream, 1.5)
+
+		"victory":
+			_show_narration_toast("Victory!", Color(0.36, 0.55, 0.35), 2.5)
+		"defeat":
+			_show_narration_toast("All creatures fainted!", Color(0.76, 0.33, 0.31), 2.5)
+		"fled":
+			_show_narration_toast("Got away safely!", cream, 1.8)
+		"flee_failed":
+			_show_narration_toast("Couldn't escape!", Color(0.83, 0.66, 0.26), 1.5)
+		"fainted":
+			_show_narration_toast("Your creature fainted!", Color(0.76, 0.33, 0.31), 2.5)
+		"item_use":
+			var item_name = entry.get("item_name", "Item")
+			_show_narration_toast("Used %s!" % item_name, Color(0.36, 0.49, 0.65), 2.0)
+		"trick_room_set":
+			_show_narration_toast("Trick Room!", Color(0.55, 0.42, 0.29), 2.0)
+		"trick_room_ended":
+			_show_narration_toast("Trick Room wore off.", Color(0.55, 0.42, 0.29), 1.5)
+		"taunt_applied":
+			_show_narration_toast("Taunted!", Color(0.85, 0.4, 0.3), 1.5)
+		"encore_applied":
+			_show_narration_toast("Encore!", Color(0.83, 0.66, 0.26), 1.5)
+		_:
+			# Fallback for any unhandled type — show as generic toast if there's a message
+			var fallback_msg = entry.get("message", "")
+			if fallback_msg != "":
+				_show_narration_toast(fallback_msg, cream, 1.5)
+
 func _set_menu_buttons_enabled(enabled: bool) -> void:
 	var mode = battle_mgr.client_battle_mode if battle_mgr else 0
 	fight_button.disabled = not enabled
@@ -2115,14 +2799,18 @@ func _set_menu_buttons_enabled(enabled: bool) -> void:
 	item_button.visible = (mode != 2)
 
 func _set_buttons_enabled(enabled: bool) -> void:
-	# For move buttons specifically
+	# For move card click buttons specifically
 	if not enabled:
-		for btn in move_buttons:
-			btn.disabled = true
+		for i in range(move_buttons.size()):
+			move_buttons[i].disabled = true
+			if i < _move_card_panels.size():
+				_move_card_panels[i].modulate = Color(0.5, 0.5, 0.5)
 		return
 	if battle_mgr == null:
-		for btn in move_buttons:
-			btn.disabled = false
+		for i in range(move_buttons.size()):
+			move_buttons[i].disabled = false
+			if i < _move_card_panels.size():
+				_move_card_panels[i].modulate = Color.WHITE
 		return
 	var active_idx = battle_mgr.client_active_creature_idx
 	if active_idx >= PlayerData.party.size():
@@ -2135,7 +2823,10 @@ func _set_buttons_enabled(enabled: bool) -> void:
 	var encore_turns = battle_mgr.client_player_encore_turns
 	var encore_move = battle_mgr.client_player_encore_move
 	for i in range(move_buttons.size()):
-		if i >= moves.size() or not move_buttons[i].visible:
+		if i >= moves.size():
+			continue
+		var card_visible = _move_card_panels[i].visible if i < _move_card_panels.size() else false
+		if not card_visible:
 			continue
 		var is_disabled = false
 		if i < pp.size() and pp[i] <= 0:
@@ -2149,3 +2840,5 @@ func _set_buttons_enabled(enabled: bool) -> void:
 		if encore_turns > 0 and encore_move != "" and moves[i] != encore_move:
 			is_disabled = true
 		move_buttons[i].disabled = is_disabled
+		if i < _move_card_panels.size():
+			_move_card_panels[i].modulate = Color(0.5, 0.5, 0.5) if is_disabled else Color.WHITE
