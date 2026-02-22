@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="LocationDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/location_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+location_id = "pine_tunnel"
+display_name = "Pine Tunnel"
+world_position = Vector3(0, 0, -32)
+discovery_radius = 6.0
+icon_type = "landmark"
+category = "landmark"
+icon_color = Color(0.15, 0.4, 0.2, 1)

@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "tidewater_beach"
 display_name = "Tidewater Beach"
-world_position = Vector3(-12, 0, -8)
+world_position = Vector3(-14, 0, -10)
 discovery_radius = 8.0
 icon_type = "zone"
 category = "zone"

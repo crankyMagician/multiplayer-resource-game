@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "npc_alex"
 display_name = "Alex Hartwell"
-world_position = Vector3(-2, 1, 5)
+world_position = Vector3(0, 0, 7)
 discovery_radius = 8.0
 icon_type = "social_npc"
 category = "social_npc"

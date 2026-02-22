@@ -1,0 +1,61 @@
+[gd_scene format=3]
+
+[sub_resource type="BoxMesh" id="base_mesh"]
+size = Vector3(3.5, 10, 3.5)
+
+[sub_resource type="BoxShape3D" id="base_shape"]
+size = Vector3(3.5, 10, 3.5)
+
+[sub_resource type="BoxMesh" id="mid_band_mesh"]
+size = Vector3(4.2, 0.6, 4.2)
+
+[sub_resource type="BoxMesh" id="upper_mesh"]
+size = Vector3(2.4, 3.2, 2.4)
+
+[sub_resource type="CylinderMesh" id="roof_mesh"]
+top_radius = 0.08
+bottom_radius = 1.8
+height = 2.4
+
+[sub_resource type="CylinderMesh" id="spire_mesh"]
+top_radius = 0.12
+bottom_radius = 0.16
+height = 1.6
+
+[sub_resource type="StandardMaterial3D" id="stone_mat"]
+albedo_color = Color(0.68, 0.63, 0.55, 1)
+
+[sub_resource type="StandardMaterial3D" id="roof_mat"]
+albedo_color = Color(0.34, 0.22, 0.16, 1)
+
+[node name="LandmarkTowerAddon" type="Node3D"]
+
+[node name="Base" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, 0)
+
+[node name="Mesh" type="MeshInstance3D" parent="Base"]
+mesh = SubResource("base_mesh")
+material_override = SubResource("stone_mat")
+
+[node name="Collision" type="CollisionShape3D" parent="Base"]
+shape = SubResource("base_shape")
+
+[node name="MidBand" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 10.3, 0)
+mesh = SubResource("mid_band_mesh")
+material_override = SubResource("stone_mat")
+
+[node name="Upper" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 12.2, 0)
+mesh = SubResource("upper_mesh")
+material_override = SubResource("stone_mat")
+
+[node name="Roof" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 15.0, 0)
+mesh = SubResource("roof_mesh")
+material_override = SubResource("roof_mat")
+
+[node name="Spire" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 16.8, 0)
+mesh = SubResource("spire_mesh")
+material_override = SubResource("roof_mat")

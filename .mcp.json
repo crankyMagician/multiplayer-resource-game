@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "blender-local": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "/Users/sam/Documents/GitHub/mcp/blender-mcp",
+        "python",
+        "-m",
+        "blender_mcp.server"
+      ],
+      "env": {}
+    }
+  }
+}

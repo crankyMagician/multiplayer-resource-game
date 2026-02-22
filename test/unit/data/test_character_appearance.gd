@@ -36,11 +36,11 @@ func test_from_dict_missing_keys_uses_defaults():
 
 	assert_eq(app.gender, "male")
 	assert_eq(app.head_id, "HEAD_01_1", "Missing head_id should use default")
-	assert_eq(app.torso_id, "TORSO_01_1", "Missing torso_id should use default")
+	assert_eq(app.torso_id, "TORSO_02_1", "Missing torso_id should use default")
 	assert_eq(app.pants_id, "PANTS_01_1", "Missing pants_id should use default")
 	assert_eq(app.shoes_id, "SHOES_01_1", "Missing shoes_id should use default")
 	assert_eq(app.hair_id, "", "Missing hair_id should be empty")
-	assert_eq(app.arms_id, "", "Missing arms_id should be empty")
+	assert_eq(app.arms_id, "HANDS_01_1", "Missing arms_id should default to HANDS_01_1")
 	assert_eq(app.hat_id, "", "Missing hat_id should be empty")
 	assert_eq(app.glasses_id, "", "Missing glasses_id should be empty")
 	assert_eq(app.beard_id, "", "Missing beard_id should be empty")
@@ -51,7 +51,7 @@ func test_from_dict_empty_dict_uses_all_defaults():
 
 	assert_eq(app.gender, "female", "Default gender should be female")
 	assert_eq(app.head_id, "HEAD_01_1")
-	assert_eq(app.torso_id, "TORSO_01_1")
+	assert_eq(app.torso_id, "TORSO_02_1")
 
 
 func test_random_default_has_required_fields():
@@ -70,6 +70,18 @@ func test_random_default_has_required_fields():
 	assert_ne(d["shoes_id"], "", "shoes_id must not be empty")
 	assert_true(d.has("needs_customization"), "Must have needs_customization flag")
 	assert_true(d["needs_customization"], "needs_customization should be true")
+
+
+func test_from_dict_armless_torso_backfills():
+	var d := {"gender": "female", "torso_id": "TORSO_01_1"}
+	var app := CharacterAppearance.from_dict(d)
+	assert_eq(app.torso_id, "TORSO_02_1", "TORSO_01_1 should migrate to TORSO_02_1")
+
+
+func test_from_dict_empty_arms_id_backfills():
+	var d := {"gender": "female", "arms_id": ""}
+	var app := CharacterAppearance.from_dict(d)
+	assert_eq(app.arms_id, "HANDS_01_1", "Empty arms_id should backfill to HANDS_01_1")
 
 
 func test_gender_preserved_female():

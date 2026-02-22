@@ -24,6 +24,6 @@ drop_max = 2
 evolves_to = "blaze_wyvern"
 evolution_level = 14
 evolution_move = "inferno_fang"
-learnset = {3: "quick_bite", 5: "pepper_blast", 8: "flame_sear", 11: "simmer", 14: "inferno_fang"}
+learnset = {3: "quick_bite", 5: "pepper_blast", 8: "flame_sear", 11: "simmer", 14: "inferno_fang", 17: "pepper_spray"}
 ability_ids = PackedStringArray("flash_fry", "scoville_boost")
 ev_yield = {"attack": 1}

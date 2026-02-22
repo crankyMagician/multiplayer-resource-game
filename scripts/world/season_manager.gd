@@ -49,7 +49,9 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	if multiplayer.is_server():
-		day_timer += delta
+		var _dbg_speed: int = get_meta("debug_speed_mult", 1)
+		var effective_delta := delta * float(_dbg_speed) if _dbg_speed > 1 else delta
+		day_timer += effective_delta
 		if day_timer >= DAY_DURATION:
 			day_timer -= DAY_DURATION
 			_advance_day()

@@ -238,3 +238,65 @@ func test_stat_change_cumulative():
 	BattleCalculator.apply_stat_changes(creature, {"attack": 2})
 	BattleCalculator.apply_stat_changes(creature, {"attack": 2})
 	assert_eq(creature["attack_stage"], 4)
+
+# --- chilled speed ---
+
+func test_chilled_speed_returns_one():
+	var creature = {"status": "chilled", "speed": 100, "speed_stage": 0}
+	assert_eq(BattleCalculator.get_speed(creature), 1)
+
+func test_chilled_speed_ignores_stages():
+	var creature = {"status": "chilled", "speed": 50, "speed_stage": 6}
+	assert_eq(BattleCalculator.get_speed(creature), 1)
+
+func test_normal_speed_not_affected_by_chilled_check():
+	var creature = {"status": "", "speed": 50, "speed_stage": 0}
+	assert_eq(BattleCalculator.get_speed(creature), 50)
+
+# --- check_confusion (fermented) ---
+
+func test_confusion_no_effect_without_fermented():
+	var creature = {"status": "", "hp": 80, "max_hp": 80}
+	var result = BattleCalculator.check_confusion(creature)
+	assert_false(result.confused)
+	assert_eq(result.damage, 0)
+	assert_eq(creature["hp"], 80)
+
+func test_confusion_no_effect_with_other_status():
+	var creature = {"status": "burned", "hp": 80, "max_hp": 80}
+	var result = BattleCalculator.check_confusion(creature)
+	assert_false(result.confused)
+	assert_eq(result.damage, 0)
+
+func test_confusion_deals_self_damage():
+	# Seed RNG so randf() < 0.33 (confusion triggers)
+	seed(1) # Find a seed that triggers confusion
+	var triggered = false
+	for s in range(100):
+		seed(s)
+		if randf() < 0.33:
+			seed(s) # Reset to same seed
+			var creature = {"status": "fermented", "hp": 80, "max_hp": 80}
+			var result = BattleCalculator.check_confusion(creature)
+			assert_true(result.confused)
+			assert_eq(result.damage, 10) # 80/8
+			assert_eq(creature["hp"], 70)
+			triggered = true
+			break
+	assert_true(triggered, "Should find a seed that triggers confusion")
+
+func test_confusion_sometimes_allows_action():
+	# Find a seed where randf() >= 0.33 (confusion doesn't trigger)
+	var passed = false
+	for s in range(100):
+		seed(s)
+		if randf() >= 0.33:
+			seed(s)
+			var creature = {"status": "fermented", "hp": 80, "max_hp": 80}
+			var result = BattleCalculator.check_confusion(creature)
+			assert_false(result.confused)
+			assert_eq(result.damage, 0)
+			assert_eq(creature["hp"], 80)
+			passed = true
+			break
+	assert_true(passed, "Should find a seed where confusion doesn't trigger")

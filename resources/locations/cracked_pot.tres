@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "cracked_pot"
 display_name = "The Cracked Pot"
-world_position = Vector3(-5, 1, 8)
+world_position = Vector3(-5, 0, 10)
 discovery_radius = 5.0
 icon_type = "shop"
 category = "shop"

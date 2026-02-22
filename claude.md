@@ -24,18 +24,9 @@ See `docs/persistence.md` for full details: UUID table, Express API endpoints, j
 ## Docker Server Build
 See `docs/docker-build.md` for full build instructions (two-phase engine + game build, SCons flags, local dev).
 
-## TestPlayer Dev Account
-- **Name**: "TestPlayer" (case-insensitive match via `name.to_lower() == "testplayer"`)
-- **When**: Every login, not just first creation. Runs in `_finalize_join()` after backfills.
-- **Where**: Works in all builds (editor, exported, deployed server). Not gated by `OS.has_feature("editor")`.
-- **What**: `_apply_testplayer_loadout(data)` in `network_manager.gd` grants:
-  - All ingredients x10, all foods x5, all battle items x10, all held items x3, all recipe scrolls x1, all tools x1
-  - $99,999 money
-  - All recipes unlocked (`known_recipes` = every recipe ID)
-  - One of every creature species at level 20 in `creature_storage` (skips species already in party/storage)
-  - Storage capacity expanded to fit all creatures + 10
-  - Full compendium (all items, all creatures seen + owned)
-- **Normal players**: Start with 4 basic tools, $0, 1 Rice Ball starter, no recipes. The old editor-only item grant block was removed.
+## New Player Defaults
+- **Normal players**: Start with 4 basic tools, $0, 1 Rice Ball starter, no recipes.
+- **First login**: `appearance` has `needs_customization: true` → character creator opens (can't dismiss). Mannequin shown until customization completes.
 
 ## Multiplayer Join/Spawn Stabilization
 - **Client pre-loads GameWorld on connect**: `_on_connected_to_server()` calls `GameManager.start_game()` BEFORE `request_join`. This ensures the MultiplayerSpawner exists before spawn replication RPCs arrive.

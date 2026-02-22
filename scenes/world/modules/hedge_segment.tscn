@@ -1,0 +1,22 @@
+[gd_scene format=3]
+
+[sub_resource type="BoxMesh" id="hedge_mesh"]
+size = Vector3(4, 1.2, 0.8)
+
+[sub_resource type="StandardMaterial3D" id="hedge_mat"]
+albedo_color = Color(0.18, 0.45, 0.2, 1)
+roughness = 1.0
+
+[sub_resource type="BoxShape3D" id="hedge_shape"]
+size = Vector3(4, 1.2, 0.8)
+
+[node name="HedgeSegment" type="Node3D"]
+
+[node name="Body" type="StaticBody3D" parent="."]
+
+[node name="Mesh" type="MeshInstance3D" parent="Body"]
+mesh = SubResource("hedge_mesh")
+material_override = SubResource("hedge_mat")
+
+[node name="Collision" type="CollisionShape3D" parent="Body"]
+shape = SubResource("hedge_shape")

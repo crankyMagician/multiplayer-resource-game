@@ -1,0 +1,40 @@
+[gd_scene format=3]
+
+[sub_resource type="BoxMesh" id="rock_a_mesh"]
+size = Vector3(3.2, 1.8, 1.8)
+
+[sub_resource type="BoxMesh" id="rock_b_mesh"]
+size = Vector3(2.6, 1.3, 1.6)
+
+[sub_resource type="BoxMesh" id="rock_c_mesh"]
+size = Vector3(2.0, 1.1, 1.4)
+
+[sub_resource type="StandardMaterial3D" id="rock_mat"]
+albedo_color = Color(0.42, 0.4, 0.37, 1)
+roughness = 1.0
+
+[sub_resource type="BoxShape3D" id="wall_shape"]
+size = Vector3(8, 2.2, 2.2)
+
+[node name="BoundaryRockWallChunk" type="Node3D"]
+
+[node name="Body" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
+
+[node name="Collision" type="CollisionShape3D" parent="Body"]
+shape = SubResource("wall_shape")
+
+[node name="RockA" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.4, 0.9, 0)
+mesh = SubResource("rock_a_mesh")
+material_override = SubResource("rock_mat")
+
+[node name="RockB" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.906, 0, 0.423, 0, 1, 0, -0.423, 0, 0.906, 0.5, 0.65, 0)
+mesh = SubResource("rock_b_mesh")
+material_override = SubResource("rock_mat")
+
+[node name="RockC" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.966, 0, -0.259, 0, 1, 0, 0.259, 0, 0.966, 2.7, 0.55, 0.1)
+mesh = SubResource("rock_c_mesh")
+material_override = SubResource("rock_mat")

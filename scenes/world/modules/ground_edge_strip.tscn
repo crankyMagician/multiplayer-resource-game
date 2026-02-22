@@ -1,0 +1,15 @@
+[gd_scene format=3]
+
+[sub_resource type="BoxMesh" id="strip_mesh"]
+size = Vector3(8, 0.03, 0.6)
+
+[sub_resource type="StandardMaterial3D" id="strip_mat"]
+albedo_color = Color(0.18, 0.2, 0.16, 1)
+roughness = 1.0
+
+[node name="GroundEdgeStrip" type="Node3D"]
+
+[node name="Strip" type="MeshInstance3D" parent="."]
+cast_shadow = 0
+mesh = SubResource("strip_mesh")
+material_override = SubResource("strip_mat")

@@ -1,0 +1,473 @@
+[gd_scene format=3]
+
+; --- Materials ---
+[sub_resource type="StandardMaterial3D" id="cobble_mat"]
+albedo_color = Color(0.55, 0.5, 0.4, 1)
+
+[sub_resource type="StandardMaterial3D" id="pale_blue_mat"]
+albedo_color = Color(0.65, 0.72, 0.8, 1)
+
+[sub_resource type="StandardMaterial3D" id="burgundy_mat"]
+albedo_color = Color(0.55, 0.2, 0.2, 1)
+
+[sub_resource type="StandardMaterial3D" id="sage_mat"]
+albedo_color = Color(0.55, 0.65, 0.5, 1)
+
+[sub_resource type="StandardMaterial3D" id="white_mat"]
+albedo_color = Color(0.9, 0.9, 0.9, 1)
+
+[sub_resource type="StandardMaterial3D" id="cream_mat"]
+albedo_color = Color(0.7, 0.65, 0.55, 1)
+
+[sub_resource type="StandardMaterial3D" id="roof_mat"]
+albedo_color = Color(0.35, 0.28, 0.22, 1)
+
+[sub_resource type="StandardMaterial3D" id="green_awning_mat"]
+albedo_color = Color(0.2, 0.45, 0.2, 1)
+
+[sub_resource type="StandardMaterial3D" id="window_mat"]
+albedo_color = Color(0.7, 0.85, 1.0, 0.5)
+transparency = 1
+
+[sub_resource type="StandardMaterial3D" id="red_cross_mat"]
+albedo_color = Color(0.8, 0.15, 0.1, 1)
+
+[sub_resource type="StandardMaterial3D" id="wood_mat"]
+albedo_color = Color(0.4, 0.25, 0.1, 1)
+
+[sub_resource type="StandardMaterial3D" id="green_mat"]
+albedo_color = Color(0.2, 0.55, 0.2, 1)
+
+[sub_resource type="StandardMaterial3D" id="stall_frame_mat"]
+albedo_color = Color(0.45, 0.3, 0.15, 1)
+
+[sub_resource type="StandardMaterial3D" id="canopy_mat"]
+albedo_color = Color(0.75, 0.6, 0.3, 0.8)
+transparency = 1
+
+[sub_resource type="StandardMaterial3D" id="planter_mat"]
+albedo_color = Color(0.5, 0.3, 0.2, 1)
+
+[sub_resource type="StandardMaterial3D" id="flower_mat"]
+albedo_color = Color(0.8, 0.3, 0.5, 1)
+
+; --- Meshes ---
+[sub_resource type="BoxMesh" id="shop_mesh_5x4x5"]
+size = Vector3(5, 4, 5)
+
+[sub_resource type="BoxMesh" id="shop_mesh_5x4_5x5"]
+size = Vector3(5, 4.5, 5)
+
+[sub_resource type="BoxMesh" id="shop_mesh_5x4x6"]
+size = Vector3(5, 4, 6)
+
+[sub_resource type="BoxMesh" id="roof_mesh_6x6"]
+size = Vector3(6, 0.5, 6)
+
+[sub_resource type="BoxMesh" id="roof_mesh_6x7"]
+size = Vector3(6, 0.5, 7)
+
+[sub_resource type="BoxMesh" id="awning_mesh"]
+size = Vector3(4, 0.1, 1.5)
+
+[sub_resource type="BoxMesh" id="window_mesh"]
+size = Vector3(1.0, 1.2, 0.1)
+
+[sub_resource type="BoxMesh" id="cross_h_mesh"]
+size = Vector3(1.5, 0.3, 0.15)
+
+[sub_resource type="BoxMesh" id="cross_v_mesh"]
+size = Vector3(0.3, 1.5, 0.15)
+
+[sub_resource type="BoxMesh" id="stall_post_mesh"]
+size = Vector3(0.15, 2.5, 0.15)
+
+[sub_resource type="BoxMesh" id="stall_top_mesh"]
+size = Vector3(3, 0.08, 2)
+
+[sub_resource type="BoxMesh" id="stall_counter_mesh"]
+size = Vector3(3, 0.1, 1.5)
+
+[sub_resource type="BoxMesh" id="planter_mesh"]
+size = Vector3(1.2, 0.6, 0.5)
+
+[sub_resource type="SphereMesh" id="flower_bush_mesh"]
+radius = 0.5
+height = 0.8
+
+[sub_resource type="CylinderMesh" id="tree_trunk_mesh"]
+top_radius = 0.12
+bottom_radius = 0.16
+height = 2.0
+
+[sub_resource type="SphereMesh" id="tree_canopy_mesh"]
+radius = 1.2
+height = 2.4
+
+; --- Terrain meshes ---
+[sub_resource type="BoxMesh" id="terrace_mesh"]
+size = Vector3(22, 0.6, 14)
+
+[sub_resource type="BoxShape3D" id="terrace_shape"]
+size = Vector3(22, 0.6, 14)
+
+[sub_resource type="StandardMaterial3D" id="warm_cobble_mat"]
+albedo_color = Color(0.52, 0.48, 0.38, 1)
+
+[sub_resource type="BoxMesh" id="entry_ramp_mesh"]
+size = Vector3(6, 0.15, 14)
+
+[sub_resource type="BoxShape3D" id="entry_ramp_shape"]
+size = Vector3(6, 0.15, 14)
+
+[sub_resource type="BoxMesh" id="retaining_wall_mesh"]
+size = Vector3(22, 0.6, 0.3)
+
+[sub_resource type="StandardMaterial3D" id="stone_mat"]
+albedo_color = Color(0.5, 0.48, 0.42, 1)
+
+[sub_resource type="CylinderMesh" id="trellis_post_mesh"]
+top_radius = 0.08
+bottom_radius = 0.08
+height = 3.5
+
+[sub_resource type="BoxMesh" id="trellis_canopy_mesh"]
+size = Vector3(10, 0.1, 6)
+
+[sub_resource type="StandardMaterial3D" id="vine_green_mat"]
+albedo_color = Color(0.25, 0.45, 0.2, 0.7)
+transparency = 1
+
+[sub_resource type="SphereMesh" id="shrub_mesh"]
+radius = 1.5
+height = 3.0
+
+[sub_resource type="StandardMaterial3D" id="dark_green_mat"]
+albedo_color = Color(0.15, 0.4, 0.15, 1)
+
+; --- Nodes ---
+[node name="MarketRow" type="Node3D"]
+
+; === Threads & Needles ===
+[node name="ThreadsAndNeedles" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+
+[node name="Body" type="StaticBody3D" parent="ThreadsAndNeedles"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+
+[node name="Mesh" type="MeshInstance3D" parent="ThreadsAndNeedles/Body"]
+mesh = SubResource("shop_mesh_5x4x5")
+material_override = SubResource("pale_blue_mat")
+
+[node name="Collision" type="CollisionShape3D" parent="ThreadsAndNeedles/Body"]
+shape = SubResource("shop_mesh_5x4x5")
+
+[node name="Roof" type="MeshInstance3D" parent="ThreadsAndNeedles"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.25, 0)
+mesh = SubResource("roof_mesh_6x6")
+material_override = SubResource("roof_mat")
+
+[node name="Awning" type="MeshInstance3D" parent="ThreadsAndNeedles"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.2, -2.7)
+mesh = SubResource("awning_mesh")
+material_override = SubResource("green_awning_mat")
+
+[node name="Window" type="MeshInstance3D" parent="ThreadsAndNeedles"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, -2.55)
+mesh = SubResource("window_mesh")
+material_override = SubResource("window_mat")
+
+[node name="Label" type="Label3D" parent="ThreadsAndNeedles"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.5, 0)
+text = "Threads & Needles"
+font_size = 28
+outline_size = 6
+modulate = Color(0.6, 0.7, 0.85, 1)
+billboard = 1
+
+; === The Book Nook ===
+[node name="TheBookNook" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0, 0)
+
+[node name="Body" type="StaticBody3D" parent="TheBookNook"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.25, 0)
+
+[node name="Mesh" type="MeshInstance3D" parent="TheBookNook/Body"]
+mesh = SubResource("shop_mesh_5x4_5x5")
+material_override = SubResource("burgundy_mat")
+
+[node name="Collision" type="CollisionShape3D" parent="TheBookNook/Body"]
+shape = SubResource("shop_mesh_5x4_5x5")
+
+[node name="Roof" type="MeshInstance3D" parent="TheBookNook"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.75, 0)
+mesh = SubResource("roof_mesh_6x6")
+material_override = SubResource("roof_mat")
+
+[node name="Window" type="MeshInstance3D" parent="TheBookNook"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.8, -2.55)
+mesh = SubResource("window_mesh")
+material_override = SubResource("window_mat")
+
+[node name="Label" type="Label3D" parent="TheBookNook"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.8, 0)
+text = "The Book Nook"
+font_size = 28
+outline_size = 6
+modulate = Color(0.8, 0.6, 0.4, 1)
+billboard = 1
+
+; === Bloom & Grow ===
+[node name="BloomAndGrow" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0, 4)
+
+[node name="Body" type="StaticBody3D" parent="BloomAndGrow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+
+[node name="Mesh" type="MeshInstance3D" parent="BloomAndGrow/Body"]
+mesh = SubResource("shop_mesh_5x4x6")
+material_override = SubResource("sage_mat")
+
+[node name="Collision" type="CollisionShape3D" parent="BloomAndGrow/Body"]
+shape = SubResource("shop_mesh_5x4x6")
+
+[node name="Roof" type="MeshInstance3D" parent="BloomAndGrow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.25, 0)
+mesh = SubResource("roof_mesh_6x7")
+material_override = SubResource("roof_mat")
+
+[node name="Planter1" type="MeshInstance3D" parent="BloomAndGrow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.3, -3.5)
+mesh = SubResource("planter_mesh")
+material_override = SubResource("planter_mat")
+
+[node name="Flowers1" type="MeshInstance3D" parent="BloomAndGrow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 1.0, -3.5)
+mesh = SubResource("flower_bush_mesh")
+material_override = SubResource("flower_mat")
+
+[node name="Planter2" type="MeshInstance3D" parent="BloomAndGrow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0.3, -3.5)
+mesh = SubResource("planter_mesh")
+material_override = SubResource("planter_mat")
+
+[node name="Flowers2" type="MeshInstance3D" parent="BloomAndGrow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 1.0, -3.5)
+mesh = SubResource("flower_bush_mesh")
+material_override = SubResource("green_mat")
+
+[node name="Label" type="Label3D" parent="BloomAndGrow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.5, 0)
+text = "Bloom & Grow"
+font_size = 28
+outline_size = 6
+modulate = Color(0.4, 0.7, 0.4, 1)
+billboard = 1
+
+; === Dr. Honey's Clinic ===
+[node name="DrHoneysClinic" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 6)
+
+[node name="Body" type="StaticBody3D" parent="DrHoneysClinic"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+
+[node name="Mesh" type="MeshInstance3D" parent="DrHoneysClinic/Body"]
+mesh = SubResource("shop_mesh_5x4x5")
+material_override = SubResource("white_mat")
+
+[node name="Collision" type="CollisionShape3D" parent="DrHoneysClinic/Body"]
+shape = SubResource("shop_mesh_5x4x5")
+
+[node name="Roof" type="MeshInstance3D" parent="DrHoneysClinic"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.25, 0)
+mesh = SubResource("roof_mesh_6x6")
+material_override = SubResource("roof_mat")
+
+[node name="CrossH" type="MeshInstance3D" parent="DrHoneysClinic"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.2, -2.55)
+mesh = SubResource("cross_h_mesh")
+material_override = SubResource("red_cross_mat")
+
+[node name="CrossV" type="MeshInstance3D" parent="DrHoneysClinic"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.2, -2.55)
+mesh = SubResource("cross_v_mesh")
+material_override = SubResource("red_cross_mat")
+
+[node name="Label" type="Label3D" parent="DrHoneysClinic"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.5, 0)
+text = "Dr. Honey's Clinic"
+font_size = 28
+outline_size = 6
+modulate = Color(0.9, 0.4, 0.35, 1)
+billboard = 1
+
+; === Market Stalls ===
+[node name="Stall1" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, 3)
+
+[node name="PostFL" type="MeshInstance3D" parent="Stall1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.4, 1.25, -0.9)
+mesh = SubResource("stall_post_mesh")
+material_override = SubResource("stall_frame_mat")
+
+[node name="PostFR" type="MeshInstance3D" parent="Stall1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.4, 1.25, -0.9)
+mesh = SubResource("stall_post_mesh")
+material_override = SubResource("stall_frame_mat")
+
+[node name="PostBL" type="MeshInstance3D" parent="Stall1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.4, 1.25, 0.9)
+mesh = SubResource("stall_post_mesh")
+material_override = SubResource("stall_frame_mat")
+
+[node name="PostBR" type="MeshInstance3D" parent="Stall1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.4, 1.25, 0.9)
+mesh = SubResource("stall_post_mesh")
+material_override = SubResource("stall_frame_mat")
+
+[node name="Canopy" type="MeshInstance3D" parent="Stall1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.55, 0)
+mesh = SubResource("stall_top_mesh")
+material_override = SubResource("canopy_mat")
+
+[node name="Counter" type="MeshInstance3D" parent="Stall1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+mesh = SubResource("stall_counter_mesh")
+material_override = SubResource("wood_mat")
+
+[node name="Stall2" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0, 3)
+
+[node name="PostFL" type="MeshInstance3D" parent="Stall2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.4, 1.25, -0.9)
+mesh = SubResource("stall_post_mesh")
+material_override = SubResource("stall_frame_mat")
+
+[node name="PostFR" type="MeshInstance3D" parent="Stall2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.4, 1.25, -0.9)
+mesh = SubResource("stall_post_mesh")
+material_override = SubResource("stall_frame_mat")
+
+[node name="PostBL" type="MeshInstance3D" parent="Stall2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.4, 1.25, 0.9)
+mesh = SubResource("stall_post_mesh")
+material_override = SubResource("stall_frame_mat")
+
+[node name="PostBR" type="MeshInstance3D" parent="Stall2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.4, 1.25, 0.9)
+mesh = SubResource("stall_post_mesh")
+material_override = SubResource("stall_frame_mat")
+
+[node name="Canopy" type="MeshInstance3D" parent="Stall2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.55, 0)
+mesh = SubResource("stall_top_mesh")
+material_override = SubResource("green_awning_mat")
+
+[node name="Counter" type="MeshInstance3D" parent="Stall2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+mesh = SubResource("stall_counter_mesh")
+material_override = SubResource("wood_mat")
+
+; === Trees ===
+[node name="Tree1" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0, 3)
+
+[node name="Trunk" type="MeshInstance3D" parent="Tree1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0)
+mesh = SubResource("tree_trunk_mesh")
+material_override = SubResource("wood_mat")
+
+[node name="Canopy" type="MeshInstance3D" parent="Tree1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.8, 0)
+mesh = SubResource("tree_canopy_mesh")
+material_override = SubResource("green_mat")
+
+[node name="Tree2" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11, 0, 0)
+
+[node name="Trunk" type="MeshInstance3D" parent="Tree2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0)
+mesh = SubResource("tree_trunk_mesh")
+material_override = SubResource("wood_mat")
+
+[node name="Canopy" type="MeshInstance3D" parent="Tree2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.8, 0)
+mesh = SubResource("tree_canopy_mesh")
+material_override = SubResource("green_mat")
+
+; === TERRAIN MASSING ===
+
+; === Raised Terrace Platform ===
+[node name="Terrace" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0.3, 3)
+
+[node name="Mesh" type="MeshInstance3D" parent="Terrace"]
+mesh = SubResource("terrace_mesh")
+material_override = SubResource("warm_cobble_mat")
+
+[node name="Collision" type="CollisionShape3D" parent="Terrace"]
+shape = SubResource("terrace_shape")
+
+; === Entry Ramp from Town Square (west side) ===
+[node name="EntryRamp" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.995, -0.105, 0, 0.105, 0.995, -6, 0.15, 3)
+
+[node name="Mesh" type="MeshInstance3D" parent="EntryRamp"]
+mesh = SubResource("entry_ramp_mesh")
+material_override = SubResource("warm_cobble_mat")
+
+[node name="Collision" type="CollisionShape3D" parent="EntryRamp"]
+shape = SubResource("entry_ramp_shape")
+
+; === Retaining Wall — South Face ===
+[node name="RetainingWall" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0.3, -4)
+mesh = SubResource("retaining_wall_mesh")
+material_override = SubResource("stone_mat")
+
+; === Trellis Canopy ===
+[node name="TrellisPostFL" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.75, 0)
+mesh = SubResource("trellis_post_mesh")
+material_override = SubResource("stall_frame_mat")
+
+[node name="TrellisPostFR" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 1.75, 0)
+mesh = SubResource("trellis_post_mesh")
+material_override = SubResource("stall_frame_mat")
+
+[node name="TrellisPostBL" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.75, 6)
+mesh = SubResource("trellis_post_mesh")
+material_override = SubResource("stall_frame_mat")
+
+[node name="TrellisPostBR" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 1.75, 6)
+mesh = SubResource("trellis_post_mesh")
+material_override = SubResource("stall_frame_mat")
+
+[node name="TrellisCanopy" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 3.2, 3)
+mesh = SubResource("trellis_canopy_mesh")
+material_override = SubResource("vine_green_mat")
+
+; === East Shrub Wall ===
+[node name="ShrubE1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 1.5, -2)
+mesh = SubResource("shrub_mesh")
+material_override = SubResource("dark_green_mat")
+
+[node name="ShrubE2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 1.5, 2)
+mesh = SubResource("shrub_mesh")
+material_override = SubResource("dark_green_mat")
+
+[node name="ShrubE3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 1.5, 6)
+mesh = SubResource("shrub_mesh")
+material_override = SubResource("dark_green_mat")
+
+[node name="ShrubE4" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 1.5, 10)
+mesh = SubResource("shrub_mesh")
+material_override = SubResource("dark_green_mat")

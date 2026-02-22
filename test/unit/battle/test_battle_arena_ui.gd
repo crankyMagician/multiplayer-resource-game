@@ -453,23 +453,23 @@ func test_hp_tint_color_boundary_25() -> void:
 
 func test_ui_hp_tint_color_high() -> void:
 	var color = ui._hp_tint_color(0.8)
-	assert_eq(color, preload("res://scripts/ui/ui_tokens.gd").STAMP_GREEN)
+	assert_eq(color, Color(0.3, 0.8, 0.3))
 
 func test_ui_hp_tint_color_medium() -> void:
 	var color = ui._hp_tint_color(0.4)
-	assert_eq(color, preload("res://scripts/ui/ui_tokens.gd").STAMP_GOLD)
+	assert_eq(color, Color(0.95, 0.75, 0.1))
 
 func test_ui_hp_tint_color_low() -> void:
 	var color = ui._hp_tint_color(0.1)
-	assert_eq(color, preload("res://scripts/ui/ui_tokens.gd").STAMP_RED)
+	assert_eq(color, Color(0.9, 0.2, 0.2))
 
 func test_ui_hp_tint_color_boundary_50() -> void:
 	var color = ui._hp_tint_color(0.5)
-	assert_eq(color, preload("res://scripts/ui/ui_tokens.gd").STAMP_GOLD)
+	assert_eq(color, Color(0.95, 0.75, 0.1))
 
 func test_ui_hp_tint_color_boundary_25() -> void:
 	var color = ui._hp_tint_color(0.25)
-	assert_eq(color, preload("res://scripts/ui/ui_tokens.gd").STAMP_RED)
+	assert_eq(color, Color(0.9, 0.2, 0.2))
 
 # === _has_any_positive ===
 

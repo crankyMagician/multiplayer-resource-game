@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "overlook_park"
 display_name = "Overlook Park"
-world_position = Vector3(0, 10, 42)
+world_position = Vector3(7, 7, 48)
 discovery_radius = 8.0
 icon_type = "zone"
 category = "zone"

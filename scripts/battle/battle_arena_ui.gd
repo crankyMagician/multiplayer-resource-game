@@ -95,7 +95,7 @@ var _narration_container: VBoxContainer = null
 var _active_toasts: Array = []
 
 # Summary data accumulator
-var _summary_victory: bool = false
+var _summary_result: String = ""
 var _is_animating_log: bool = false
 var _initial_setup: bool = false
 var _battle_starting: bool = false  # Guards against battle_ended during _on_battle_started awaits
@@ -269,9 +269,9 @@ func _build_action_layer() -> void:
 	# Narration toast container (center-top, over arena)
 	_narration_container = VBoxContainer.new()
 	_narration_container.name = "NarrationContainer"
-	_narration_container.anchor_left = 0.25
+	_narration_container.anchor_left = 0.20
 	_narration_container.anchor_top = 0.02
-	_narration_container.anchor_right = 0.75
+	_narration_container.anchor_right = 0.80
 	_narration_container.anchor_bottom = 0.45
 	_narration_container.offset_left = 0
 	_narration_container.offset_top = 0
@@ -411,7 +411,7 @@ func _build_move_cards_overlay() -> void:
 
 		var name_label = Label.new()
 		name_label.name = "MoveName"
-		name_label.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_SMALL))
+		name_label.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_BODY))
 		name_label.add_theme_color_override("font_color", UITokens.PAPER_CREAM)
 		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		header.add_child(name_label)
@@ -425,21 +425,21 @@ func _build_move_cards_overlay() -> void:
 		# Info line: Type | Category | Pwr:X | Acc:X%
 		var info_label = Label.new()
 		info_label.name = "InfoLine"
-		info_label.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_TINY))
+		info_label.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_SMALL))
 		info_label.add_theme_color_override("font_color", Color(0.8, 0.75, 0.65))
 		card_vbox.add_child(info_label)
 
 		# PP line
 		var pp_label = Label.new()
 		pp_label.name = "PPLine"
-		pp_label.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_TINY))
+		pp_label.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_SMALL))
 		pp_label.add_theme_color_override("font_color", Color(0.7, 0.65, 0.55))
 		card_vbox.add_child(pp_label)
 
 		# Description
 		var desc_label = Label.new()
 		desc_label.name = "Description"
-		desc_label.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_TINY))
+		desc_label.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_SMALL))
 		desc_label.add_theme_color_override("font_color", Color(0.65, 0.6, 0.5))
 		desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 		card_vbox.add_child(desc_label)
@@ -933,7 +933,7 @@ func _on_battle_started() -> void:
 			_on_turn_result(tl)
 	_battle_starting = false
 
-func _on_battle_ended(victory: bool) -> void:
+func _on_battle_ended(result: String) -> void:
 	# Wait for _on_battle_started to finish its await chain before tearing down
 	if _battle_starting:
 		while _battle_starting:
@@ -948,10 +948,12 @@ func _on_battle_ended(victory: bool) -> void:
 			_restore_game_world_ui()
 			return
 	_set_phase(BattlePhase.ENDED)
-	_summary_victory = victory
-	# Victory/defeat music
-	if victory:
+	_summary_result = result
+	# Victory/defeat/fled music
+	if result == "victory":
 		AudioManager.play_music("victory")
+	elif result == "fled":
+		AudioManager.play_music("overworld")
 	else:
 		AudioManager.play_music("defeat")
 	await get_tree().create_timer(0.5).timeout
@@ -1687,19 +1689,41 @@ func _on_switch_pressed() -> void:
 
 # === ITEM PANEL ===
 
+func _make_dark_card_style(accent_color: Color = Color(0.5, 0.42, 0.3)) -> StyleBoxFlat:
+	var s = StyleBoxFlat.new()
+	s.bg_color = Color(0.18, 0.15, 0.12, 0.95)
+	s.border_color = accent_color
+	s.set_border_width_all(1)
+	s.border_width_left = 4
+	s.set_corner_radius_all(6)
+	s.set_content_margin_all(10)
+	return s
+
+func _make_dark_card_hover_style(accent_color: Color = Color(0.5, 0.42, 0.3)) -> StyleBoxFlat:
+	var s = StyleBoxFlat.new()
+	s.bg_color = Color(0.24, 0.2, 0.16, 0.95)
+	s.border_color = accent_color
+	s.set_border_width_all(2)
+	s.border_width_left = 4
+	s.set_corner_radius_all(6)
+	s.set_content_margin_all(10)
+	return s
+
 func _show_item_panel() -> void:
 	if item_panel:
 		item_panel.queue_free()
 	item_panel = PanelContainer.new()
 	item_panel.anchors_preset = Control.PRESET_CENTER
-	item_panel.custom_minimum_size = Vector2(350, 0)
+	item_panel.custom_minimum_size = Vector2(400, 0)
 	UITheme.apply_panel(item_panel)
 	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 6)
 	item_panel.add_child(vbox)
 
 	var title = Label.new()
 	title.text = "Use Item"
 	UITheme.style_subheading(title)
+	title.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_H3))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(title)
 
@@ -1712,14 +1736,59 @@ func _show_item_panel() -> void:
 		if bi == null:
 			continue
 		has_items = true
-		var btn = Button.new()
-		btn.text = "%s x%d — %s" % [bi.display_name, PlayerData.inventory[item_id], bi.description]
-		btn.custom_minimum_size.y = 32
-		UITheme.style_button(btn, "secondary")
+
+		var card = PanelContainer.new()
+		card.add_theme_stylebox_override("panel", _make_dark_card_style())
+		card.custom_minimum_size.y = 52
+
+		var hbox = HBoxContainer.new()
+		hbox.add_theme_constant_override("separation", 10)
+		card.add_child(hbox)
+
+		# Icon
+		var info = {"icon_texture": bi.icon_texture, "icon_color": bi.icon_color}
+		var icon = UITheme.create_item_icon(info, 28)
+		hbox.add_child(icon)
+
+		var text_vbox = VBoxContainer.new()
+		text_vbox.add_theme_constant_override("separation", 2)
+		text_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		hbox.add_child(text_vbox)
+
+		var name_label = Label.new()
+		name_label.text = "%s  x%d" % [bi.display_name, PlayerData.inventory[item_id]]
+		name_label.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_BODY))
+		name_label.add_theme_color_override("font_color", UITokens.PAPER_CREAM)
+		text_vbox.add_child(name_label)
+
+		var desc_label = Label.new()
+		desc_label.text = bi.description
+		desc_label.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_SMALL))
+		desc_label.add_theme_color_override("font_color", Color(0.65, 0.58, 0.48))
+		desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+		text_vbox.add_child(desc_label)
+
+		# Invisible click button overlay
+		var click_btn = Button.new()
+		click_btn.flat = true
+		click_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		click_btn.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		var btn_style = StyleBoxEmpty.new()
+		click_btn.add_theme_stylebox_override("normal", btn_style)
+		click_btn.add_theme_stylebox_override("hover", btn_style)
+		click_btn.add_theme_stylebox_override("pressed", btn_style)
+		click_btn.add_theme_stylebox_override("focus", btn_style)
+		card.add_child(click_btn)
+
 		var iid = item_id
 		var effect = bi.effect_type
-		btn.pressed.connect(func(): _on_item_selected(iid, effect))
-		vbox.add_child(btn)
+		var card_ref = card
+		var normal_style = _make_dark_card_style()
+		var hover_style = _make_dark_card_hover_style()
+		click_btn.mouse_entered.connect(func(): card_ref.add_theme_stylebox_override("panel", hover_style))
+		click_btn.mouse_exited.connect(func(): card_ref.add_theme_stylebox_override("panel", normal_style))
+		click_btn.pressed.connect(func(): _on_item_selected(iid, effect))
+		vbox.add_child(card)
 
 	if not has_items:
 		var empty_label = Label.new()
@@ -1730,7 +1799,7 @@ func _show_item_panel() -> void:
 
 	var cancel = Button.new()
 	cancel.text = "Cancel"
-	UITheme.style_button(cancel, "danger")
+	UITheme.style_button(cancel, "secondary")
 	cancel.pressed.connect(func():
 		item_panel.queue_free()
 		item_panel = null
@@ -1749,14 +1818,19 @@ func _show_item_target_panel(item_id: String, effect_type: String) -> void:
 		item_panel.queue_free()
 	item_panel = PanelContainer.new()
 	item_panel.anchors_preset = Control.PRESET_CENTER
-	item_panel.custom_minimum_size = Vector2(350, 0)
+	item_panel.custom_minimum_size = Vector2(400, 0)
 	UITheme.apply_panel(item_panel)
 	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 6)
 	item_panel.add_child(vbox)
 
+	# Title with item name context
+	var bi = DataRegistry.get_battle_item(item_id)
+	var item_display = bi.display_name if bi else item_id
 	var title = Label.new()
-	title.text = "Select Target"
+	title.text = "Use %s on..." % item_display
 	UITheme.style_subheading(title)
+	title.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_H3))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(title)
 
@@ -1769,13 +1843,85 @@ func _show_item_target_panel(item_id: String, effect_type: String) -> void:
 			continue
 		if effect_type != "revive" and is_fainted:
 			continue
-		var btn = Button.new()
-		btn.text = "%s — HP: %d/%d" % [creature.get("nickname", "???"), hp, max_hp]
-		btn.custom_minimum_size.y = 28
-		UITheme.style_button(btn, "secondary")
+
+		var card = PanelContainer.new()
+		card.add_theme_stylebox_override("panel", _make_dark_card_style())
+		card.custom_minimum_size.y = 56
+
+		var hbox = HBoxContainer.new()
+		hbox.add_theme_constant_override("separation", 10)
+		card.add_child(hbox)
+
+		# Creature color swatch
+		var species = DataRegistry.get_species(creature.get("species_id", ""))
+		var swatch = ColorRect.new()
+		swatch.custom_minimum_size = Vector2(20, 20)
+		swatch.color = species.mesh_color if species else Color.WHITE
+		hbox.add_child(swatch)
+
+		var text_vbox = VBoxContainer.new()
+		text_vbox.add_theme_constant_override("separation", 2)
+		text_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		hbox.add_child(text_vbox)
+
+		var name_label = Label.new()
+		name_label.text = creature.get("nickname", "???")
+		name_label.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_BODY))
+		name_label.add_theme_color_override("font_color", UITokens.PAPER_CREAM)
+		text_vbox.add_child(name_label)
+
+		# HP row
+		var hp_row = HBoxContainer.new()
+		hp_row.add_theme_constant_override("separation", 6)
+		text_vbox.add_child(hp_row)
+
+		var hp_bar = ProgressBar.new()
+		hp_bar.custom_minimum_size = Vector2(100, 10)
+		hp_bar.max_value = max_hp
+		hp_bar.value = hp
+		hp_bar.show_percentage = false
+		var hp_ratio = float(hp) / max(1, max_hp)
+		var bar_style = StyleBoxFlat.new()
+		if hp_ratio > 0.5:
+			bar_style.bg_color = Color(0.36, 0.55, 0.35)
+		elif hp_ratio > 0.25:
+			bar_style.bg_color = Color(0.83, 0.66, 0.26)
+		else:
+			bar_style.bg_color = Color(0.76, 0.33, 0.31)
+		bar_style.set_corner_radius_all(3)
+		hp_bar.add_theme_stylebox_override("fill", bar_style)
+		var bar_bg = StyleBoxFlat.new()
+		bar_bg.bg_color = Color(0.15, 0.12, 0.1)
+		bar_bg.set_corner_radius_all(3)
+		hp_bar.add_theme_stylebox_override("background", bar_bg)
+		hp_row.add_child(hp_bar)
+
+		var hp_text = Label.new()
+		hp_text.text = "%d/%d" % [hp, max_hp]
+		hp_text.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_SMALL))
+		hp_text.add_theme_color_override("font_color", Color(0.65, 0.58, 0.48))
+		hp_row.add_child(hp_text)
+
+		# Invisible click button overlay
+		var click_btn = Button.new()
+		click_btn.flat = true
+		click_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		click_btn.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		var btn_style = StyleBoxEmpty.new()
+		click_btn.add_theme_stylebox_override("normal", btn_style)
+		click_btn.add_theme_stylebox_override("hover", btn_style)
+		click_btn.add_theme_stylebox_override("pressed", btn_style)
+		click_btn.add_theme_stylebox_override("focus", btn_style)
+		card.add_child(click_btn)
+
 		var cidx = i
 		var iid = item_id
-		btn.pressed.connect(func():
+		var card_ref = card
+		var normal_style = _make_dark_card_style()
+		var hover_style = _make_dark_card_hover_style()
+		click_btn.mouse_entered.connect(func(): card_ref.add_theme_stylebox_override("panel", hover_style))
+		click_btn.mouse_exited.connect(func(): card_ref.add_theme_stylebox_override("panel", normal_style))
+		click_btn.pressed.connect(func():
 			if battle_mgr:
 				battle_mgr.send_item_use(iid, cidx)
 				if battle_mgr.client_battle_mode == 2:
@@ -1786,11 +1932,11 @@ func _show_item_target_panel(item_id: String, effect_type: String) -> void:
 				item_panel.queue_free()
 				item_panel = null
 		)
-		vbox.add_child(btn)
+		vbox.add_child(card)
 
 	var cancel = Button.new()
 	cancel.text = "Cancel"
-	UITheme.style_button(cancel, "danger")
+	UITheme.style_button(cancel, "secondary")
 	cancel.pressed.connect(func():
 		item_panel.queue_free()
 		item_panel = null
@@ -1805,14 +1951,16 @@ func _show_switch_panel() -> void:
 		switch_panel.queue_free()
 	switch_panel = PanelContainer.new()
 	switch_panel.anchors_preset = Control.PRESET_CENTER
-	switch_panel.custom_minimum_size = Vector2(400, 0)
+	switch_panel.custom_minimum_size = Vector2(420, 0)
 	UITheme.apply_panel(switch_panel)
 	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 6)
 	switch_panel.add_child(vbox)
 
 	var title = Label.new()
 	title.text = "Switch Creature"
 	UITheme.style_subheading(title)
+	title.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_H3))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(title)
 
@@ -1820,21 +1968,127 @@ func _show_switch_panel() -> void:
 	var found_any = false
 	for i in range(PlayerData.party.size()):
 		var c = PlayerData.party[i]
-		var hp = c.get("hp", 0)
-		var max_hp = c.get("max_hp", 1)
-		var status_text = StatusEffects.get_status_display_name(c.get("status", ""))
-		if status_text != "":
-			status_text = " [%s]" % status_text
-		var btn = Button.new()
-		btn.text = "%s Lv.%d — HP: %d/%d%s" % [c.get("nickname", "???"), c.get("level", 1), hp, max_hp, status_text]
-		btn.custom_minimum_size.y = 36
-		UITheme.style_button(btn, "secondary")
-		if i == current or hp <= 0:
-			btn.disabled = true
+		var hp = int(c.get("hp", 0))
+		var max_hp = int(c.get("max_hp", 1))
+		var is_fainted = hp <= 0
+		var is_active = i == current
+
+		# Card style: gold accent for active, normal for others
+		var accent = UITokens.STAMP_GOLD if is_active else Color(0.5, 0.42, 0.3)
+		var card = PanelContainer.new()
+		card.add_theme_stylebox_override("panel", _make_dark_card_style(accent))
+		card.custom_minimum_size.y = 64
+
+		# Dim fainted creatures
+		if is_fainted:
+			card.modulate.a = 0.5
+
+		var hbox = HBoxContainer.new()
+		hbox.add_theme_constant_override("separation", 10)
+		card.add_child(hbox)
+
+		# Creature color swatch
+		var species = DataRegistry.get_species(c.get("species_id", ""))
+		var swatch = ColorRect.new()
+		swatch.custom_minimum_size = Vector2(24, 24)
+		swatch.color = species.mesh_color if species else Color.WHITE
+		hbox.add_child(swatch)
+
+		var text_vbox = VBoxContainer.new()
+		text_vbox.add_theme_constant_override("separation", 2)
+		text_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		hbox.add_child(text_vbox)
+
+		# Top line: name + level
+		var top_row = HBoxContainer.new()
+		text_vbox.add_child(top_row)
+
+		var name_label = Label.new()
+		var name_text = c.get("nickname", "???")
+		if is_active:
+			name_text += " (Active)"
+		name_label.text = name_text
+		name_label.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_BODY))
+		name_label.add_theme_color_override("font_color", UITokens.PAPER_CREAM)
+		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		top_row.add_child(name_label)
+
+		var level_label = Label.new()
+		level_label.text = "Lv.%d" % c.get("level", 1)
+		level_label.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_SMALL))
+		level_label.add_theme_color_override("font_color", Color(0.65, 0.58, 0.48))
+		top_row.add_child(level_label)
+
+		# HP row
+		var hp_row = HBoxContainer.new()
+		hp_row.add_theme_constant_override("separation", 6)
+		text_vbox.add_child(hp_row)
+
+		var hp_bar = ProgressBar.new()
+		hp_bar.custom_minimum_size = Vector2(120, 12)
+		hp_bar.max_value = max_hp
+		hp_bar.value = hp
+		hp_bar.show_percentage = false
+		var hp_ratio = float(hp) / max(1, max_hp)
+		var bar_style = StyleBoxFlat.new()
+		if hp_ratio > 0.5:
+			bar_style.bg_color = Color(0.36, 0.55, 0.35)
+		elif hp_ratio > 0.25:
+			bar_style.bg_color = Color(0.83, 0.66, 0.26)
 		else:
+			bar_style.bg_color = Color(0.76, 0.33, 0.31)
+		bar_style.set_corner_radius_all(3)
+		hp_bar.add_theme_stylebox_override("fill", bar_style)
+		var bar_bg = StyleBoxFlat.new()
+		bar_bg.bg_color = Color(0.15, 0.12, 0.1)
+		bar_bg.set_corner_radius_all(3)
+		hp_bar.add_theme_stylebox_override("background", bar_bg)
+		hp_row.add_child(hp_bar)
+
+		var hp_text = Label.new()
+		hp_text.text = "%d/%d" % [hp, max_hp]
+		hp_text.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_SMALL))
+		hp_text.add_theme_color_override("font_color", Color(0.65, 0.58, 0.48))
+		hp_row.add_child(hp_text)
+
+		# Status line
+		var status_id = c.get("status", "")
+		if is_fainted:
+			var fainted_label = Label.new()
+			fainted_label.text = "Fainted"
+			fainted_label.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_SMALL))
+			fainted_label.add_theme_color_override("font_color", UITokens.STAMP_RED)
+			text_vbox.add_child(fainted_label)
+		elif status_id != "":
+			var status_display = StatusEffects.get_status_display_name(status_id)
+			if status_display != "":
+				var status_label = Label.new()
+				status_label.text = "[%s]" % status_display
+				status_label.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_SMALL))
+				status_label.add_theme_color_override("font_color", Color(0.85, 0.6, 0.3))
+				text_vbox.add_child(status_label)
+
+		# Click handler — only for available (not active, not fainted)
+		if not is_active and not is_fainted:
 			found_any = true
+			var click_btn = Button.new()
+			click_btn.flat = true
+			click_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+			click_btn.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+			var btn_style = StyleBoxEmpty.new()
+			click_btn.add_theme_stylebox_override("normal", btn_style)
+			click_btn.add_theme_stylebox_override("hover", btn_style)
+			click_btn.add_theme_stylebox_override("pressed", btn_style)
+			click_btn.add_theme_stylebox_override("focus", btn_style)
+			card.add_child(click_btn)
+
 			var idx = i
-			btn.pressed.connect(func():
+			var card_ref = card
+			var normal_style = _make_dark_card_style(accent)
+			var hover_style = _make_dark_card_hover_style(accent)
+			click_btn.mouse_entered.connect(func(): card_ref.add_theme_stylebox_override("panel", hover_style))
+			click_btn.mouse_exited.connect(func(): card_ref.add_theme_stylebox_override("panel", normal_style))
+			click_btn.pressed.connect(func():
 				battle_mgr.send_switch(idx)
 				if battle_mgr.client_battle_mode == 2:
 					_set_phase(BattlePhase.WAITING)
@@ -1843,7 +2097,8 @@ func _show_switch_panel() -> void:
 				switch_panel.queue_free()
 				switch_panel = null
 			)
-		vbox.add_child(btn)
+
+		vbox.add_child(card)
 
 	if not found_any:
 		var lbl = Label.new()
@@ -1853,7 +2108,7 @@ func _show_switch_panel() -> void:
 
 	var cancel_btn = Button.new()
 	cancel_btn.text = "Cancel"
-	UITheme.style_button(cancel_btn, "danger")
+	UITheme.style_button(cancel_btn, "secondary")
 	cancel_btn.pressed.connect(func():
 		switch_panel.queue_free()
 		switch_panel = null
@@ -1967,18 +2222,30 @@ func _show_summary_screen() -> void:
 
 	# Title
 	var title = Label.new()
-	if _summary_victory:
-		title.text = "Victory!"
-		title.add_theme_color_override("font_color", UITokens.STAMP_GREEN)
-	else:
-		title.text = "Defeat..."
-		title.add_theme_color_override("font_color", UITokens.STAMP_RED)
+	match _summary_result:
+		"victory":
+			title.text = "Victory!"
+			title.add_theme_color_override("font_color", UITokens.STAMP_GREEN)
+		"fled":
+			title.text = "Escaped!"
+			title.add_theme_color_override("font_color", UITokens.STAMP_GOLD)
+		_:
+			title.text = "Defeat..."
+			title.add_theme_color_override("font_color", UITokens.STAMP_RED)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	UITheme.style_heading(title)
 	vbox.add_child(title)
 
-	# XP section
-	if battle_mgr.summary_xp_results.size() > 0:
+	# Fled subtitle
+	if _summary_result == "fled":
+		var subtitle = Label.new()
+		subtitle.text = "Got away safely."
+		subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		UITheme.style_body(subtitle)
+		vbox.add_child(subtitle)
+
+	# XP section (skip when fled — nothing earned)
+	if _summary_result != "fled" and battle_mgr.summary_xp_results.size() > 0:
 		var xp_header = Label.new()
 		xp_header.text = "Experience:"
 		UITheme.style_body(xp_header)
@@ -1994,7 +2261,7 @@ func _show_summary_screen() -> void:
 				text += " (Level %d!)" % lvl
 			var lbl = Label.new()
 			lbl.text = text
-			UITheme.style_small(lbl)
+			UITheme.style_body(lbl)
 			if r.get("level_ups", []).size() > 0:
 				lbl.add_theme_color_override("font_color", UITokens.STAMP_GOLD)
 			vbox.add_child(lbl)
@@ -2006,7 +2273,7 @@ func _show_summary_screen() -> void:
 			var new_species = DataRegistry.get_species(evo.get("new_species_id", ""))
 			var evo_name = new_species.display_name if new_species else evo.get("new_species_id", "")
 			lbl.text = "  Evolved into %s!" % evo_name
-			UITheme.style_small(lbl)
+			UITheme.style_body(lbl)
 			lbl.add_theme_color_override("font_color", UITokens.TYPE_SWEET)
 			vbox.add_child(lbl)
 
@@ -2018,7 +2285,7 @@ func _show_summary_screen() -> void:
 				var move_name = move_def.display_name if move_def else nm.get("move_id", "???")
 				var lbl = Label.new()
 				lbl.text = "  Learned %s!" % move_name
-				UITheme.style_small(lbl)
+				UITheme.style_body(lbl)
 				lbl.add_theme_color_override("font_color", UITokens.STAMP_GREEN)
 				vbox.add_child(lbl)
 
@@ -2033,14 +2300,14 @@ func _show_summary_screen() -> void:
 			var item_name = ingredient.display_name if ingredient else item_id
 			var lbl = Label.new()
 			lbl.text = "  %s x%d" % [item_name, battle_mgr.summary_drops[item_id]]
-			UITheme.style_small(lbl)
+			UITheme.style_body(lbl)
 			vbox.add_child(lbl)
 
 	# Trainer rewards
 	if battle_mgr.summary_trainer_money > 0:
 		var lbl = Label.new()
 		lbl.text = "$%d earned!" % battle_mgr.summary_trainer_money
-		UITheme.style_small(lbl)
+		UITheme.style_body(lbl)
 		lbl.add_theme_color_override("font_color", UITokens.STAMP_GOLD)
 		vbox.add_child(lbl)
 	if battle_mgr.summary_trainer_ingredients.size() > 0:
@@ -2049,7 +2316,7 @@ func _show_summary_screen() -> void:
 			var item_name = ingredient.display_name if ingredient else item_id
 			var lbl = Label.new()
 			lbl.text = "  Bonus: %s x%d" % [item_name, battle_mgr.summary_trainer_ingredients[item_id]]
-			UITheme.style_small(lbl)
+			UITheme.style_body(lbl)
 			vbox.add_child(lbl)
 
 	# PvP loss
@@ -2064,14 +2331,14 @@ func _show_summary_screen() -> void:
 			var item_name = ingredient.display_name if ingredient else item_id
 			var lbl = Label.new()
 			lbl.text = "  %s x%d" % [item_name, battle_mgr.summary_pvp_loss[item_id]]
-			UITheme.style_small(lbl)
+			UITheme.style_body(lbl)
 			vbox.add_child(lbl)
 
 	# Defeat penalty
 	if battle_mgr.summary_defeat_penalty > 0:
 		var lbl = Label.new()
 		lbl.text = "Lost $%d. Returned to camp." % battle_mgr.summary_defeat_penalty
-		UITheme.style_small(lbl)
+		UITheme.style_body(lbl)
 		lbl.add_theme_color_override("font_color", UITokens.STAMP_RED)
 		vbox.add_child(lbl)
 
@@ -2590,19 +2857,23 @@ func _show_narration_toast(text: String, color: Color, linger: float) -> void:
 	# Build toast panel
 	var panel = PanelContainer.new()
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var style = StyleBoxFlat.new()
-	style.bg_color = Color(0.08, 0.06, 0.05, 0.85)
-	style.border_color = Color(0.4, 0.35, 0.25, 0.6)
-	style.set_border_width_all(1)
-	style.set_corner_radius_all(4)
-	style.set_content_margin_all(8)
+	var style = UITheme.make_panel_style(
+		Color(0.12, 0.1, 0.08, 0.92),
+		Color(0.5, 0.42, 0.3, 0.7),
+		6,
+		2
+	)
+	style.set_content_margin_all(12)
 	panel.add_theme_stylebox_override("panel", style)
 
 	var label = Label.new()
 	label.text = text
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_BODY))
+	label.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_H3))
 	label.add_theme_color_override("font_color", color)
+	label.add_theme_constant_override("shadow_offset_x", 1)
+	label.add_theme_constant_override("shadow_offset_y", 1)
+	label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.5))
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(label)

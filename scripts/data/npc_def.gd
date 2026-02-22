@@ -35,5 +35,5 @@ extends Resource
 
 @export var occupation: String = ""
 
-# Character appearance for modular Synty model (optional — falls back to color-tinted mannequin)
+# Character appearance for modular AR Kit model (optional — falls back to color-tinted mannequin)
 @export var appearance: CharacterAppearance = null

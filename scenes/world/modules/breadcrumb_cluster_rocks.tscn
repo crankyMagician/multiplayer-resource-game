@@ -1,0 +1,25 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/world/modular_scatter_3d.gd" id="1"]
+
+[sub_resource type="BoxMesh" id="rock_mesh"]
+size = Vector3(0.9, 0.35, 0.65)
+
+[sub_resource type="StandardMaterial3D" id="rock_mat"]
+albedo_color = Color(0.45, 0.43, 0.4, 1)
+roughness = 1.0
+
+[node name="BreadcrumbClusterRocks" type="Node3D"]
+
+[node name="Rocks" type="MultiMeshInstance3D" parent="."]
+material_override = SubResource("rock_mat")
+script = ExtResource("1")
+source_mesh = SubResource("rock_mesh")
+count = 12
+area_size = Vector2(8, 5)
+y_offset_min = 0.01
+y_offset_max = 0.08
+min_scale = Vector3(0.8, 0.8, 0.8)
+max_scale = Vector3(1.5, 1.2, 1.5)
+max_yaw_degrees = 180.0
+scatter_seed = 811

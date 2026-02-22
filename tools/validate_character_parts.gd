@@ -1,8 +1,8 @@
 @tool
 extends SceneTree
 
-## Validates that converted Synty character parts have UAL-compatible bone names.
-## Run: '/Applications/Mechanical Turk.app/Contents/MacOS/Mechanical Turk' --path . --script tools/validate_synty_parts.gd
+## Validates that converted AR Kit character parts have UAL-compatible bone names.
+## Run: '/Applications/Mechanical Turk.app/Contents/MacOS/Mechanical Turk' --path . --script tools/validate_character_parts.gd
 
 const CHARACTERS_DIR := "res://assets/characters/"
 
@@ -38,7 +38,7 @@ func _init() -> void:
 
 
 func _run_validation() -> void:
-	print("=== Synty Character Part Validation ===")
+	print("=== Character Part Validation ===")
 	print("")
 
 	# Build set for fast lookup
@@ -50,7 +50,7 @@ func _run_validation() -> void:
 	var ref_skeleton: Skeleton3D = null
 	var mannequin_scene := load("res://assets/models/mannequin_f.glb")
 	if mannequin_scene:
-		var inst := mannequin_scene.instantiate()
+		var inst: Node = mannequin_scene.instantiate()
 		ref_skeleton = _find_skeleton(inst)
 		if ref_skeleton:
 			print("Reference skeleton: %d bones" % ref_skeleton.get_bone_count())
@@ -107,7 +107,7 @@ func _validate_glb(glb_path: String, ual_set: Dictionary) -> void:
 		fail_count += 1
 		return
 
-	var inst := scene.instantiate()
+	var inst: Node = scene.instantiate()
 	var skeleton := _find_skeleton(inst)
 
 	if not skeleton:

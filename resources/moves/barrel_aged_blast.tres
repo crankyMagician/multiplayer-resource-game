@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="MoveDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/move_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+move_id = "barrel_aged_blast"
+display_name = "Barrel Aged Blast"
+type = "fermented"
+category = "special"
+power = 70
+accuracy = 95
+pp = 15
+status_effect = "fermented"
+status_chance = 25
+description = "Launches aged brew. May leave target tipsy."

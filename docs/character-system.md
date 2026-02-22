@@ -2,19 +2,20 @@
 
 ## Source Assets
 
-"Customizable 3D Characters Vol 2" FBX models — 397 models across male/female, 8-9 body part categories per gender.
+"Customizable 3D Characters Complete Bundle" (AR Kit, Unity Asset Store) — 397 FBX models across male/female, 8-9 body part categories per gender.
 
 ## Asset Pipeline
 
 | Tool | Purpose |
 |------|---------|
-| `tools/convert_synty_to_ual.py` | Blender batch bone remap: Mixamo→UAL |
-| `tools/import_synty_characters.sh` | Import + organize |
-| `tools/validate_synty_parts.gd` | Bone validation |
+| `tools/convert_arkit_to_ual.py` | Blender batch bone remap: Mixamo→UAL |
+| `tools/import_arkit_characters.sh` | Import + organize |
+| `tools/validate_character_parts.gd` | Bone validation |
+| `tools/retarget_rest_pose.py` | Rest pose retarget + finger weight collapse |
 
 ### Bone Remap
 
-Synty uses Mixamo bones (`Hips`, `Arm.L`), UAL uses Unreal bones (`pelvis`, `upperarm_l`). Script inserts `root` bone as parent of `pelvis`. Vertex groups auto-rename.
+AR Kit uses Mixamo bones (`Hips`, `Arm.L`), UAL uses Unreal bones (`pelvis`, `upperarm_l`). Script inserts `root` bone as parent of `pelvis`. Vertex groups auto-rename.
 
 ### Asset Structure
 

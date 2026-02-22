@@ -1,0 +1,474 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/world/modules/ground_patch_cluster.tscn" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/world/modules/ground_edge_strip.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/world/modules/sign_post.tscn" id="3"]
+[ext_resource type="PackedScene" path="res://scenes/world/modules/fence_post_rope.tscn" id="4"]
+[ext_resource type="PackedScene" path="res://scenes/world/modules/hedge_segment.tscn" id="5"]
+[ext_resource type="PackedScene" path="res://scenes/world/modules/boundary_tree_line_chunk.tscn" id="6"]
+[ext_resource type="PackedScene" path="res://scenes/world/modules/boundary_wall_segment.tscn" id="7"]
+[ext_resource type="PackedScene" path="res://scenes/world/modules/invisible_boundary_wall.tscn" id="8"]
+[ext_resource type="PackedScene" path="res://scenes/world/modules/terrain_mound_segment.tscn" id="9"]
+[ext_resource type="PackedScene" path="res://scenes/world/modules/lamppost_simple.tscn" id="10"]
+
+; --- Materials ---
+[sub_resource type="StandardMaterial3D" id="barn_red_mat"]
+albedo_color = Color(0.6, 0.2, 0.15, 1)
+
+[sub_resource type="StandardMaterial3D" id="barn_roof_mat"]
+albedo_color = Color(0.35, 0.15, 0.1, 1)
+
+[sub_resource type="StandardMaterial3D" id="wood_mat"]
+albedo_color = Color(0.4, 0.25, 0.1, 1)
+
+[sub_resource type="StandardMaterial3D" id="green_mat"]
+albedo_color = Color(0.2, 0.55, 0.2, 1)
+
+[sub_resource type="StandardMaterial3D" id="glass_mat"]
+albedo_color = Color(0.7, 0.85, 0.75, 0.3)
+transparency = 1
+
+[sub_resource type="StandardMaterial3D" id="metal_frame_mat"]
+albedo_color = Color(0.5, 0.5, 0.48, 1)
+
+[sub_resource type="StandardMaterial3D" id="cloth_mat"]
+albedo_color = Color(0.55, 0.45, 0.3, 1)
+
+[sub_resource type="StandardMaterial3D" id="orange_mat"]
+albedo_color = Color(0.8, 0.5, 0.15, 1)
+
+[sub_resource type="StandardMaterial3D" id="fruit_green_mat"]
+albedo_color = Color(0.25, 0.5, 0.2, 1)
+
+; --- Meshes ---
+[sub_resource type="BoxMesh" id="barn_mesh"]
+size = Vector3(8, 5, 10)
+
+[sub_resource type="BoxMesh" id="barn_roof_mesh"]
+size = Vector3(9, 0.6, 11)
+
+[sub_resource type="BoxMesh" id="barn_door_mesh"]
+size = Vector3(3, 3.5, 0.2)
+
+[sub_resource type="BoxMesh" id="greenhouse_frame_h_mesh"]
+size = Vector3(6, 0.15, 0.15)
+
+[sub_resource type="BoxMesh" id="greenhouse_frame_v_mesh"]
+size = Vector3(0.15, 3.5, 0.15)
+
+[sub_resource type="BoxMesh" id="greenhouse_panel_side_mesh"]
+size = Vector3(0.1, 3, 4)
+
+[sub_resource type="BoxMesh" id="greenhouse_panel_front_mesh"]
+size = Vector3(6, 3, 0.1)
+
+[sub_resource type="BoxMesh" id="greenhouse_roof_mesh"]
+size = Vector3(6.2, 0.1, 4.2)
+
+[sub_resource type="CylinderMesh" id="scarecrow_body_mesh"]
+top_radius = 0.12
+bottom_radius = 0.12
+height = 2.5
+
+[sub_resource type="BoxMesh" id="scarecrow_crossbar_mesh"]
+size = Vector3(1.5, 0.1, 0.1)
+
+[sub_resource type="SphereMesh" id="scarecrow_head_mesh"]
+radius = 0.25
+height = 0.5
+
+[sub_resource type="CylinderMesh" id="fruit_trunk_mesh"]
+top_radius = 0.12
+bottom_radius = 0.16
+height = 2.0
+
+[sub_resource type="SphereMesh" id="fruit_canopy_mesh"]
+radius = 1.2
+height = 2.0
+
+[sub_resource type="SphereMesh" id="fruit_mesh"]
+radius = 0.12
+height = 0.24
+
+; --- Terrain meshes ---
+[sub_resource type="BoxMesh" id="meadow_mound_mesh"]
+size = Vector3(22, 0.8, 18)
+
+[sub_resource type="BoxShape3D" id="meadow_mound_shape"]
+size = Vector3(22, 0.8, 18)
+
+[sub_resource type="StandardMaterial3D" id="meadow_mat"]
+albedo_color = Color(0.3, 0.55, 0.25, 1)
+
+[sub_resource type="BoxMesh" id="farm_ramp_mesh"]
+size = Vector3(6, 0.15, 16)
+
+[sub_resource type="BoxShape3D" id="farm_ramp_shape"]
+size = Vector3(6, 0.15, 16)
+
+[sub_resource type="CylinderMesh" id="windbreak_trunk_mesh"]
+top_radius = 0.2
+bottom_radius = 0.25
+height = 4.0
+
+[sub_resource type="SphereMesh" id="windbreak_canopy_mesh"]
+radius = 2.0
+height = 3.0
+
+[sub_resource type="StandardMaterial3D" id="windbreak_green_mat"]
+albedo_color = Color(0.2, 0.5, 0.2, 1)
+
+[sub_resource type="StandardMaterial3D" id="windbreak_wood_mat"]
+albedo_color = Color(0.4, 0.25, 0.1, 1)
+
+[sub_resource type="BoxMesh" id="stone_wall_mesh"]
+size = Vector3(0.8, 1.2, 20)
+
+[sub_resource type="StandardMaterial3D" id="stone_wall_mat"]
+albedo_color = Color(0.5, 0.48, 0.42, 1)
+
+[sub_resource type="BoxMesh" id="rolling_hill_mesh"]
+size = Vector3(12, 2, 8)
+
+[sub_resource type="StandardMaterial3D" id="hill_green_mat"]
+albedo_color = Color(0.28, 0.5, 0.22, 1)
+
+; --- Nodes ---
+[node name="FarmDecor" type="Node3D"]
+
+; === Barn ===
+[node name="Barn" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0, -5)
+
+[node name="Body" type="StaticBody3D" parent="Barn"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+
+[node name="Mesh" type="MeshInstance3D" parent="Barn/Body"]
+mesh = SubResource("barn_mesh")
+material_override = SubResource("barn_red_mat")
+
+[node name="Collision" type="CollisionShape3D" parent="Barn/Body"]
+shape = SubResource("barn_mesh")
+
+[node name="Roof" type="MeshInstance3D" parent="Barn"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.3, 0)
+mesh = SubResource("barn_roof_mesh")
+material_override = SubResource("barn_roof_mat")
+
+[node name="Door" type="MeshInstance3D" parent="Barn"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.75, -5.1)
+mesh = SubResource("barn_door_mesh")
+material_override = SubResource("wood_mat")
+
+[node name="Label" type="Label3D" parent="Barn"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6.5, 0)
+text = "Barn"
+font_size = 36
+outline_size = 8
+modulate = Color(0.8, 0.4, 0.3, 1)
+billboard = 1
+
+; === Greenhouse ===
+[node name="Greenhouse" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0, 5)
+
+[node name="FrameBottomF" type="MeshInstance3D" parent="Greenhouse"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.08, -2)
+mesh = SubResource("greenhouse_frame_h_mesh")
+material_override = SubResource("metal_frame_mat")
+
+[node name="FrameBottomB" type="MeshInstance3D" parent="Greenhouse"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.08, 2)
+mesh = SubResource("greenhouse_frame_h_mesh")
+material_override = SubResource("metal_frame_mat")
+
+[node name="FrameTopF" type="MeshInstance3D" parent="Greenhouse"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.5, -2)
+mesh = SubResource("greenhouse_frame_h_mesh")
+material_override = SubResource("metal_frame_mat")
+
+[node name="FrameTopB" type="MeshInstance3D" parent="Greenhouse"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.5, 2)
+mesh = SubResource("greenhouse_frame_h_mesh")
+material_override = SubResource("metal_frame_mat")
+
+[node name="PostFL" type="MeshInstance3D" parent="Greenhouse"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 1.75, -2)
+mesh = SubResource("greenhouse_frame_v_mesh")
+material_override = SubResource("metal_frame_mat")
+
+[node name="PostFR" type="MeshInstance3D" parent="Greenhouse"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 1.75, -2)
+mesh = SubResource("greenhouse_frame_v_mesh")
+material_override = SubResource("metal_frame_mat")
+
+[node name="PostBL" type="MeshInstance3D" parent="Greenhouse"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 1.75, 2)
+mesh = SubResource("greenhouse_frame_v_mesh")
+material_override = SubResource("metal_frame_mat")
+
+[node name="PostBR" type="MeshInstance3D" parent="Greenhouse"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 1.75, 2)
+mesh = SubResource("greenhouse_frame_v_mesh")
+material_override = SubResource("metal_frame_mat")
+
+[node name="GlassL" type="MeshInstance3D" parent="Greenhouse"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 1.75, 0)
+mesh = SubResource("greenhouse_panel_side_mesh")
+material_override = SubResource("glass_mat")
+
+[node name="GlassR" type="MeshInstance3D" parent="Greenhouse"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 1.75, 0)
+mesh = SubResource("greenhouse_panel_side_mesh")
+material_override = SubResource("glass_mat")
+
+[node name="GlassB" type="MeshInstance3D" parent="Greenhouse"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.75, 2)
+mesh = SubResource("greenhouse_panel_front_mesh")
+material_override = SubResource("glass_mat")
+
+[node name="Roof" type="MeshInstance3D" parent="Greenhouse"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.6, 0)
+mesh = SubResource("greenhouse_roof_mesh")
+material_override = SubResource("glass_mat")
+
+[node name="Label" type="Label3D" parent="Greenhouse"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.5, 0)
+text = "Greenhouse"
+font_size = 28
+outline_size = 6
+modulate = Color(0.4, 0.7, 0.4, 1)
+billboard = 1
+
+; === Scarecrow ===
+[node name="Scarecrow" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
+
+[node name="Body" type="MeshInstance3D" parent="Scarecrow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
+mesh = SubResource("scarecrow_body_mesh")
+material_override = SubResource("wood_mat")
+
+[node name="Crossbar" type="MeshInstance3D" parent="Scarecrow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.2, 0)
+mesh = SubResource("scarecrow_crossbar_mesh")
+material_override = SubResource("cloth_mat")
+
+[node name="Head" type="MeshInstance3D" parent="Scarecrow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.75, 0)
+mesh = SubResource("scarecrow_head_mesh")
+material_override = SubResource("cloth_mat")
+
+; === Fruit Trees ===
+[node name="AppleTree" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0, -3)
+
+[node name="Trunk" type="MeshInstance3D" parent="AppleTree"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0)
+mesh = SubResource("fruit_trunk_mesh")
+material_override = SubResource("wood_mat")
+
+[node name="Canopy" type="MeshInstance3D" parent="AppleTree"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.8, 0)
+mesh = SubResource("fruit_canopy_mesh")
+material_override = SubResource("green_mat")
+
+[node name="Fruit1" type="MeshInstance3D" parent="AppleTree"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 2.2, 0.3)
+mesh = SubResource("fruit_mesh")
+material_override = SubResource("barn_red_mat")
+
+[node name="Fruit2" type="MeshInstance3D" parent="AppleTree"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 2.5, -0.4)
+mesh = SubResource("fruit_mesh")
+material_override = SubResource("barn_red_mat")
+
+[node name="OrangeTree" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0, 5)
+
+[node name="Trunk" type="MeshInstance3D" parent="OrangeTree"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0)
+mesh = SubResource("fruit_trunk_mesh")
+material_override = SubResource("wood_mat")
+
+[node name="Canopy" type="MeshInstance3D" parent="OrangeTree"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.8, 0)
+mesh = SubResource("fruit_canopy_mesh")
+material_override = SubResource("fruit_green_mat")
+
+[node name="Fruit1" type="MeshInstance3D" parent="OrangeTree"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 2.3, 0.2)
+mesh = SubResource("fruit_mesh")
+material_override = SubResource("orange_mat")
+
+[node name="Fruit2" type="MeshInstance3D" parent="OrangeTree"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3, 2.6, -0.5)
+mesh = SubResource("fruit_mesh")
+material_override = SubResource("orange_mat")
+
+; === TERRAIN MASSING ===
+
+; === Meadow Mound ===
+[node name="MeadowMound" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
+
+[node name="Mesh" type="MeshInstance3D" parent="MeadowMound"]
+mesh = SubResource("meadow_mound_mesh")
+material_override = SubResource("meadow_mat")
+
+[node name="Collision" type="CollisionShape3D" parent="MeadowMound"]
+shape = SubResource("meadow_mound_shape")
+
+; === Ramp from Town (west) ===
+[node name="FarmRamp" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.995, -0.105, 0, 0.105, 0.995, -12, 0.2, 0)
+
+[node name="Mesh" type="MeshInstance3D" parent="FarmRamp"]
+mesh = SubResource("farm_ramp_mesh")
+material_override = SubResource("meadow_mat")
+
+[node name="Collision" type="CollisionShape3D" parent="FarmRamp"]
+shape = SubResource("farm_ramp_shape")
+
+; === Windbreak Tree Line (north edge) ===
+[node name="Windbreak1" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, -9)
+
+[node name="Trunk" type="MeshInstance3D" parent="Windbreak1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+mesh = SubResource("windbreak_trunk_mesh")
+material_override = SubResource("windbreak_wood_mat")
+
+[node name="Canopy" type="MeshInstance3D" parent="Windbreak1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, 0)
+mesh = SubResource("windbreak_canopy_mesh")
+material_override = SubResource("windbreak_green_mat")
+
+[node name="Windbreak2" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, -9)
+
+[node name="Trunk" type="MeshInstance3D" parent="Windbreak2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+mesh = SubResource("windbreak_trunk_mesh")
+material_override = SubResource("windbreak_wood_mat")
+
+[node name="Canopy" type="MeshInstance3D" parent="Windbreak2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, 0)
+mesh = SubResource("windbreak_canopy_mesh")
+material_override = SubResource("windbreak_green_mat")
+
+[node name="Windbreak3" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0, -9)
+
+[node name="Trunk" type="MeshInstance3D" parent="Windbreak3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+mesh = SubResource("windbreak_trunk_mesh")
+material_override = SubResource("windbreak_wood_mat")
+
+[node name="Canopy" type="MeshInstance3D" parent="Windbreak3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, 0)
+mesh = SubResource("windbreak_canopy_mesh")
+material_override = SubResource("windbreak_green_mat")
+
+[node name="Windbreak4" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11, 0, -9)
+
+[node name="Trunk" type="MeshInstance3D" parent="Windbreak4"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+mesh = SubResource("windbreak_trunk_mesh")
+material_override = SubResource("windbreak_wood_mat")
+
+[node name="Canopy" type="MeshInstance3D" parent="Windbreak4"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, 0)
+mesh = SubResource("windbreak_canopy_mesh")
+material_override = SubResource("windbreak_green_mat")
+
+; === Low Stone Wall (east boundary) ===
+[node name="StoneWall" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 1, 0)
+mesh = SubResource("stone_wall_mesh")
+material_override = SubResource("stone_wall_mat")
+
+; === Rolling Hill Behind Barn ===
+[node name="RollingHill" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 1, -10)
+mesh = SubResource("rolling_hill_mesh")
+material_override = SubResource("hill_green_mat")
+
+; === Modular Level Design Upgrade ===
+[node name="GroundDetail" type="Node3D" parent="."]
+
+[node name="SoilPatchBarn" parent="GroundDetail" instance=ExtResource("1")]
+transform = Transform3D(0.95, 0, 0, 0, 1, 0, 0, 0, 0.9, 5, 0, -4)
+
+[node name="SoilPatchGreenhouse" parent="GroundDetail" instance=ExtResource("1")]
+transform = Transform3D(0.8, 0, 0, 0, 1, 0, 0, 0, 0.8, 7, 0, 5)
+
+[node name="FarmEdgeStripNorth" parent="GroundDetail" instance=ExtResource("2")]
+transform = Transform3D(1.7, 0, 0, 0, 1, 0, 0, 0, 1.0, 3, 0, -11)
+
+[node name="FarmEdgeStripEast" parent="GroundDetail" instance=ExtResource("2")]
+transform = Transform3D(0, 0, -1.4, 0, 1, 0, 1.0, 0, 0, 13.8, 0, 0)
+
+[node name="TerrainRelief" type="Node3D" parent="."]
+
+[node name="MoundNorthField" parent="TerrainRelief" instance=ExtResource("9")]
+transform = Transform3D(0.95, 0, 0, 0, 0.65, 0, 0, 0, 0.95, 8.5, 0, -7.5)
+
+[node name="MoundEastField" parent="TerrainRelief" instance=ExtResource("9")]
+transform = Transform3D(0.8, 0, 0, 0, 0.55, 0, 0, 0, 0.8, 14.5, 0, 3.5)
+
+[node name="Boundaries" type="Node3D" parent="."]
+
+[node name="FenceBoundarySouth" parent="Boundaries" instance=ExtResource("4")]
+transform = Transform3D(1.6, 0, 0, 0, 1, 0, 0, 0, 1.0, 2, 0, 10)
+
+[node name="FenceBoundaryWest" parent="Boundaries" instance=ExtResource("4")]
+transform = Transform3D(0, 0, -1.7, 0, 1, 0, 1.0, 0, 0, -12, 0, 1)
+
+[node name="HedgeBoundaryNorth" parent="Boundaries" instance=ExtResource("5")]
+transform = Transform3D(2.0, 0, 0, 0, 1, 0, 0, 0, 0.9, 1, 0, -14)
+
+[node name="WallBoundaryEast" parent="Boundaries" instance=ExtResource("7")]
+transform = Transform3D(0, 0, -1.7, 0, 1, 0, 1.0, 0, 0, 17, 0, 0)
+
+[node name="Landmarks" type="Node3D" parent="."]
+
+[node name="FarmTreeLineLandmark" parent="Landmarks" instance=ExtResource("6")]
+transform = Transform3D(1.5, 0, 0, 0, 1, 0, 0, 0, 1.0, 4, 0, -16)
+
+[node name="Wayfinding" type="Node3D" parent="."]
+
+[node name="SignFarmEntry" parent="Wayfinding" instance=ExtResource("3")]
+transform = Transform3D(0.94, 0, 0.342, 0, 1, 0, -0.342, 0, 0.94, -7.5, 0, 2)
+district_name = "Farm Zone"
+arrow_text = "Fields ->"
+district_color = Color(0.66, 0.8, 0.42, 1)
+
+[node name="SignBackToTown" parent="Wayfinding" instance=ExtResource("3")]
+transform = Transform3D(0.819, 0, -0.573, 0, 1, 0, 0.573, 0, 0.819, -11, 0, -1)
+district_name = "Town Square"
+arrow_text = "<- Return"
+district_color = Color(0.84, 0.73, 0.44, 1)
+
+[node name="Props" type="Node3D" parent="."]
+
+[node name="TreeLineFarEdge" parent="Props" instance=ExtResource("6")]
+transform = Transform3D(1.3, 0, 0, 0, 1, 0, 0, 0, 1.0, 18, 0, 0)
+
+[node name="FenceGuideRamp" parent="Props" instance=ExtResource("4")]
+transform = Transform3D(0.996, 0, -0.087, 0, 1, 0, 0.087, 0, 0.996, -10, 0, 5)
+
+[node name="LampFarmGate" parent="Props" instance=ExtResource("10")]
+transform = Transform3D(0.906, 0, 0.423, 0, 1, 0, -0.423, 0, 0.906, -8.5, 0, 1)
+
+[node name="LampBarnEdge" parent="Props" instance=ExtResource("10")]
+transform = Transform3D(0.985, 0, -0.174, 0, 1, 0, 0.174, 0, 0.985, 10.5, 0, -3.5)
+
+[node name="Containment" type="Node3D" parent="."]
+
+[node name="InvisibleFarEast" parent="Containment" instance=ExtResource("8")]
+transform = Transform3D(0, 0, -3.9, 0, 1, 0, 1.0, 0, 0, 23, 0, 0)
+
+[node name="InvisibleFarNorth" parent="Containment" instance=ExtResource("8")]
+transform = Transform3D(3.8, 0, 0, 0, 1, 0, 0, 0, 1.0, 4, 0, -19)

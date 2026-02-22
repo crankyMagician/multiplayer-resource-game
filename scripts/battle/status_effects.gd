@@ -9,6 +9,10 @@ extends RefCounted
 # wilted: -50% Sp.Attack, -25% Speed for 3 turns
 # soured: -50% Defense for 3 turns
 # brined: -50% Speed, 25% skip turn for 4 turns
+# fermented (Tipsy): 33% self-hit for 1/8 max HP, 3 turns
+# stuffed (Stuffed): blocks all healing, 3 turns
+# spiced (Spiced Up): +25% damage dealt AND received, 3 turns
+# chilled (Chilled): always moves last, 4 turns
 
 static func apply_end_of_turn(creature: Dictionary) -> Dictionary:
 	var result = {"damage": 0, "message": "", "cured": false}
@@ -72,6 +76,34 @@ static func apply_end_of_turn(creature: Dictionary) -> Dictionary:
 				creature["status_turns"] = 0
 				result.cured = true
 				result.message = "shook off the brine!"
+		"fermented":
+			result.message = "is tipsy and confused..."
+			if turns >= 3:
+				creature["status"] = ""
+				creature["status_turns"] = 0
+				result.cured = true
+				result.message = "sobered up!"
+		"stuffed":
+			result.message = "is too stuffed to eat..."
+			if turns >= 3:
+				creature["status"] = ""
+				creature["status_turns"] = 0
+				result.cured = true
+				result.message = "digested its meal!"
+		"spiced":
+			result.message = "is burning with spice!"
+			if turns >= 3:
+				creature["status"] = ""
+				creature["status_turns"] = 0
+				result.cured = true
+				result.message = "cooled down!"
+		"chilled":
+			result.message = "is chilled and sluggish..."
+			if turns >= 4:
+				creature["status"] = ""
+				creature["status_turns"] = 0
+				result.cured = true
+				result.message = "warmed back up!"
 	return result
 
 static func get_stat_modifier(creature: Dictionary, stat: String) -> float:
@@ -113,4 +145,16 @@ static func get_status_display_name(status: String) -> String:
 		"wilted": return "Wilted"
 		"soured": return "Soured"
 		"brined": return "Brined"
+		"fermented": return "Tipsy"
+		"stuffed": return "Stuffed"
+		"spiced": return "Spiced Up"
+		"chilled": return "Chilled"
 		_: return ""
+
+static func is_heal_blocked(creature: Dictionary) -> bool:
+	return creature.get("status", "") == "stuffed"
+
+static func get_damage_multiplier(creature: Dictionary) -> float:
+	if creature.get("status", "") == "spiced":
+		return 1.25
+	return 1.0

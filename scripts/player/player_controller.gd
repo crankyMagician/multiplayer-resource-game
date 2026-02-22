@@ -246,8 +246,9 @@ func _resolve_peer_id(local_id: int) -> int:
 
 
 func _assemble_character() -> void:
-	if appearance_data.is_empty():
-		# No custom appearance — use fallback mannequin
+	var has_parts := appearance_data.has("head_id") and str(appearance_data.get("head_id", "")) != ""
+	if appearance_data.is_empty() or not has_parts:
+		# No valid parts — show mannequin until character creator completes
 		var fallback_scene: PackedScene = load("res://assets/models/mannequin_f.glb")
 		if fallback_scene:
 			character_model = fallback_scene.instantiate()
@@ -268,8 +269,9 @@ func _assemble_character() -> void:
 
 func _apply_visuals() -> void:
 	# Apply player color tint only to fallback mannequin (no custom appearance).
-	# Modular characters use the Synty atlas texture and don't need color tinting.
-	if character_model and appearance_data.is_empty():
+	# Modular characters use the AR Kit atlas texture and don't need color tinting.
+	var has_parts := appearance_data.has("head_id") and str(appearance_data.get("head_id", "")) != ""
+	if character_model and not has_parts:
 		var meshes = _find_mesh_instances(character_model)
 		for mi: MeshInstance3D in meshes:
 			if mi.get_surface_override_material_count() > 0:

@@ -1,9 +1,10 @@
 class_name CharacterAssembler
 extends RefCounted
 
-## Assembles a modular character from Synty parts on a shared skeleton.
-## Loads base model (with Armature > Skeleton3D), hides default meshes,
-## attaches selected part meshes, and applies the shared texture atlas material.
+## Assembles a modular character from AR Kit parts on a shared skeleton.
+## The base model (modular_male/female.glb) already contains ALL part meshes
+## pre-skinned to the skeleton. Assembly works by showing selected parts and
+## hiding everything else — no separate GLB loading needed.
 
 const MANNEQUIN_FALLBACK := "res://assets/models/mannequin_f.glb"
 
@@ -51,17 +52,18 @@ static func assemble(parent: Node3D, appearance: Dictionary, old_model: Node3D =
 		model.queue_free()
 		return _create_fallback(parent, appearance)
 
-	# Hide all default mesh instances on the base model
-	_set_meshes_visible(model, false)
-
-	# Load and attach parts
-	var atlas_mat := _get_atlas_material()
+	# Collect the set of part IDs to show (case-insensitive lookup)
+	var show_ids: Dictionary = {}  # lowercase part_id -> true
 	for category in PART_CATEGORIES:
 		var key: String = PART_CATEGORIES[category]
 		var part_id: String = appearance.get(key, "")
-		if part_id == "":
-			continue
-		_attach_part(skeleton, gender, category, part_id, atlas_mat)
+		if part_id != "":
+			show_ids[part_id.to_lower()] = true
+
+	# Show selected parts, hide everything else.
+	# Base model meshes are already skinned to the skeleton — no GLB loading needed.
+	var atlas_mat := _get_atlas_material()
+	_apply_part_visibility(skeleton, show_ids, atlas_mat)
 
 	parent.add_child(model)
 	return model
@@ -91,32 +93,20 @@ static func _create_fallback(parent: Node3D, appearance: Dictionary) -> Node3D:
 	return model
 
 
-## Attach a part mesh to the skeleton.
-static func _attach_part(skeleton: Skeleton3D, gender: String, category: String, part_id: String, atlas_mat: Material) -> void:
-	var part_path := CharacterPartRegistry.get_part_path(gender, category, part_id)
-	var part_scene: PackedScene = load(part_path)
-	if part_scene == null:
-		# Silently skip missing parts — they might not be imported yet
-		return
-
-	var part_inst: Node3D = part_scene.instantiate()
-
-	# Extract all MeshInstance3D nodes from the part and reparent to skeleton
-	var meshes := _find_all_mesh_instances(part_inst)
-	for mi: MeshInstance3D in meshes:
-		# Detach from part instance
-		mi.get_parent().remove_child(mi)
-		mi.name = category + "_" + part_id + "_" + str(meshes.find(mi))
-
-		# Apply atlas material if available
-		if atlas_mat:
-			mi.material_override = atlas_mat
-
-		# Add to skeleton so skinning works
-		skeleton.add_child(mi)
-
-	# Cleanup the now-empty part instance
-	part_inst.queue_free()
+## Show/hide mesh children of the skeleton based on selected part IDs.
+## Each MeshInstance3D in the base model is named after its part ID (e.g. "HEAD_01_1").
+## We match case-insensitively since a few parts have inconsistent casing.
+static func _apply_part_visibility(skeleton: Skeleton3D, show_ids: Dictionary, atlas_mat: Material) -> void:
+	for child_idx in skeleton.get_child_count():
+		var child: Node = skeleton.get_child(child_idx)
+		if child is MeshInstance3D:
+			var mi := child as MeshInstance3D
+			if show_ids.has(mi.name.to_lower()):
+				mi.visible = true
+				if atlas_mat:
+					mi.material_override = atlas_mat
+			else:
+				mi.visible = false
 
 
 ## Get or create the shared atlas material.
@@ -136,6 +126,7 @@ static func _get_atlas_material() -> Material:
 	return _atlas_material
 
 
+
 ## Find Skeleton3D in node tree.
 static func _find_skeleton(node: Node) -> Skeleton3D:
 	if node is Skeleton3D:
@@ -147,19 +138,3 @@ static func _find_skeleton(node: Node) -> Skeleton3D:
 	return null
 
 
-## Find all MeshInstance3D nodes recursively.
-static func _find_all_mesh_instances(node: Node) -> Array[MeshInstance3D]:
-	var result: Array[MeshInstance3D] = []
-	if node is MeshInstance3D:
-		result.append(node)
-	for child in node.get_children():
-		result.append_array(_find_all_mesh_instances(child))
-	return result
-
-
-## Set visibility on all MeshInstance3D children.
-static func _set_meshes_visible(node: Node, visible: bool) -> void:
-	if node is MeshInstance3D:
-		(node as MeshInstance3D).visible = visible
-	for child in node.get_children():
-		_set_meshes_visible(child, visible)

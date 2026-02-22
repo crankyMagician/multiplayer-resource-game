@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Import Synty "Customizable 3D Characters Vol 2" assets into the project.
+# Import AR Kit "Customizable 3D Characters Complete Bundle" assets into the project.
 #
 # Usage:
-#   ./tools/import_synty_characters.sh <synty_source_dir>
+#   ./tools/import_arkit_characters.sh <source_dir>
 #
-# Where <synty_source_dir> is the root of the extracted Synty pack containing:
+# Where <source_dir> is the root of the extracted AR Kit pack containing:
 #   Models/Modular_Female_Character/, Models/Modular_Male_Character/,
 #   External/Sprites/, Textures/
 #
@@ -17,19 +17,19 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-CONVERT_SCRIPT="$SCRIPT_DIR/convert_synty_to_ual.py"
+CONVERT_SCRIPT="$SCRIPT_DIR/convert_arkit_to_ual.py"
 
 if [ $# -lt 1 ]; then
-    echo "Usage: $0 <synty_source_dir>"
-    echo "  synty_source_dir: Root of extracted Synty Customizable 3D Characters Vol 2"
+    echo "Usage: $0 <source_dir>"
+    echo "  source_dir: Root of extracted AR Kit Customizable 3D Characters Complete Bundle"
     exit 1
 fi
 
 SOURCE_DIR="$(cd "$1" && pwd)"
-TEMP_DIR="$PROJECT_DIR/.synty_converted"
+TEMP_DIR="$PROJECT_DIR/.arkit_converted"
 ASSETS_DIR="$PROJECT_DIR/assets/characters"
 
-echo "=== Synty Character Import ==="
+echo "=== AR Kit Character Import ==="
 echo "Source: $SOURCE_DIR"
 echo "Project: $PROJECT_DIR"
 echo ""
@@ -294,5 +294,5 @@ done
 echo ""
 echo "Next steps:"
 echo "  1. Open project in Godot to trigger .import for GLB files"
-echo "  2. Run validation: Mechanical Turk --path . --script tools/validate_synty_parts.gd"
+echo "  2. Run validation: Mechanical Turk --path . --script tools/validate_character_parts.gd"
 echo "  3. Check warnings in Blender output above for unmapped bones"

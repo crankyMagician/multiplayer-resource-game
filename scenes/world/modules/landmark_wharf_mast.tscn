@@ -1,0 +1,62 @@
+[gd_scene format=3]
+
+[sub_resource type="BoxMesh" id="base_mesh"]
+size = Vector3(2.4, 1.2, 2.4)
+
+[sub_resource type="BoxShape3D" id="base_shape"]
+size = Vector3(2.4, 1.2, 2.4)
+
+[sub_resource type="CylinderMesh" id="mast_mesh"]
+top_radius = 0.11
+bottom_radius = 0.16
+height = 14
+
+[sub_resource type="BoxMesh" id="beam_wide_mesh"]
+size = Vector3(5.2, 0.16, 0.16)
+
+[sub_resource type="BoxMesh" id="beam_narrow_mesh"]
+size = Vector3(3.6, 0.14, 0.14)
+
+[sub_resource type="BoxMesh" id="pennant_mesh"]
+size = Vector3(2.2, 1.1, 0.06)
+
+[sub_resource type="StandardMaterial3D" id="wood_mat"]
+albedo_color = Color(0.35, 0.25, 0.16, 1)
+
+[sub_resource type="StandardMaterial3D" id="rope_mat"]
+albedo_color = Color(0.54, 0.44, 0.3, 1)
+
+[sub_resource type="StandardMaterial3D" id="cloth_mat"]
+albedo_color = Color(0.78, 0.22, 0.17, 1)
+
+[node name="LandmarkWharfMast" type="Node3D"]
+
+[node name="Base" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+
+[node name="Mesh" type="MeshInstance3D" parent="Base"]
+mesh = SubResource("base_mesh")
+material_override = SubResource("wood_mat")
+
+[node name="Collision" type="CollisionShape3D" parent="Base"]
+shape = SubResource("base_shape")
+
+[node name="Mast" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 8, 0)
+mesh = SubResource("mast_mesh")
+material_override = SubResource("wood_mat")
+
+[node name="BeamLow" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.995, -0.105, 0, 0.105, 0.995, 0, 8.1, 0)
+mesh = SubResource("beam_wide_mesh")
+material_override = SubResource("rope_mat")
+
+[node name="BeamHigh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.999, 0.035, 0, -0.035, 0.999, 0, 11.6, 0)
+mesh = SubResource("beam_narrow_mesh")
+material_override = SubResource("rope_mat")
+
+[node name="Pennant" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.259, 0, 0.966, 0.966, 0, -0.259, 0, 1, 0, 1.4, 12.1, 0)
+mesh = SubResource("pennant_mesh")
+material_override = SubResource("cloth_mat")

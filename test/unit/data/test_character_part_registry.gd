@@ -68,7 +68,6 @@ func test_get_texture_atlas_path():
 func test_optional_categories_list():
 	var optional := CharacterPartRegistry.OPTIONAL_CATEGORIES
 	assert_true(optional.has("hair"), "hair should be optional")
-	assert_true(optional.has("arms"), "arms should be optional")
 	assert_true(optional.has("hats"), "hats should be optional")
 	assert_true(optional.has("glasses"), "glasses should be optional")
 	assert_true(optional.has("beard"), "beard should be optional")
@@ -76,6 +75,7 @@ func test_optional_categories_list():
 	assert_false(optional.has("torso"), "torso should not be optional")
 	assert_false(optional.has("pants"), "pants should not be optional")
 	assert_false(optional.has("shoes"), "shoes should not be optional")
+	assert_false(optional.has("arms"), "arms should not be optional")
 
 
 func test_validate_appearance_valid():
@@ -83,9 +83,10 @@ func test_validate_appearance_valid():
 	var appearance := {
 		"gender": "female",
 		"head_id": "HEAD_01_1",
-		"torso_id": "TORSO_01_1",
+		"torso_id": "TORSO_02_1",
 		"pants_id": "PANTS_01_1",
 		"shoes_id": "SHOES_01_1",
+		"arms_id": "HANDS_01_1",
 	}
 	assert_true(CharacterPartRegistry.validate_appearance(appearance))
 
@@ -94,9 +95,10 @@ func test_validate_appearance_invalid_gender():
 	var appearance := {
 		"gender": "robot",
 		"head_id": "HEAD_01_1",
-		"torso_id": "TORSO_01_1",
+		"torso_id": "TORSO_02_1",
 		"pants_id": "PANTS_01_1",
 		"shoes_id": "SHOES_01_1",
+		"arms_id": "HANDS_01_1",
 	}
 	assert_false(CharacterPartRegistry.validate_appearance(appearance))
 
@@ -106,9 +108,10 @@ func test_validate_appearance_missing_required():
 	var appearance := {
 		"gender": "female",
 		"head_id": "",
-		"torso_id": "TORSO_01_1",
+		"torso_id": "TORSO_02_1",
 		"pants_id": "PANTS_01_1",
 		"shoes_id": "SHOES_01_1",
+		"arms_id": "HANDS_01_1",
 	}
 	assert_false(CharacterPartRegistry.validate_appearance(appearance))
 
@@ -118,28 +121,42 @@ func test_validate_appearance_missing_gender():
 	var appearance := {
 		"gender": "",
 		"head_id": "HEAD_01_1",
-		"torso_id": "TORSO_01_1",
+		"torso_id": "TORSO_02_1",
 		"pants_id": "PANTS_01_1",
 		"shoes_id": "SHOES_01_1",
+		"arms_id": "HANDS_01_1",
 	}
 	assert_false(CharacterPartRegistry.validate_appearance(appearance))
 
 
 func test_validate_appearance_optional_empty_ok():
-	# Optional parts can be empty
+	# Optional parts can be empty, but arms_id is now required
 	var appearance := {
 		"gender": "male",
 		"head_id": "HEAD_01_1",
-		"torso_id": "TORSO_01_1",
+		"torso_id": "TORSO_02_1",
 		"pants_id": "PANTS_01_1",
 		"shoes_id": "SHOES_01_1",
+		"arms_id": "HANDS_01_1",
 		"hair_id": "",
-		"arms_id": "",
 		"hat_id": "",
 		"glasses_id": "",
 		"beard_id": "",
 	}
 	assert_true(CharacterPartRegistry.validate_appearance(appearance))
+
+
+func test_validate_appearance_empty_arms_rejected():
+	# arms_id is required — empty should fail
+	var appearance := {
+		"gender": "female",
+		"head_id": "HEAD_01_1",
+		"torso_id": "TORSO_02_1",
+		"pants_id": "PANTS_01_1",
+		"shoes_id": "SHOES_01_1",
+		"arms_id": "",
+	}
+	assert_false(CharacterPartRegistry.validate_appearance(appearance))
 
 
 func test_category_keys_mapping():

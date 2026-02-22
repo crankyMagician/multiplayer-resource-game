@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="MoveDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/move_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+move_id = "deep_freeze_dish"
+display_name = "Deep Freeze Dish"
+type = "sweet"
+category = "special"
+power = 70
+accuracy = 95
+pp = 15
+status_effect = "chilled"
+status_chance = 25
+description = "A frozen dessert that chills the target."

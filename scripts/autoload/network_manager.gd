@@ -10,6 +10,7 @@ signal player_data_received()
 const PORT = 7777
 const MAX_CLIENTS = 32
 const JOIN_READY_TIMEOUT_MS = 15000
+const CREATOR_TIMEOUT_MS = 300000 # 5 min for character creation
 const BUFF_CHECK_INTERVAL = 5.0
 
 # Bank system
@@ -75,7 +76,8 @@ func _process(delta: float) -> void:
 			if state == "active":
 				continue
 			var joined_at = int(join_state[peer_id].get("joined_at_ms", now))
-			if now - joined_at >= JOIN_READY_TIMEOUT_MS:
+			var timeout = CREATOR_TIMEOUT_MS if state == "in_creator" else JOIN_READY_TIMEOUT_MS
+			if now - joined_at >= timeout:
 				timed_out.append(peer_id)
 		for peer_id in timed_out:
 			var pending_name = str(join_state[peer_id].get("player_name", "unknown"))
@@ -207,9 +209,7 @@ func _on_peer_disconnected(id: int) -> void:
 func _on_connected_to_server() -> void:
 	print("Connected to server!")
 	connection_succeeded.emit()
-	# Load game world FIRST so MultiplayerSpawner exists before any spawn RPCs arrive.
-	GameManager.start_game()
-	# Send join request with our name
+	# Don't load game world yet — wait for player data to decide if creator is needed
 	request_join.rpc_id(1, player_info.name)
 
 func _on_connection_failed() -> void:
@@ -338,122 +338,6 @@ func _backfill_location_renames(data: Dictionary) -> void:
 	if changed:
 		data["discovered_locations"] = locations
 
-func _apply_testplayer_loadout(data: Dictionary) -> void:
-	var pname: String = data.get("player_name", "")
-	if not pname.to_lower().begins_with("testplayer"):
-		return
-	DataRegistry.ensure_loaded()
-	var inv: Dictionary = data.get("inventory", {})
-	# All ingredients x10
-	for id in DataRegistry.ingredients:
-		inv[id] = 10
-	# All foods x5
-	for id in DataRegistry.foods:
-		inv[id] = 5
-	# All battle items x10
-	for id in DataRegistry.battle_items:
-		inv[id] = 10
-	# All held items x3
-	for id in DataRegistry.held_items:
-		inv[id] = 3
-	# All recipe scrolls x1
-	for id in DataRegistry.recipe_scrolls:
-		inv[id] = 1
-	# All tools x1
-	for id in DataRegistry.tools:
-		if id not in inv:
-			inv[id] = 1
-	data["inventory"] = inv
-	data["money"] = 99999
-	# All recipes unlocked
-	var all_recipes: Array = []
-	for id in DataRegistry.recipes:
-		all_recipes.append(id)
-	data["known_recipes"] = all_recipes
-	# One of every creature species in storage (level 20)
-	var storage: Array = data.get("creature_storage", [])
-	var existing_species: Dictionary = {}
-	for c in data.get("party", []):
-		existing_species[c.get("species_id", "")] = true
-	for c in storage:
-		existing_species[c.get("species_id", "")] = true
-	for species_id in DataRegistry.species:
-		if species_id in existing_species:
-			continue
-		var sp: CreatureSpecies = DataRegistry.species[species_id]
-		var creature := {
-			"species_id": species_id,
-			"nickname": sp.display_name,
-			"level": 20,
-			"hp": sp.base_hp,
-			"max_hp": sp.base_hp,
-			"attack": sp.base_attack,
-			"defense": sp.base_defense,
-			"sp_attack": sp.base_sp_attack,
-			"sp_defense": sp.base_sp_defense,
-			"speed": sp.base_speed,
-			"moves": Array(sp.moves).slice(0, 4),
-			"pp": [],
-			"types": Array(sp.types),
-			"xp": 0,
-			"xp_to_next": 400,
-			"ability_id": sp.ability_ids[0] if sp.ability_ids.size() > 0 else "",
-			"held_item_id": "",
-			"evs": {},
-			"creature_id": _generate_uuid(),
-			"ivs": {},
-			"bond_points": 0,
-			"bond_level": 0,
-			"battle_affinities": {},
-		}
-		for mid in creature["moves"]:
-			var mdef = DataRegistry.get_move(mid)
-			creature["pp"].append(mdef.pp if mdef else 10)
-		storage.append(creature)
-	data["creature_storage"] = storage
-	if data.get("storage_capacity", 10) < storage.size() + 10:
-		data["storage_capacity"] = storage.size() + 10
-	# Full compendium
-	var compendium: Dictionary = data.get("compendium", {})
-	var all_items: Array = []
-	for id in DataRegistry.ingredients:
-		all_items.append(id)
-	for id in DataRegistry.foods:
-		all_items.append(id)
-	for id in DataRegistry.battle_items:
-		all_items.append(id)
-	for id in DataRegistry.held_items:
-		all_items.append(id)
-	for id in DataRegistry.tools:
-		all_items.append(id)
-	for id in DataRegistry.recipe_scrolls:
-		all_items.append(id)
-	compendium["items"] = all_items
-	var all_seen: Array = []
-	var all_owned: Array = []
-	for id in DataRegistry.species:
-		all_seen.append(id)
-		all_owned.append(id)
-	compendium["creatures_seen"] = all_seen
-	compendium["creatures_owned"] = all_owned
-	data["compendium"] = compendium
-	# Pre-set appearance so TestPlayer skips character creator
-	var app: Dictionary = data.get("appearance", {})
-	if app.is_empty() or app.get("needs_customization", false):
-		data["appearance"] = {
-			"gender": "female",
-			"head_id": "HEAD_01_1",
-			"hair_id": "HAIR_01_1",
-			"torso_id": "TORSO_01_1",
-			"pants_id": "PANTS_01_1",
-			"shoes_id": "SHOES_01_1",
-			"arms_id": "",
-			"hat_id": "",
-			"glasses_id": "",
-			"beard_id": "",
-		}
-	print("[TestPlayer] Applied full loadout: ", inv.size(), " item types, ", storage.size(), " creatures in storage, ", all_recipes.size(), " recipes")
-
 # === Join Flow RPCs ===
 
 @rpc("any_peer", "reliable")
@@ -533,7 +417,6 @@ func _finalize_join(sender_id: int, player_name: String, data: Dictionary) -> vo
 	_backfill_ingredient_renames(data)
 	# Migrate renamed location IDs in old saves
 	_backfill_location_renames(data)
-	_apply_testplayer_loadout(data)
 	# Backfill player color for old saves that lack it
 	var pc = data.get("player_color", {})
 	if not pc is Dictionary or pc.is_empty():
@@ -646,8 +529,42 @@ func _join_rejected(reason: String) -> void:
 @rpc("authority", "reliable")
 func _receive_player_data(data: Dictionary) -> void:
 	PlayerData.load_from_server(data)
-	GameManager.start_game()
 	player_data_received.emit()
+	if PlayerData.appearance.get("needs_customization", false):
+		# New player — show character creator before entering game world
+		_show_character_creator()
+	else:
+		# Returning player — go straight to game world
+		_enter_game_world()
+
+func _show_character_creator() -> void:
+	var main = get_tree().current_scene
+	if main == null:
+		return
+	# Remove ConnectUI
+	for child in main.get_children():
+		if child.name == "ConnectUI":
+			child.queue_free()
+	# Tell server we're in the creator (extends timeout to 5 min)
+	client_in_character_creator.rpc_id(1)
+	# Add character creator scene
+	var creator_script = load("res://scripts/ui/character_creator_ui.gd")
+	var creator = CanvasLayer.new()
+	creator.name = "CharacterCreatorUI"
+	creator.set_script(creator_script)
+	main.add_child(creator)
+	creator.appearance_confirmed.connect(_on_creator_confirmed)
+	creator.open(PlayerData.appearance.duplicate(), true)
+
+func _on_creator_confirmed(appearance: Dictionary) -> void:
+	# Send appearance to server
+	request_update_appearance.rpc_id(1, appearance)
+	PlayerData.appearance = appearance
+	# Now enter game world
+	_enter_game_world()
+
+func _enter_game_world() -> void:
+	GameManager.start_game()
 	_send_ready_when_world_loaded.call_deferred()
 
 func _send_ready_when_world_loaded() -> void:
@@ -669,6 +586,15 @@ func _wait_for_spawn_path_ready(timeout_sec: float = 8.0) -> bool:
 			return true
 		await get_tree().process_frame
 	return false
+
+@rpc("any_peer", "reliable")
+func client_in_character_creator() -> void:
+	if not multiplayer.is_server():
+		return
+	var sender_id = multiplayer.get_remote_sender_id()
+	if sender_id in join_state:
+		join_state[sender_id]["state"] = "in_creator"
+		join_state[sender_id]["joined_at_ms"] = Time.get_ticks_msec()
 
 @rpc("any_peer", "reliable")
 func client_ready_for_spawn() -> void:
@@ -2367,12 +2293,444 @@ func _sync_appearance(peer_id: int, appearance: Dictionary) -> void:
 		PlayerData.appearance = appearance
 
 
+# === Dev Debug Actions (editor-only) ===
+
+@rpc("any_peer", "reliable")
+func request_debug_action(action: String, params: Dictionary) -> void:
+	if not multiplayer.is_server():
+		return
+	if not OS.has_feature("editor"):
+		var sender = multiplayer.get_remote_sender_id()
+		_debug_action_result.rpc_id(sender, action, "Rejected: server is not an editor build")
+		return
+	var peer := multiplayer.get_remote_sender_id()
+	var msg := _handle_debug_action(peer, action, params)
+	_debug_action_result.rpc_id(peer, action, msg)
+
+@rpc("authority", "reliable")
+func _debug_action_result(action: String, message: String) -> void:
+	var overlay = get_node_or_null("/root/Main/GameWorld/UI/DevDebugOverlay")
+	if overlay and overlay.has_method("_on_debug_result"):
+		overlay._on_debug_result(action, message)
+	print("[Debug] %s: %s" % [action, message])
+
+func _handle_debug_action(peer: int, action: String, params: Dictionary) -> String:
+	match action:
+		"set_time":
+			var sm = get_node_or_null("/root/Main/GameWorld/SeasonManager")
+			if not sm:
+				return "SeasonManager not found"
+			sm.current_year = int(params.get("year", sm.current_year))
+			sm.current_month = clampi(int(params.get("month", sm.current_month)), 1, 12)
+			sm.day_in_month = clampi(int(params.get("day", sm.day_in_month)), 1, 28)
+			sm.current_weather = int(params.get("weather", sm.current_weather))
+			sm._broadcast_time.rpc(sm.current_year, sm.current_month, sm.day_in_month, sm.total_day_count, sm.current_weather, sm.day_timer)
+			return "Time set to Y%d M%d D%d W%d" % [sm.current_year, sm.current_month, sm.day_in_month, sm.current_weather]
+
+		"advance_day":
+			var sm = get_node_or_null("/root/Main/GameWorld/SeasonManager")
+			if not sm:
+				return "SeasonManager not found"
+			sm.day_timer = sm.DAY_DURATION
+			return "Day timer maxed — will advance next frame"
+
+		"set_time_speed":
+			var sm = get_node_or_null("/root/Main/GameWorld/SeasonManager")
+			if not sm:
+				return "SeasonManager not found"
+			var mult := clampi(int(params.get("multiplier", 1)), 1, 100)
+			sm.set_meta("debug_speed_mult", mult)
+			return "Time speed set to %dx" % mult
+
+		"wild_battle":
+			var species_id: String = str(params.get("species_id", ""))
+			var species = DataRegistry.get_species(species_id)
+			if not species:
+				return "Unknown species: %s" % species_id
+			var bm = get_node_or_null("/root/Main/GameWorld/BattleManager")
+			if not bm:
+				return "BattleManager not found"
+			if peer in bm.player_battle_map:
+				return "Already in battle"
+			var enemy := CreatureInstance.create_from_species(species, 10).to_dict()
+			bm.server_start_battle(peer, enemy)
+			return "Wild battle started vs %s" % species_id
+
+		"trainer_battle":
+			var trainer_id: String = str(params.get("trainer_id", ""))
+			var bm = get_node_or_null("/root/Main/GameWorld/BattleManager")
+			if not bm:
+				return "BattleManager not found"
+			if peer in bm.player_battle_map:
+				return "Already in battle"
+			bm.server_start_trainer_battle(peer, trainer_id)
+			return "Trainer battle started: %s" % trainer_id
+
+		"give_item":
+			var item_id: String = str(params.get("item_id", ""))
+			var qty: int = int(params.get("qty", 1))
+			if peer not in player_data_store:
+				return "No player data"
+			server_add_inventory(peer, item_id, qty)
+			_sync_inventory_full.rpc_id(peer, player_data_store[peer].get("inventory", {}))
+			return "Gave %dx %s" % [qty, item_id]
+
+		"give_money":
+			var amount: int = int(params.get("amount", 0))
+			if peer not in player_data_store:
+				return "No player data"
+			server_add_money(peer, amount)
+			_sync_money.rpc_id(peer, int(player_data_store[peer].get("money", 0)))
+			return "Gave $%d" % amount
+
+		"teleport":
+			var x: float = float(params.get("x", 0))
+			var y: float = float(params.get("y", 1))
+			var z: float = float(params.get("z", 3))
+			var player_node = get_node_or_null("/root/Main/GameWorld/Players/%d" % peer)
+			if not player_node:
+				return "Player node not found"
+			player_node.position = Vector3(x, y, z)
+			return "Teleported to (%.1f, %.1f, %.1f)" % [x, y, z]
+
+		"heal_party":
+			if peer not in player_data_store:
+				return "No player data"
+			var party: Array = player_data_store[peer].get("party", [])
+			for creature in party:
+				creature["hp"] = creature.get("max_hp", creature.get("hp", 1))
+				creature["status"] = ""
+				creature["status_turns"] = 0
+				# Restore PP
+				var moves: Array = creature.get("moves", [])
+				var pp: Array = []
+				for mid in moves:
+					var mdef = DataRegistry.get_move(str(mid))
+					pp.append(mdef.pp if mdef else 10)
+				creature["pp"] = pp
+			player_data_store[peer]["party"] = party
+			_sync_party_full.rpc_id(peer, party)
+			return "Party healed (%d creatures)" % party.size()
+
+		"unlock_all_recipes":
+			if peer not in player_data_store:
+				return "No player data"
+			DataRegistry.ensure_loaded()
+			var all_recipes: Array = []
+			for rid in DataRegistry.recipes:
+				all_recipes.append(rid)
+			player_data_store[peer]["known_recipes"] = all_recipes
+			_sync_known_recipes.rpc_id(peer, all_recipes)
+			return "Unlocked %d recipes" % all_recipes.size()
+
+		"set_creature_level":
+			if peer not in player_data_store:
+				return "No player data"
+			var party: Array = player_data_store[peer].get("party", [])
+			var idx: int = int(params.get("party_idx", 0))
+			var lvl: int = clampi(int(params.get("level", 1)), 1, 50)
+			if idx < 0 or idx >= party.size():
+				return "Invalid party index %d (party size %d)" % [idx, party.size()]
+			party[idx]["level"] = lvl
+			var bm = get_node_or_null("/root/Main/GameWorld/BattleManager")
+			if bm:
+				bm._recalc_stats(party[idx])
+			party[idx]["hp"] = party[idx].get("max_hp", party[idx].get("hp", 1))
+			_sync_party_full.rpc_id(peer, party)
+			return "Set party[%d] to level %d" % [idx, lvl]
+
+		"max_all_creatures":
+			if peer not in player_data_store:
+				return "No player data"
+			var party: Array = player_data_store[peer].get("party", [])
+			var bm = get_node_or_null("/root/Main/GameWorld/BattleManager")
+			for creature in party:
+				creature["level"] = 50
+				if bm:
+					bm._recalc_stats(creature)
+				creature["hp"] = creature.get("max_hp", creature.get("hp", 1))
+			_sync_party_full.rpc_id(peer, party)
+			return "Maxed %d creatures to level 50" % party.size()
+
+		"force_evolve":
+			if peer not in player_data_store:
+				return "No player data"
+			var party: Array = player_data_store[peer].get("party", [])
+			var idx: int = int(params.get("party_idx", 0))
+			if idx < 0 or idx >= party.size():
+				return "Invalid party index %d" % idx
+			var creature = party[idx]
+			var species = DataRegistry.get_species(creature.get("species_id", ""))
+			if not species or species.evolves_to == "":
+				return "Species %s has no evolution" % creature.get("species_id", "?")
+			var evo_species = DataRegistry.get_species(species.evolves_to)
+			if not evo_species:
+				return "Evolution species %s not found" % species.evolves_to
+			creature["species_id"] = species.evolves_to
+			creature["nickname"] = evo_species.display_name
+			creature["types"] = Array(evo_species.types)
+			var bm = get_node_or_null("/root/Main/GameWorld/BattleManager")
+			if bm:
+				bm._recalc_stats(creature)
+			creature["hp"] = creature.get("max_hp", creature.get("hp", 1))
+			_sync_party_full.rpc_id(peer, party)
+			return "Evolved party[%d] to %s" % [idx, species.evolves_to]
+
+		"set_friendship":
+			if peer not in player_data_store:
+				return "No player data"
+			var npc_id: String = str(params.get("npc_id", ""))
+			var points: int = clampi(int(params.get("points", 0)), -100, 100)
+			var friendships: Dictionary = player_data_store[peer].get("npc_friendships", {})
+			if npc_id not in friendships:
+				friendships[npc_id] = {"points": 0, "talked_today": false, "gifted_today": false}
+			friendships[npc_id]["points"] = points
+			player_data_store[peer]["npc_friendships"] = friendships
+			_sync_npc_friendships.rpc_id(peer, friendships)
+			return "Set %s friendship to %d" % [npc_id, points]
+
+		"max_all_friendships":
+			if peer not in player_data_store:
+				return "No player data"
+			var friendships: Dictionary = player_data_store[peer].get("npc_friendships", {})
+			DataRegistry.ensure_loaded()
+			for npc_id in DataRegistry.npcs:
+				if npc_id not in friendships:
+					friendships[npc_id] = {"points": 0, "talked_today": false, "gifted_today": false}
+				friendships[npc_id]["points"] = 100
+			player_data_store[peer]["npc_friendships"] = friendships
+			_sync_npc_friendships.rpc_id(peer, friendships)
+			return "Maxed all NPC friendships"
+
+		"force_grow_plots":
+			var fm = get_node_or_null("/root/Main/GameWorld/Zones/FarmZone/FarmManager")
+			if not fm:
+				return "FarmManager not found"
+			var count := 0
+			for plot in fm.plots:
+				if plot.plot_state == plot.PlotState.PLANTED or plot.plot_state == plot.PlotState.WATERED or plot.plot_state == plot.PlotState.GROWING:
+					plot.set_state(plot.PlotState.READY)
+					count += 1
+			return "Grew %d plots to READY" % count
+
+		"reset_plots":
+			var fm = get_node_or_null("/root/Main/GameWorld/Zones/FarmZone/FarmManager")
+			if not fm:
+				return "FarmManager not found"
+			for plot in fm.plots:
+				plot.set_state(plot.PlotState.TILLED)
+				plot.planted_seed_id = ""
+				plot.growth_progress = 0.0
+				plot.water_level = 0.0
+				plot.owner_peer_id = 0
+			return "Reset %d plots to TILLED" % fm.plots.size()
+
+		"complete_quest":
+			var quest_id: String = str(params.get("quest_id", ""))
+			var qm = get_node_or_null("/root/Main/GameWorld/QuestManager")
+			if not qm:
+				return "QuestManager not found"
+			DataRegistry.ensure_loaded()
+			var qdata = qm._ensure_quest_data(peer)
+			var active: Dictionary = qdata.get("active", {})
+			if quest_id not in active:
+				# Try to accept it first
+				qm.handle_accept_quest(peer, quest_id)
+				qdata = qm._ensure_quest_data(peer)
+				active = qdata.get("active", {})
+				if quest_id not in active:
+					return "Quest %s not found/startable" % quest_id
+			# Force all objectives to complete by maxing progress
+			var qdef = DataRegistry.get_quest(quest_id)
+			if qdef:
+				var objectives: Array = active[quest_id].get("objectives", [])
+				for i in range(qdef.objectives.size()):
+					if i < objectives.size():
+						var target_count: int = int(qdef.objectives[i].get("target_count", 1))
+						objectives[i]["progress"] = target_count
+			# Complete it
+			qm.handle_complete_quest(peer, quest_id)
+			return "Completed quest: %s" % quest_id
+
+		"reset_quests":
+			if peer not in player_data_store:
+				return "No player data"
+			player_data_store[peer]["quests"] = {"active": {}, "completed": {}, "daily_reset_day": 0, "weekly_reset_day": 0, "unlock_flags": []}
+			var qm = get_node_or_null("/root/Main/GameWorld/QuestManager")
+			if qm:
+				qm._sync_quest_state.rpc_id(peer, {}, {}, [])
+			return "All quests reset"
+
+		"end_excursion":
+			var em = get_node_or_null("/root/Main/GameWorld/ExcursionManager")
+			if not em:
+				return "ExcursionManager not found"
+			em.handle_disconnect(peer)
+			return "Excursion ended"
+
+		# === Battle Actions ===
+
+		"battle_force_win":
+			var bm = get_node_or_null("/root/Main/GameWorld/BattleManager")
+			if not bm:
+				return "BattleManager not found"
+			var battle = bm._get_battle_for_peer(peer)
+			if not battle:
+				return "Not in a battle"
+			# Set all enemy party creatures to 0 HP
+			for c in battle.side_b_party:
+				c["hp"] = 0
+			# Set active enemy to 1 HP and process a move turn to trigger win
+			var enemy = battle.side_b_party[battle.side_b_active_idx]
+			enemy["hp"] = 1
+			battle.state = "processing"
+			var player_creature = battle.side_a_party[battle.side_a_active_idx]
+			var moves = player_creature.get("moves", [])
+			if moves.size() > 0:
+				bm._process_move_turn(battle, "move", str(moves[0]))
+			return "Forced win"
+
+		"battle_force_lose":
+			var bm = get_node_or_null("/root/Main/GameWorld/BattleManager")
+			if not bm:
+				return "BattleManager not found"
+			var battle = bm._get_battle_for_peer(peer)
+			if not battle:
+				return "Not in a battle"
+			# Set all player party creatures to 0 HP
+			for c in battle.side_a_party:
+				c["hp"] = 0
+			var player_creature = battle.side_a_party[battle.side_a_active_idx]
+			player_creature["hp"] = 1
+			battle.state = "processing"
+			var enemy = battle.side_b_party[battle.side_b_active_idx]
+			var emoves = enemy.get("moves", [])
+			if emoves.size() > 0:
+				bm._process_move_turn(battle, "move", str(emoves[0]))
+			return "Forced loss"
+
+		"battle_set_hp":
+			var bm = get_node_or_null("/root/Main/GameWorld/BattleManager")
+			if not bm:
+				return "BattleManager not found"
+			var battle = bm._get_battle_for_peer(peer)
+			if not battle:
+				return "Not in a battle"
+			var side: String = str(params.get("side", "player"))
+			var hp: int = int(params.get("hp", 1))
+			var creature: Dictionary
+			if side == "player":
+				creature = battle.side_a_party[battle.side_a_active_idx]
+			else:
+				creature = battle.side_b_party[battle.side_b_active_idx]
+			creature["hp"] = clampi(hp, 0, creature.get("max_hp", 999))
+			bm._send_state_to_peer(battle, peer)
+			return "Set %s HP to %d" % [side, creature["hp"]]
+
+		"battle_set_status":
+			var bm = get_node_or_null("/root/Main/GameWorld/BattleManager")
+			if not bm:
+				return "BattleManager not found"
+			var battle = bm._get_battle_for_peer(peer)
+			if not battle:
+				return "Not in a battle"
+			var side: String = str(params.get("side", "player"))
+			var status: String = str(params.get("status", ""))
+			var creature: Dictionary
+			if side == "player":
+				creature = battle.side_a_party[battle.side_a_active_idx]
+			else:
+				creature = battle.side_b_party[battle.side_b_active_idx]
+			creature["status"] = status
+			creature["status_turns"] = 3 if status != "" else 0
+			bm._send_state_to_peer(battle, peer)
+			return "Set %s status to '%s'" % [side, status if status != "" else "none"]
+
+		"battle_set_stat_stage":
+			var bm = get_node_or_null("/root/Main/GameWorld/BattleManager")
+			if not bm:
+				return "BattleManager not found"
+			var battle = bm._get_battle_for_peer(peer)
+			if not battle:
+				return "Not in a battle"
+			var side: String = str(params.get("side", "player"))
+			var stat: String = str(params.get("stat", "attack"))
+			var val: int = clampi(int(params.get("value", 0)), -6, 6)
+			var creature: Dictionary
+			if side == "player":
+				creature = battle.side_a_party[battle.side_a_active_idx]
+			else:
+				creature = battle.side_b_party[battle.side_b_active_idx]
+			creature[stat + "_stage"] = val
+			bm._send_state_to_peer(battle, peer)
+			return "Set %s %s stage to %d" % [side, stat, val]
+
+		"battle_heal":
+			var bm = get_node_or_null("/root/Main/GameWorld/BattleManager")
+			if not bm:
+				return "BattleManager not found"
+			var battle = bm._get_battle_for_peer(peer)
+			if not battle:
+				return "Not in a battle"
+			var creature = battle.side_a_party[battle.side_a_active_idx]
+			creature["hp"] = creature.get("max_hp", creature.get("hp", 1))
+			creature["status"] = ""
+			creature["status_turns"] = 0
+			bm._send_state_to_peer(battle, peer)
+			return "Healed player's active creature"
+
+		"battle_set_weather":
+			var bm = get_node_or_null("/root/Main/GameWorld/BattleManager")
+			if not bm:
+				return "BattleManager not found"
+			var battle = bm._get_battle_for_peer(peer)
+			if not battle:
+				return "Not in a battle"
+			var weather: String = str(params.get("weather", "none"))
+			var turns: int = clampi(int(params.get("turns", 5)), 0, 10)
+			battle["weather"] = weather if weather != "none" else ""
+			battle["weather_turns"] = turns if weather != "none" else 0
+			bm._send_state_to_peer(battle, peer)
+			return "Set battle weather to %s (%d turns)" % [weather, turns]
+
+		"battle_clear_hazards":
+			var bm = get_node_or_null("/root/Main/GameWorld/BattleManager")
+			if not bm:
+				return "BattleManager not found"
+			var battle = bm._get_battle_for_peer(peer)
+			if not battle:
+				return "Not in a battle"
+			battle["side_a_hazards"] = []
+			battle["side_b_hazards"] = []
+			bm._send_state_to_peer(battle, peer)
+			return "Cleared all hazards"
+
+		"battle_max_pp":
+			var bm = get_node_or_null("/root/Main/GameWorld/BattleManager")
+			if not bm:
+				return "BattleManager not found"
+			var battle = bm._get_battle_for_peer(peer)
+			if not battle:
+				return "Not in a battle"
+			var creature = battle.side_a_party[battle.side_a_active_idx]
+			var moves: Array = creature.get("moves", [])
+			var pp: Array = []
+			for mid in moves:
+				var mdef = DataRegistry.get_move(str(mid))
+				pp.append(mdef.pp if mdef else 10)
+			creature["pp"] = pp
+			bm._send_state_to_peer(battle, peer)
+			return "Restored all PP"
+
+		_:
+			return "Unknown action: %s" % action
+
 func _validate_appearance(app: Dictionary) -> bool:
 	var gender: String = app.get("gender", "")
 	if gender != "female" and gender != "male":
 		return false
 	# Required parts: head, torso, pants, shoes
-	for required_key in ["head_id", "torso_id", "pants_id", "shoes_id"]:
+	for required_key in ["head_id", "torso_id", "pants_id", "shoes_id", "arms_id"]:
 		var val: String = app.get(required_key, "")
 		if val == "":
 			return false

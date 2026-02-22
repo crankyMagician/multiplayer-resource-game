@@ -1,0 +1,50 @@
+[gd_scene format=3]
+
+[sub_resource type="BoxMesh" id="platform_mesh"]
+size = Vector3(6, 0.18, 2.5)
+
+[sub_resource type="BoxShape3D" id="platform_shape"]
+size = Vector3(6, 0.18, 2.5)
+
+[sub_resource type="CylinderMesh" id="post_mesh"]
+top_radius = 0.12
+bottom_radius = 0.15
+height = 1.8
+
+[sub_resource type="StandardMaterial3D" id="wood_mat"]
+albedo_color = Color(0.42, 0.32, 0.22, 1)
+
+[sub_resource type="StandardMaterial3D" id="post_mat"]
+albedo_color = Color(0.34, 0.24, 0.16, 1)
+
+[node name="DockSegment" type="Node3D"]
+
+[node name="Platform" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.09, 0)
+
+[node name="Mesh" type="MeshInstance3D" parent="Platform"]
+mesh = SubResource("platform_mesh")
+material_override = SubResource("wood_mat")
+
+[node name="Collision" type="CollisionShape3D" parent="Platform"]
+shape = SubResource("platform_shape")
+
+[node name="PostFL" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.7, -0.8, -0.95)
+mesh = SubResource("post_mesh")
+material_override = SubResource("post_mat")
+
+[node name="PostFR" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.7, -0.8, -0.95)
+mesh = SubResource("post_mesh")
+material_override = SubResource("post_mat")
+
+[node name="PostBL" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.7, -0.8, 0.95)
+mesh = SubResource("post_mesh")
+material_override = SubResource("post_mat")
+
+[node name="PostBR" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.7, -0.8, 0.95)
+mesh = SubResource("post_mesh")
+material_override = SubResource("post_mat")

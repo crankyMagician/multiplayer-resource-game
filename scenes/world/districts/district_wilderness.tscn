@@ -1,0 +1,932 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/world/modules/ground_patch_cluster.tscn" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/world/modules/ground_edge_strip.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/world/modules/sign_post.tscn" id="3"]
+[ext_resource type="PackedScene" path="res://scenes/world/modules/breadcrumb_cluster_rocks.tscn" id="4"]
+[ext_resource type="PackedScene" path="res://scenes/world/modules/breadcrumb_cluster_logs.tscn" id="5"]
+[ext_resource type="PackedScene" path="res://scenes/world/modules/landmark_wilderness_spire.tscn" id="6"]
+[ext_resource type="PackedScene" path="res://scenes/world/modules/boundary_tree_line_chunk.tscn" id="7"]
+[ext_resource type="PackedScene" path="res://scenes/world/modules/boundary_rock_wall_chunk.tscn" id="8"]
+[ext_resource type="PackedScene" path="res://scenes/world/modules/invisible_boundary_wall.tscn" id="9"]
+[ext_resource type="PackedScene" path="res://scenes/world/modules/terrain_mound_segment.tscn" id="10"]
+
+; --- Materials ---
+[sub_resource type="StandardMaterial3D" id="dirt_mat"]
+albedo_color = Color(0.5, 0.4, 0.25, 1)
+
+[sub_resource type="StandardMaterial3D" id="wood_mat"]
+albedo_color = Color(0.4, 0.25, 0.1, 1)
+
+[sub_resource type="StandardMaterial3D" id="dark_green_mat"]
+albedo_color = Color(0.15, 0.4, 0.2, 1)
+
+[sub_resource type="StandardMaterial3D" id="green_mat"]
+albedo_color = Color(0.2, 0.55, 0.2, 1)
+
+[sub_resource type="StandardMaterial3D" id="rock_mat"]
+albedo_color = Color(0.5, 0.48, 0.45, 1)
+
+[sub_resource type="StandardMaterial3D" id="dark_rock_mat"]
+albedo_color = Color(0.38, 0.36, 0.33, 1)
+
+[sub_resource type="StandardMaterial3D" id="stump_mat"]
+albedo_color = Color(0.35, 0.22, 0.1, 1)
+
+[sub_resource type="StandardMaterial3D" id="dead_tree_mat"]
+albedo_color = Color(0.3, 0.22, 0.15, 1)
+
+[sub_resource type="StandardMaterial3D" id="stone_ruin_mat"]
+albedo_color = Color(0.45, 0.43, 0.4, 1)
+
+[sub_resource type="StandardMaterial3D" id="moss_mat"]
+albedo_color = Color(0.25, 0.4, 0.2, 1)
+
+[sub_resource type="StandardMaterial3D" id="mushroom_cap_mat"]
+albedo_color = Color(0.6, 0.3, 0.25, 1)
+
+[sub_resource type="StandardMaterial3D" id="mushroom_stem_mat"]
+albedo_color = Color(0.8, 0.75, 0.65, 1)
+
+[sub_resource type="StandardMaterial3D" id="mountain_mat"]
+albedo_color = Color(0.4, 0.38, 0.35, 1)
+
+[sub_resource type="StandardMaterial3D" id="ridge_mat"]
+albedo_color = Color(0.45, 0.42, 0.38, 1)
+
+[sub_resource type="StandardMaterial3D" id="island_mat"]
+albedo_color = Color(0.35, 0.45, 0.3, 1)
+
+; --- Meshes ---
+[sub_resource type="BoxMesh" id="path_main_mesh"]
+size = Vector3(3.5, 0.05, 50)
+
+[sub_resource type="BoxMesh" id="path_fork_mesh"]
+size = Vector3(20, 0.05, 3.5)
+
+[sub_resource type="BoxMesh" id="path_short_mesh"]
+size = Vector3(3.5, 0.05, 10)
+
+[sub_resource type="CylinderMesh" id="pine_trunk_mesh"]
+top_radius = 0.12
+bottom_radius = 0.18
+height = 2.5
+
+[sub_resource type="CylinderMesh" id="pine_tier1_mesh"]
+top_radius = 0.1
+bottom_radius = 1.2
+height = 1.8
+
+[sub_resource type="CylinderMesh" id="pine_tier2_mesh"]
+top_radius = 0.1
+bottom_radius = 0.9
+height = 1.5
+
+[sub_resource type="CylinderMesh" id="pine_tier3_mesh"]
+top_radius = 0.05
+bottom_radius = 0.6
+height = 1.2
+
+[sub_resource type="BoxMesh" id="rock_small_mesh"]
+size = Vector3(0.8, 0.5, 0.6)
+
+[sub_resource type="BoxMesh" id="rock_med_mesh"]
+size = Vector3(1.5, 1.0, 1.2)
+
+[sub_resource type="BoxMesh" id="rock_large_mesh"]
+size = Vector3(2.5, 1.8, 2.0)
+
+[sub_resource type="CylinderMesh" id="stump_mesh"]
+top_radius = 0.4
+bottom_radius = 0.45
+height = 0.5
+
+[sub_resource type="BoxMesh" id="arch_pillar_mesh"]
+size = Vector3(1.0, 4, 1.0)
+
+[sub_resource type="BoxMesh" id="arch_lintel_mesh"]
+size = Vector3(5, 0.8, 1.0)
+
+[sub_resource type="BoxMesh" id="broken_arch_pillar_mesh"]
+size = Vector3(1.2, 3.5, 1.2)
+
+[sub_resource type="BoxMesh" id="broken_arch_lintel_mesh"]
+size = Vector3(5, 0.8, 1.2)
+
+[sub_resource type="CylinderMesh" id="dead_trunk_mesh"]
+top_radius = 0.1
+bottom_radius = 0.2
+height = 3.5
+
+[sub_resource type="BoxMesh" id="dead_branch_mesh"]
+size = Vector3(1.5, 0.1, 0.1)
+
+[sub_resource type="BoxMesh" id="ruin_wall_mesh"]
+size = Vector3(3, 2, 0.5)
+
+[sub_resource type="CylinderMesh" id="broken_pillar_mesh"]
+top_radius = 0.35
+bottom_radius = 0.4
+height = 2.5
+
+[sub_resource type="BoxMesh" id="cave_frame_mesh"]
+size = Vector3(1.5, 5, 1.5)
+
+[sub_resource type="BoxMesh" id="cave_lintel_mesh"]
+size = Vector3(5, 1.0, 1.5)
+
+[sub_resource type="CylinderMesh" id="mushroom_stem_mesh"]
+top_radius = 0.12
+bottom_radius = 0.12
+height = 0.6
+
+[sub_resource type="SphereMesh" id="mushroom_cap_mesh"]
+radius = 0.3
+height = 0.3
+
+[sub_resource type="BoxMesh" id="mountain_north_mesh"]
+size = Vector3(100, 25, 15)
+
+[sub_resource type="BoxMesh" id="mountain_east_mesh"]
+size = Vector3(10, 20, 80)
+
+[sub_resource type="BoxMesh" id="mountain_south_mesh"]
+size = Vector3(80, 18, 10)
+
+[sub_resource type="BoxMesh" id="island_mesh"]
+size = Vector3(12, 6, 10)
+
+; --- Terrain meshes ---
+[sub_resource type="BoxMesh" id="entry_ridge_mesh"]
+size = Vector3(5, 3, 12)
+
+[sub_resource type="BoxShape3D" id="entry_ridge_shape"]
+size = Vector3(5, 3, 12)
+
+[sub_resource type="BoxMesh" id="t1_canyon_wall_mesh"]
+size = Vector3(3, 4, 10)
+
+[sub_resource type="BoxMesh" id="t1_descent_mesh"]
+size = Vector3(6, 0.3, 8)
+
+[sub_resource type="BoxShape3D" id="t1_descent_shape"]
+size = Vector3(6, 0.3, 8)
+
+[sub_resource type="BoxMesh" id="t2_canyon_wall_mesh"]
+size = Vector3(4, 5, 18)
+
+[sub_resource type="BoxShape3D" id="t2_canyon_wall_shape"]
+size = Vector3(4, 5, 18)
+
+[sub_resource type="BoxMesh" id="rock_overhang_mesh"]
+size = Vector3(6, 0.5, 4)
+
+[sub_resource type="BoxMesh" id="t2_descent_mesh"]
+size = Vector3(6, 0.3, 8)
+
+[sub_resource type="BoxShape3D" id="t2_descent_shape"]
+size = Vector3(6, 0.3, 8)
+
+[sub_resource type="BoxMesh" id="t3_canyon_wall_mesh"]
+size = Vector3(4, 7, 18)
+
+[sub_resource type="BoxShape3D" id="t3_canyon_wall_shape"]
+size = Vector3(4, 7, 18)
+
+[sub_resource type="BoxMesh" id="dark_ground_mesh"]
+size = Vector3(26, 0.04, 18)
+
+[sub_resource type="StandardMaterial3D" id="very_dark_green_mat"]
+albedo_color = Color(0.12, 0.22, 0.1, 1)
+
+; --- Nodes ---
+[node name="Wilderness" type="Node3D"]
+
+; === Main Dirt Path (z=-3 to z=-53) ===
+[node name="PathMain" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, -28)
+mesh = SubResource("path_main_mesh")
+material_override = SubResource("dirt_mat")
+
+; === Path Forks (Tier 1 at z=-15) ===
+[node name="PathForkT1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, -15)
+mesh = SubResource("path_fork_mesh")
+material_override = SubResource("dirt_mat")
+
+; === Path Forks (Tier 2 at z=-33) ===
+[node name="PathForkT2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, -33)
+mesh = SubResource("path_fork_mesh")
+material_override = SubResource("dirt_mat")
+
+; === Path Forks (Tier 3 at z=-48) ===
+[node name="PathForkT3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, -48)
+mesh = SubResource("path_fork_mesh")
+material_override = SubResource("dirt_mat")
+
+; === Gatekeeper Arch 1 at z=-20 ===
+[node name="GatekeeperArch1" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -20)
+
+[node name="PillarL" type="MeshInstance3D" parent="GatekeeperArch1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 2, 0)
+mesh = SubResource("arch_pillar_mesh")
+material_override = SubResource("stone_ruin_mat")
+
+[node name="PillarR" type="MeshInstance3D" parent="GatekeeperArch1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 2, 0)
+mesh = SubResource("arch_pillar_mesh")
+material_override = SubResource("stone_ruin_mat")
+
+[node name="Lintel" type="MeshInstance3D" parent="GatekeeperArch1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.4, 0)
+mesh = SubResource("arch_lintel_mesh")
+material_override = SubResource("stone_ruin_mat")
+
+[node name="Label" type="Label3D" parent="GatekeeperArch1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.5, 0)
+text = "Tier 1 Gate"
+font_size = 28
+outline_size = 6
+modulate = Color(0.7, 0.65, 0.5, 1)
+billboard = 1
+
+; === Gatekeeper Arch 2 (broken) at z=-40 ===
+[node name="GatekeeperArch2" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -40)
+
+[node name="PillarL" type="MeshInstance3D" parent="GatekeeperArch2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 1.75, 0)
+mesh = SubResource("broken_arch_pillar_mesh")
+material_override = SubResource("dark_rock_mat")
+
+[node name="PillarR" type="MeshInstance3D" parent="GatekeeperArch2"]
+transform = Transform3D(0.966, 0, 0.259, 0, 1, 0, -0.259, 0, 0.966, 2.5, 1.5, 0)
+mesh = SubResource("broken_arch_pillar_mesh")
+material_override = SubResource("dark_rock_mat")
+
+[node name="Lintel" type="MeshInstance3D" parent="GatekeeperArch2"]
+transform = Transform3D(0.985, 0.174, 0, -0.174, 0.985, 0, 0, 0, 1, 0.3, 3.8, 0)
+mesh = SubResource("broken_arch_lintel_mesh")
+material_override = SubResource("dark_rock_mat")
+
+[node name="Label" type="Label3D" parent="GatekeeperArch2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.5, 0)
+text = "Tier 2 Gate"
+font_size = 28
+outline_size = 6
+modulate = Color(0.6, 0.5, 0.4, 1)
+billboard = 1
+
+; === TIER 1 DECORATIONS (z=-5 to -20) ===
+
+; Pine trees
+[node name="Pine1" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0, -8)
+
+[node name="Trunk" type="MeshInstance3D" parent="Pine1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
+mesh = SubResource("pine_trunk_mesh")
+material_override = SubResource("wood_mat")
+
+[node name="Tier1" type="MeshInstance3D" parent="Pine1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.0, 0)
+mesh = SubResource("pine_tier1_mesh")
+material_override = SubResource("dark_green_mat")
+
+[node name="Tier2" type="MeshInstance3D" parent="Pine1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.2, 0)
+mesh = SubResource("pine_tier2_mesh")
+material_override = SubResource("dark_green_mat")
+
+[node name="Tier3" type="MeshInstance3D" parent="Pine1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.2, 0)
+mesh = SubResource("pine_tier3_mesh")
+material_override = SubResource("dark_green_mat")
+
+[node name="Pine2" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0, -10)
+
+[node name="Trunk" type="MeshInstance3D" parent="Pine2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
+mesh = SubResource("pine_trunk_mesh")
+material_override = SubResource("wood_mat")
+
+[node name="Tier1" type="MeshInstance3D" parent="Pine2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.0, 0)
+mesh = SubResource("pine_tier1_mesh")
+material_override = SubResource("dark_green_mat")
+
+[node name="Tier2" type="MeshInstance3D" parent="Pine2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.2, 0)
+mesh = SubResource("pine_tier2_mesh")
+material_override = SubResource("dark_green_mat")
+
+[node name="Pine3" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0, -16)
+
+[node name="Trunk" type="MeshInstance3D" parent="Pine3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
+mesh = SubResource("pine_trunk_mesh")
+material_override = SubResource("wood_mat")
+
+[node name="Tier1" type="MeshInstance3D" parent="Pine3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.0, 0)
+mesh = SubResource("pine_tier1_mesh")
+material_override = SubResource("dark_green_mat")
+
+[node name="Tier2" type="MeshInstance3D" parent="Pine3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.2, 0)
+mesh = SubResource("pine_tier2_mesh")
+material_override = SubResource("dark_green_mat")
+
+[node name="Tier3" type="MeshInstance3D" parent="Pine3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.2, 0)
+mesh = SubResource("pine_tier3_mesh")
+material_override = SubResource("dark_green_mat")
+
+[node name="Pine4" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0, -14)
+
+[node name="Trunk" type="MeshInstance3D" parent="Pine4"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
+mesh = SubResource("pine_trunk_mesh")
+material_override = SubResource("wood_mat")
+
+[node name="Tier1" type="MeshInstance3D" parent="Pine4"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.0, 0)
+mesh = SubResource("pine_tier1_mesh")
+material_override = SubResource("dark_green_mat")
+
+; Small rocks
+[node name="Rock1" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.951, 0, 0.309, 0, 1, 0, -0.309, 0, 0.951, -4, 0.25, -7)
+mesh = SubResource("rock_small_mesh")
+material_override = SubResource("rock_mat")
+
+[node name="Rock2" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.891, 0, -0.454, 0, 1, 0, 0.454, 0, 0.891, 4, 0.25, -9)
+mesh = SubResource("rock_small_mesh")
+material_override = SubResource("rock_mat")
+
+[node name="Rock3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0.25, -18)
+mesh = SubResource("rock_small_mesh")
+material_override = SubResource("rock_mat")
+
+[node name="Rock4" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0.25, -17)
+mesh = SubResource("rock_small_mesh")
+material_override = SubResource("rock_mat")
+
+; Stumps
+[node name="Stump1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7, 0.25, -12)
+mesh = SubResource("stump_mesh")
+material_override = SubResource("stump_mat")
+
+[node name="Stump2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0.25, -11)
+mesh = SubResource("stump_mesh")
+material_override = SubResource("stump_mat")
+
+; === TIER 2 DECORATIONS (z=-20 to -40) ===
+
+; Larger boulders
+[node name="Boulder1" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.927, 0, 0.375, 0, 1, 0, -0.375, 0, 0.927, -8, 0.9, -24)
+mesh = SubResource("rock_large_mesh")
+material_override = SubResource("rock_mat")
+
+[node name="Boulder2" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.891, 0, -0.454, 0, 1, 0, 0.454, 0, 0.891, 8, 0.9, -25)
+mesh = SubResource("rock_large_mesh")
+material_override = SubResource("rock_mat")
+
+[node name="Boulder3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0.5, -33)
+mesh = SubResource("rock_med_mesh")
+material_override = SubResource("rock_mat")
+
+[node name="Boulder4" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0.5, -34)
+mesh = SubResource("rock_med_mesh")
+material_override = SubResource("rock_mat")
+
+; Stone ruins
+[node name="Ruin1" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.966, 0, 0.259, 0, 1, 0, -0.259, 0, 0.966, -7, 1, -27)
+mesh = SubResource("ruin_wall_mesh")
+material_override = SubResource("stone_ruin_mat")
+
+[node name="Ruin2" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.940, 0, -0.342, 0, 1, 0, 0.342, 0, 0.940, 7, 1, -31)
+mesh = SubResource("ruin_wall_mesh")
+material_override = SubResource("stone_ruin_mat")
+
+; Dead trees
+[node name="DeadTree1" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0, -26)
+
+[node name="Trunk" type="MeshInstance3D" parent="DeadTree1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.75, 0)
+mesh = SubResource("dead_trunk_mesh")
+material_override = SubResource("dead_tree_mat")
+
+[node name="Branch" type="MeshInstance3D" parent="DeadTree1"]
+transform = Transform3D(0.866, 0.5, 0, -0.5, 0.866, 0, 0, 0, 1, 0.5, 3.0, 0)
+mesh = SubResource("dead_branch_mesh")
+material_override = SubResource("dead_tree_mat")
+
+[node name="DeadTree2" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0, -27)
+
+[node name="Trunk" type="MeshInstance3D" parent="DeadTree2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.75, 0)
+mesh = SubResource("dead_trunk_mesh")
+material_override = SubResource("dead_tree_mat")
+
+[node name="Branch" type="MeshInstance3D" parent="DeadTree2"]
+transform = Transform3D(0.866, -0.5, 0, 0.5, 0.866, 0, 0, 0, 1, -0.5, 2.8, 0)
+mesh = SubResource("dead_branch_mesh")
+material_override = SubResource("dead_tree_mat")
+
+[node name="DeadTree3" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0, -36)
+
+[node name="Trunk" type="MeshInstance3D" parent="DeadTree3"]
+transform = Transform3D(0.985, 0.174, 0, -0.174, 0.985, 0, 0, 0, 1, 0, 1.75, 0)
+mesh = SubResource("dead_trunk_mesh")
+material_override = SubResource("dead_tree_mat")
+
+[node name="DeadTree4" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0, -38)
+
+[node name="Trunk" type="MeshInstance3D" parent="DeadTree4"]
+transform = Transform3D(0.985, -0.174, 0, 0.174, 0.985, 0, 0, 0, 1, 0, 1.75, 0)
+mesh = SubResource("dead_trunk_mesh")
+material_override = SubResource("dead_tree_mat")
+
+; === TIER 3 DECORATIONS (z=-40 to -55) ===
+
+; Cave entrance frames
+[node name="CaveFrameL" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0, -52)
+
+[node name="PillarL" type="MeshInstance3D" parent="CaveFrameL"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 2.5, 0)
+mesh = SubResource("cave_frame_mesh")
+material_override = SubResource("dark_rock_mat")
+
+[node name="PillarR" type="MeshInstance3D" parent="CaveFrameL"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 2.5, 0)
+mesh = SubResource("cave_frame_mesh")
+material_override = SubResource("dark_rock_mat")
+
+[node name="Lintel" type="MeshInstance3D" parent="CaveFrameL"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.5, 0)
+mesh = SubResource("cave_lintel_mesh")
+material_override = SubResource("dark_rock_mat")
+
+[node name="CaveFrameR" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0, -53)
+
+[node name="PillarL" type="MeshInstance3D" parent="CaveFrameR"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 2.5, 0)
+mesh = SubResource("cave_frame_mesh")
+material_override = SubResource("dark_rock_mat")
+
+[node name="PillarR" type="MeshInstance3D" parent="CaveFrameR"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 2.5, 0)
+mesh = SubResource("cave_frame_mesh")
+material_override = SubResource("dark_rock_mat")
+
+[node name="Lintel" type="MeshInstance3D" parent="CaveFrameR"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.5, 0)
+mesh = SubResource("cave_lintel_mesh")
+material_override = SubResource("dark_rock_mat")
+
+; Broken pillars
+[node name="BrokenPillar1" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.966, 0, 0.259, 0, 1, 0, -0.259, 0, 0.966, -4, 1.25, -48)
+mesh = SubResource("broken_pillar_mesh")
+material_override = SubResource("moss_mat")
+
+[node name="BrokenPillar2" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.940, 0, -0.342, 0, 1, 0, 0.342, 0, 0.940, 4, 1.25, -49)
+mesh = SubResource("broken_pillar_mesh")
+material_override = SubResource("stone_ruin_mat")
+
+[node name="BrokenPillar3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 1.25, -54)
+mesh = SubResource("broken_pillar_mesh")
+material_override = SubResource("moss_mat")
+
+; Rock walls around Cauldron
+[node name="RockWallL" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.927, 0, 0.375, 0, 1, 0, -0.375, 0, 0.927, -8, 0.9, -55)
+mesh = SubResource("rock_large_mesh")
+material_override = SubResource("dark_rock_mat")
+
+[node name="RockWallR" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.927, 0, -0.375, 0, 1, 0, 0.375, 0, 0.927, 8, 0.9, -55)
+mesh = SubResource("rock_large_mesh")
+material_override = SubResource("dark_rock_mat")
+
+; Dead trees in deep wilds
+[node name="DeepDeadTree1" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0, -46)
+
+[node name="Trunk" type="MeshInstance3D" parent="DeepDeadTree1"]
+transform = Transform3D(0.985, 0.174, 0, -0.174, 0.985, 0, 0, 0, 1, 0, 1.75, 0)
+mesh = SubResource("dead_trunk_mesh")
+material_override = SubResource("dead_tree_mat")
+
+[node name="DeepDeadTree2" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0, -50)
+
+[node name="Trunk" type="MeshInstance3D" parent="DeepDeadTree2"]
+transform = Transform3D(0.985, -0.174, 0, 0.174, 0.985, 0, 0, 0, 1, 0, 1.75, 0)
+mesh = SubResource("dead_trunk_mesh")
+material_override = SubResource("dead_tree_mat")
+
+; Mushrooms
+[node name="Mushroom1" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, -50)
+
+[node name="Stem" type="MeshInstance3D" parent="Mushroom1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+mesh = SubResource("mushroom_stem_mesh")
+material_override = SubResource("mushroom_stem_mat")
+
+[node name="Cap" type="MeshInstance3D" parent="Mushroom1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
+mesh = SubResource("mushroom_cap_mesh")
+material_override = SubResource("mushroom_cap_mat")
+
+[node name="Mushroom2" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, -52)
+
+[node name="Stem" type="MeshInstance3D" parent="Mushroom2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+mesh = SubResource("mushroom_stem_mesh")
+material_override = SubResource("mushroom_stem_mat")
+
+[node name="Cap" type="MeshInstance3D" parent="Mushroom2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
+mesh = SubResource("mushroom_cap_mesh")
+material_override = SubResource("mushroom_cap_mat")
+
+[node name="Mushroom3" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0, -53)
+
+[node name="Stem" type="MeshInstance3D" parent="Mushroom3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+mesh = SubResource("mushroom_stem_mesh")
+material_override = SubResource("mushroom_stem_mat")
+
+[node name="Cap" type="MeshInstance3D" parent="Mushroom3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
+mesh = SubResource("mushroom_cap_mesh")
+material_override = SubResource("mushroom_cap_mat")
+
+; === HORIZON BLOCKERS ===
+
+; North mountains
+[node name="MountainNorth" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 10, 78)
+mesh = SubResource("mountain_north_mesh")
+material_override = SubResource("mountain_mat")
+
+; East ridge
+[node name="RidgeEast" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 58, 8, -20)
+mesh = SubResource("mountain_east_mesh")
+material_override = SubResource("ridge_mat")
+
+; South hills
+[node name="MountainSouth" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 7, -75)
+mesh = SubResource("mountain_south_mesh")
+material_override = SubResource("mountain_mat")
+
+; West islands
+[node name="Island1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -68, 1, -3)
+mesh = SubResource("island_mesh")
+material_override = SubResource("island_mat")
+
+[node name="Island2" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.966, 0, 0.259, 0, 1, 0, -0.259, 0, 0.966, -78, 0.5, -18)
+mesh = SubResource("island_mesh")
+material_override = SubResource("island_mat")
+
+; === TERRAIN MASSING ===
+
+; === Entry Corridor Ridges (z ~ -3 to -12) ===
+[node name="EntryRidgeL" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 1.5, -7)
+
+[node name="Mesh" type="MeshInstance3D" parent="EntryRidgeL"]
+mesh = SubResource("entry_ridge_mesh")
+material_override = SubResource("rock_mat")
+
+[node name="Collision" type="CollisionShape3D" parent="EntryRidgeL"]
+shape = SubResource("entry_ridge_shape")
+
+[node name="EntryRidgeR" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 1.5, -7)
+
+[node name="Mesh" type="MeshInstance3D" parent="EntryRidgeR"]
+mesh = SubResource("entry_ridge_mesh")
+material_override = SubResource("rock_mat")
+
+[node name="Collision" type="CollisionShape3D" parent="EntryRidgeR"]
+shape = SubResource("entry_ridge_shape")
+
+; === Tier 1 Canyon Walls (visual, outside encounter zones) ===
+[node name="T1WallL" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -19, 2, -17)
+mesh = SubResource("t1_canyon_wall_mesh")
+material_override = SubResource("rock_mat")
+
+[node name="T1WallR" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 19, 2, -17)
+mesh = SubResource("t1_canyon_wall_mesh")
+material_override = SubResource("rock_mat")
+
+; === Tier 1→2 Descent (at Gatekeeper Arch 1, z=-20) ===
+[node name="T1Descent" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.995, -0.105, 0, 0.105, 0.995, 0, -0.4, -20)
+
+[node name="Mesh" type="MeshInstance3D" parent="T1Descent"]
+mesh = SubResource("t1_descent_mesh")
+material_override = SubResource("dirt_mat")
+
+[node name="Collision" type="CollisionShape3D" parent="T1Descent"]
+shape = SubResource("t1_descent_shape")
+
+; === Dense Pine Tree Line (behind Gate 1, z ~ -20) ===
+[node name="GatePine1" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0, -20)
+
+[node name="Trunk" type="MeshInstance3D" parent="GatePine1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
+mesh = SubResource("pine_trunk_mesh")
+material_override = SubResource("wood_mat")
+
+[node name="Tier1" type="MeshInstance3D" parent="GatePine1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.0, 0)
+mesh = SubResource("pine_tier1_mesh")
+material_override = SubResource("dark_green_mat")
+
+[node name="Tier2" type="MeshInstance3D" parent="GatePine1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.2, 0)
+mesh = SubResource("pine_tier2_mesh")
+material_override = SubResource("dark_green_mat")
+
+[node name="GatePine2" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, -21)
+
+[node name="Trunk" type="MeshInstance3D" parent="GatePine2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
+mesh = SubResource("pine_trunk_mesh")
+material_override = SubResource("wood_mat")
+
+[node name="Tier1" type="MeshInstance3D" parent="GatePine2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.0, 0)
+mesh = SubResource("pine_tier1_mesh")
+material_override = SubResource("dark_green_mat")
+
+[node name="Tier2" type="MeshInstance3D" parent="GatePine2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.2, 0)
+mesh = SubResource("pine_tier2_mesh")
+material_override = SubResource("dark_green_mat")
+
+[node name="GatePine3" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -20)
+
+[node name="Trunk" type="MeshInstance3D" parent="GatePine3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
+mesh = SubResource("pine_trunk_mesh")
+material_override = SubResource("wood_mat")
+
+[node name="Tier1" type="MeshInstance3D" parent="GatePine3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.0, 0)
+mesh = SubResource("pine_tier1_mesh")
+material_override = SubResource("dark_green_mat")
+
+[node name="Tier2" type="MeshInstance3D" parent="GatePine3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.2, 0)
+mesh = SubResource("pine_tier2_mesh")
+material_override = SubResource("dark_green_mat")
+
+[node name="GatePine4" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, -21)
+
+[node name="Trunk" type="MeshInstance3D" parent="GatePine4"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
+mesh = SubResource("pine_trunk_mesh")
+material_override = SubResource("wood_mat")
+
+[node name="Tier1" type="MeshInstance3D" parent="GatePine4"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.0, 0)
+mesh = SubResource("pine_tier1_mesh")
+material_override = SubResource("dark_green_mat")
+
+[node name="GatePine5" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0, -20)
+
+[node name="Trunk" type="MeshInstance3D" parent="GatePine5"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
+mesh = SubResource("pine_trunk_mesh")
+material_override = SubResource("wood_mat")
+
+[node name="Tier1" type="MeshInstance3D" parent="GatePine5"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.0, 0)
+mesh = SubResource("pine_tier1_mesh")
+material_override = SubResource("dark_green_mat")
+
+[node name="Tier2" type="MeshInstance3D" parent="GatePine5"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.2, 0)
+mesh = SubResource("pine_tier2_mesh")
+material_override = SubResource("dark_green_mat")
+
+[node name="GatePine6" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, -20)
+
+[node name="Trunk" type="MeshInstance3D" parent="GatePine6"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
+mesh = SubResource("pine_trunk_mesh")
+material_override = SubResource("wood_mat")
+
+[node name="Tier1" type="MeshInstance3D" parent="GatePine6"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.0, 0)
+mesh = SubResource("pine_tier1_mesh")
+material_override = SubResource("dark_green_mat")
+
+; === Tier 2 Canyon Narrowing (z=-20 to -35) ===
+[node name="T2WallL" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -17, 2.5, -28)
+
+[node name="Mesh" type="MeshInstance3D" parent="T2WallL"]
+mesh = SubResource("t2_canyon_wall_mesh")
+material_override = SubResource("rock_mat")
+
+[node name="Collision" type="CollisionShape3D" parent="T2WallL"]
+shape = SubResource("t2_canyon_wall_shape")
+
+[node name="T2WallR" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 17, 2.5, -28)
+
+[node name="Mesh" type="MeshInstance3D" parent="T2WallR"]
+mesh = SubResource("t2_canyon_wall_mesh")
+material_override = SubResource("rock_mat")
+
+[node name="Collision" type="CollisionShape3D" parent="T2WallR"]
+shape = SubResource("t2_canyon_wall_shape")
+
+; Rock overhang
+[node name="RockOverhang" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 5.5, -25)
+mesh = SubResource("rock_overhang_mesh")
+material_override = SubResource("dark_rock_mat")
+
+; === Tier 2→3 Descent (at Gatekeeper Arch 2, z=-40) ===
+[node name="T2Descent" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.990, -0.139, 0, 0.139, 0.990, 0, -1.2, -40)
+
+[node name="Mesh" type="MeshInstance3D" parent="T2Descent"]
+mesh = SubResource("t2_descent_mesh")
+material_override = SubResource("dirt_mat")
+
+[node name="Collision" type="CollisionShape3D" parent="T2Descent"]
+shape = SubResource("t2_descent_shape")
+
+; === Tier 3 Enclosure (z=-40 to -55) ===
+[node name="T3WallL" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 3.5, -48)
+
+[node name="Mesh" type="MeshInstance3D" parent="T3WallL"]
+mesh = SubResource("t3_canyon_wall_mesh")
+material_override = SubResource("dark_rock_mat")
+
+[node name="Collision" type="CollisionShape3D" parent="T3WallL"]
+shape = SubResource("t3_canyon_wall_shape")
+
+[node name="T3WallR" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 3.5, -48)
+
+[node name="Mesh" type="MeshInstance3D" parent="T3WallR"]
+mesh = SubResource("t3_canyon_wall_mesh")
+material_override = SubResource("dark_rock_mat")
+
+[node name="Collision" type="CollisionShape3D" parent="T3WallR"]
+shape = SubResource("t3_canyon_wall_shape")
+
+; Dark ground overlay for Tier 3
+[node name="T3DarkGround" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.6, -48)
+mesh = SubResource("dark_ground_mesh")
+material_override = SubResource("very_dark_green_mat")
+
+; === Modular Level Design Upgrade ===
+[node name="GroundDetail" type="Node3D" parent="."]
+
+[node name="PatchClusterEntry" parent="GroundDetail" instance=ExtResource("1")]
+transform = Transform3D(1.0, 0, 0, 0, 1, 0, 0, 0, 0.9, 0, 0, -10)
+
+[node name="PatchClusterMid" parent="GroundDetail" instance=ExtResource("1")]
+transform = Transform3D(1.15, 0, 0, 0, 1, 0, 0, 0, 0.95, 0, 0, -30)
+
+[node name="PatchClusterDeep" parent="GroundDetail" instance=ExtResource("1")]
+transform = Transform3D(1.2, 0, 0, 0, 1, 0, 0, 0, 1.0, 0, 0, -50)
+
+[node name="DeepEdgeStrip" parent="GroundDetail" instance=ExtResource("2")]
+transform = Transform3D(1.9, 0, 0, 0, 1, 0, 0, 0, 1.0, 0, 0, -55.5)
+
+[node name="TerrainRelief" type="Node3D" parent="."]
+
+[node name="MoundEntryWest" parent="TerrainRelief" instance=ExtResource("10")]
+transform = Transform3D(0.95, 0, 0, 0, 0.75, 0, 0, 0, 0.95, -9, 0, -18)
+
+[node name="MoundMidEast" parent="TerrainRelief" instance=ExtResource("10")]
+transform = Transform3D(1.05, 0, 0, 0, 0.85, 0, 0, 0, 1.05, 10, 0, -33)
+
+[node name="MoundDeepWest" parent="TerrainRelief" instance=ExtResource("10")]
+transform = Transform3D(1.1, 0, 0, 0, 1.0, 0, 0, 0, 1.05, -11.5, 0, -48)
+
+[node name="MoundDeepEast" parent="TerrainRelief" instance=ExtResource("10")]
+transform = Transform3D(0.9, 0, 0, 0, 0.7, 0, 0, 0, 0.95, 12.5, 0, -58)
+
+[node name="Boundaries" type="Node3D" parent="."]
+
+[node name="BoundaryRockL1" parent="Boundaries" instance=ExtResource("8")]
+transform = Transform3D(1.15, 0, 0, 0, 1, 0, 0, 0, 1.0, -24, 0, -24)
+
+[node name="BoundaryRockR1" parent="Boundaries" instance=ExtResource("8")]
+transform = Transform3D(1.15, 0, 0, 0, 1, 0, 0, 0, 1.0, 24, 0, -24)
+
+[node name="BoundaryRockL2" parent="Boundaries" instance=ExtResource("8")]
+transform = Transform3D(1.2, 0, 0, 0, 1, 0, 0, 0, 1.1, -22, 0, -47)
+
+[node name="BoundaryRockR2" parent="Boundaries" instance=ExtResource("8")]
+transform = Transform3D(1.2, 0, 0, 0, 1, 0, 0, 0, 1.1, 22, 0, -47)
+
+[node name="Landmarks" type="Node3D" parent="."]
+
+[node name="DeepWildernessSpire" parent="Landmarks" instance=ExtResource("6")]
+transform = Transform3D(1.0, 0, 0, 0, 1.1, 0, 0, 0, 1.0, 13, 0, -60)
+
+[node name="Wayfinding" type="Node3D" parent="."]
+
+[node name="SignTier1Fork" parent="Wayfinding" instance=ExtResource("3")]
+transform = Transform3D(0.996, 0, 0.087, 0, 1, 0, -0.087, 0, 0.996, -4, 0, -13)
+district_name = "Tier 1 Fork"
+arrow_text = "Deep Wilds ->"
+district_color = Color(0.68, 0.78, 0.42, 1)
+
+[node name="SignTier2Fork" parent="Wayfinding" instance=ExtResource("3")]
+transform = Transform3D(0.966, 0, 0.259, 0, 1, 0, -0.259, 0, 0.966, 3, 0, -31)
+district_name = "Tier 2 Fork"
+arrow_text = "Spire ->"
+district_color = Color(0.62, 0.7, 0.4, 1)
+
+[node name="SignExit" parent="Wayfinding" instance=ExtResource("3")]
+transform = Transform3D(0.906, 0, -0.423, 0, 1, 0, 0.423, 0, 0.906, 4, 0, -6)
+district_name = "Town Exit"
+arrow_text = "<- South"
+district_color = Color(0.78, 0.74, 0.45, 1)
+
+[node name="Props" type="Node3D" parent="."]
+
+[node name="BreadcrumbRocksEntry" parent="Props" instance=ExtResource("4")]
+transform = Transform3D(1.0, 0, 0, 0, 1, 0, 0, 0, 1.0, 0, 0, -11)
+
+[node name="BreadcrumbLogsEntry" parent="Props" instance=ExtResource("5")]
+transform = Transform3D(1.0, 0, 0, 0, 1, 0, 0, 0, 1.0, 0, 0, -19)
+
+[node name="BreadcrumbRocksMid" parent="Props" instance=ExtResource("4")]
+transform = Transform3D(1.0, 0, 0, 0, 1, 0, 0, 0, 1.0, 0, 0, -35)
+
+[node name="BreadcrumbLogsMid" parent="Props" instance=ExtResource("5")]
+transform = Transform3D(1.1, 0, 0, 0, 1, 0, 0, 0, 1.1, 1.5, 0, -43)
+
+[node name="BreadcrumbRocksDeep" parent="Props" instance=ExtResource("4")]
+transform = Transform3D(1.05, 0, 0, 0, 1, 0, 0, 0, 1.05, 3, 0, -53)
+
+[node name="Containment" type="Node3D" parent="."]
+
+[node name="TreeLineEntry" parent="Containment" instance=ExtResource("7")]
+transform = Transform3D(1.4, 0, 0, 0, 1.0, 0, 0, 0, 1.0, 0, 0, -4)
+
+[node name="TreeLineDeep" parent="Containment" instance=ExtResource("7")]
+transform = Transform3D(1.5, 0, 0, 0, 1.0, 0, 0, 0, 1.0, 0, 0, -62)
+
+[node name="InvisibleWallWest" parent="Containment" instance=ExtResource("9")]
+transform = Transform3D(0, 0, -6.0, 0, 1, 0, 1.0, 0, 0, -31, 0, -32)
+
+[node name="InvisibleWallEast" parent="Containment" instance=ExtResource("9")]
+transform = Transform3D(0, 0, -6.0, 0, 1, 0, 1.0, 0, 0, 31, 0, -32)

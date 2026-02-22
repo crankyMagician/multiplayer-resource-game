@@ -3,7 +3,7 @@ extends Node
 # BattleCalculator, StatusEffects, FieldEffects available via class_name
 
 signal battle_started()
-signal battle_ended(victory: bool)
+signal battle_ended(result: String)
 signal turn_result_received(results: Array)
 signal xp_result_received(results: Dictionary)
 signal move_learn_prompt(creature_idx: int, new_move_id: String)
@@ -777,6 +777,13 @@ func _execute_action(attacker: Dictionary, defender: Dictionary, move, actor: St
 		result["message"] = "can't move!"
 		return result
 
+	# Confusion check (fermented/tipsy)
+	var confusion = BattleCalculator.check_confusion(attacker)
+	if confusion.confused:
+		result["confused_self_hit"] = confusion.damage
+		result["message"] = "hurt itself in confusion!"
+		return result
+
 	# Protection move
 	if move.is_protection:
 		var success_chance = pow(1.0 / 3.0, attacker.get("protect_count", 0))
@@ -944,6 +951,10 @@ func _execute_action(attacker: Dictionary, defender: Dictionary, move, actor: St
 					result["item_messages"] = []
 				result["item_messages"].append(def_item_result.message)
 
+			# Spiced: +25% damage dealt by attacker, +25% damage received by defender
+			dmg = int(dmg * StatusEffects.get_damage_multiplier(attacker))
+			dmg = int(dmg * StatusEffects.get_damage_multiplier(defender))
+
 			# Substitute absorbs damage
 			var sub_hp = defender.get("substitute_hp", 0)
 			if sub_hp > 0:
@@ -1002,9 +1013,12 @@ func _execute_action(attacker: Dictionary, defender: Dictionary, move, actor: St
 
 		# Drain healing
 		if move.drain_percent > 0 and total_damage > 0:
-			var heal = int(total_damage * move.drain_percent)
-			attacker["hp"] = min(attacker.get("max_hp", 40), attacker.get("hp", 0) + heal)
-			result["drain_heal"] = heal
+			if StatusEffects.is_heal_blocked(attacker):
+				result["heal_blocked"] = true
+			else:
+				var heal = int(total_damage * move.drain_percent)
+				attacker["hp"] = min(attacker.get("max_hp", 40), attacker.get("hp", 0) + heal)
+				result["drain_heal"] = heal
 
 		# Knock Off: remove defender's held item
 		if move.knock_off and defender.get("held_item_id", "") != "" and defender.get("hp", 0) > 0:
@@ -1014,9 +1028,12 @@ func _execute_action(attacker: Dictionary, defender: Dictionary, move, actor: St
 
 	# Healing
 	if move.heal_percent > 0:
-		var heal = int(attacker.get("max_hp", 40) * move.heal_percent)
-		attacker["hp"] = min(attacker.get("max_hp", 40), attacker.get("hp", 0) + heal)
-		result["heal"] = heal
+		if StatusEffects.is_heal_blocked(attacker):
+			result["heal_blocked"] = true
+		else:
+			var heal = int(attacker.get("max_hp", 40) * move.heal_percent)
+			attacker["hp"] = min(attacker.get("max_hp", 40), attacker.get("hp", 0) + heal)
+			result["heal"] = heal
 
 	# Status effect on defender (substitute blocks status from damaging moves)
 	if move.status_effect != "" and defender.get("hp", 0) > 0 and defender.get("substitute_hp", 0) <= 0:
@@ -1119,23 +1136,23 @@ func _apply_end_of_turn(battle: Dictionary, turn_log: Array) -> void:
 			turn_log.append({"actor": "enemy", "type": "status_damage", "damage": status_result.damage, "message": status_result.message})
 
 	# Ability end-of-turn effects
-	if a_creature.get("hp", 0) > 0:
+	if a_creature.get("hp", 0) > 0 and not StatusEffects.is_heal_blocked(a_creature):
 		var heal = AbilityEffects.end_of_turn(a_creature, weather)
 		if heal > 0:
 			turn_log.append({"actor": "player", "type": "ability_heal", "heal": heal, "message": "healed by its ability!"})
 
-	if b_creature.get("hp", 0) > 0:
+	if b_creature.get("hp", 0) > 0 and not StatusEffects.is_heal_blocked(b_creature):
 		var heal = AbilityEffects.end_of_turn(b_creature, weather)
 		if heal > 0:
 			turn_log.append({"actor": "enemy", "type": "ability_heal", "heal": heal, "message": "healed by its ability!"})
 
 	# Held item end-of-turn effects
-	if a_creature.get("hp", 0) > 0:
+	if a_creature.get("hp", 0) > 0 and not StatusEffects.is_heal_blocked(a_creature):
 		var heal = HeldItemEffects.end_of_turn(a_creature)
 		if heal > 0:
 			turn_log.append({"actor": "player", "type": "item_heal", "heal": heal, "message": "healed by its held item!"})
 
-	if b_creature.get("hp", 0) > 0:
+	if b_creature.get("hp", 0) > 0 and not StatusEffects.is_heal_blocked(b_creature):
 		var heal = HeldItemEffects.end_of_turn(b_creature)
 		if heal > 0:
 			turn_log.append({"actor": "enemy", "type": "item_heal", "heal": heal, "message": "healed by its held item!"})
@@ -1286,7 +1303,7 @@ func _check_battle_outcome(battle: Dictionary, turn_log: Array) -> void:
 				var species_id = str(enemy.get("species_id", ""))
 				quest_mgr.notify_progress(peer_id, "defeat_creature", species_id)
 
-		_end_battle_for_peer(battle, peer_id, true)
+		_end_battle_for_peer(battle, peer_id, "victory")
 		return
 
 	if player_creature.hp <= 0:
@@ -1297,7 +1314,7 @@ func _check_battle_outcome(battle: Dictionary, turn_log: Array) -> void:
 			_send_state_to_peer(battle, peer_id)
 			# Loss penalty: lose 50% money + teleport to spawn
 			_apply_defeat_penalty(battle, peer_id)
-			_end_battle_for_peer(battle, peer_id, false)
+			_end_battle_for_peer(battle, peer_id, "defeat")
 			return
 		else:
 			turn_log.append({"type": "fainted", "need_switch": true})
@@ -1734,7 +1751,7 @@ func _process_flee(battle: Dictionary) -> void:
 
 	if randf() < flee_chance:
 		_send_turn_result.rpc_id(peer_id, [{"type": "fled"}], 0, [], 0)
-		_end_battle_for_peer(battle, peer_id, false)
+		_end_battle_for_peer(battle, peer_id, "fled")
 	else:
 		var enemy_move_id = _pick_enemy_move(enemy)
 		var enemy_move = DataRegistry.get_move(enemy_move_id)
@@ -1783,9 +1800,12 @@ func _process_item_use(battle: Dictionary, action_data: String) -> void:
 				# Can't heal fainted creature with heal item
 				battle.state = "waiting_action"
 				return
-			var heal_amount = min(battle_item.effect_value, max_hp - old_hp)
-			target_creature["hp"] = min(old_hp + battle_item.effect_value, max_hp)
-			turn_log.append({"type": "item_use", "actor": "player", "item_name": battle_item.display_name, "creature_name": target_creature.get("nickname", "???"), "message": "Healed %d HP!" % heal_amount})
+			if StatusEffects.is_heal_blocked(target_creature):
+				turn_log.append({"type": "item_use", "actor": "player", "item_name": battle_item.display_name, "creature_name": target_creature.get("nickname", "???"), "message": "Too stuffed to heal!"})
+			else:
+				var heal_amount = min(battle_item.effect_value, max_hp - old_hp)
+				target_creature["hp"] = min(old_hp + battle_item.effect_value, max_hp)
+				turn_log.append({"type": "item_use", "actor": "player", "item_name": battle_item.display_name, "creature_name": target_creature.get("nickname", "???"), "message": "Healed %d HP!" % heal_amount})
 		"cure_status":
 			var status = target_creature.get("status", "")
 			if status != "" and int(target_creature.get("hp", 0)) > 0:
@@ -1901,15 +1921,15 @@ func _calculate_drops(enemy: Dictionary) -> Dictionary:
 
 # === BATTLE END ===
 
-func _end_battle_for_peer(battle: Dictionary, peer_id: int, victory: bool) -> void:
-	print("[BattleManager] _end_battle_for_peer: peer=", peer_id, " battle_id=", battle.battle_id, " victory=", victory)
+func _end_battle_for_peer(battle: Dictionary, peer_id: int, result: String) -> void:
+	print("[BattleManager] _end_battle_for_peer: peer=", peer_id, " battle_id=", battle.battle_id, " result=", result)
 	# Save party state
 	if peer_id == battle.side_a_peer and battle.side_a_party.size() > 0:
 		NetworkManager.server_update_party(peer_id, battle.side_a_party)
 	elif peer_id == battle.side_b_peer and battle.side_b_party.size() > 0:
 		NetworkManager.server_update_party(peer_id, battle.side_b_party)
 	# Grant bond points on victory
-	if victory:
+	if result == "victory":
 		NetworkManager.server_grant_bond_points_battle(peer_id)
 
 	# Clean up maps
@@ -1922,7 +1942,7 @@ func _end_battle_for_peer(battle: Dictionary, peer_id: int, victory: bool) -> vo
 	if encounter_mgr:
 		encounter_mgr.end_encounter(peer_id)
 
-	_battle_ended_client.rpc_id(peer_id, victory)
+	_battle_ended_client.rpc_id(peer_id, result)
 
 func _end_battle_full(battle: Dictionary, result: String) -> void:
 	# Save both sides
@@ -1954,17 +1974,17 @@ func _end_battle_full(battle: Dictionary, result: String) -> void:
 
 	match result:
 		"a_wins":
-			_battle_ended_client.rpc_id(battle.side_a_peer, true)
+			_battle_ended_client.rpc_id(battle.side_a_peer, "victory")
 			if battle.side_b_peer > 0:
-				_battle_ended_client.rpc_id(battle.side_b_peer, false)
+				_battle_ended_client.rpc_id(battle.side_b_peer, "defeat")
 		"b_wins":
-			_battle_ended_client.rpc_id(battle.side_a_peer, false)
+			_battle_ended_client.rpc_id(battle.side_a_peer, "defeat")
 			if battle.side_b_peer > 0:
-				_battle_ended_client.rpc_id(battle.side_b_peer, true)
+				_battle_ended_client.rpc_id(battle.side_b_peer, "victory")
 		"draw":
-			_battle_ended_client.rpc_id(battle.side_a_peer, false)
+			_battle_ended_client.rpc_id(battle.side_a_peer, "defeat")
 			if battle.side_b_peer > 0:
-				_battle_ended_client.rpc_id(battle.side_b_peer, false)
+				_battle_ended_client.rpc_id(battle.side_b_peer, "defeat")
 
 func _apply_defeat_penalty(_battle: Dictionary, peer_id: int) -> void:
 	if peer_id not in NetworkManager.player_data_store:
@@ -2046,11 +2066,11 @@ func _send_xp_result(results: Dictionary) -> void:
 	PlayerData.party_changed.emit()
 
 @rpc("authority", "reliable")
-func _battle_ended_client(victory: bool) -> void:
+func _battle_ended_client(result: String) -> void:
 	in_battle = false
 	awaiting_action = false
-	battle_ended.emit(victory)
-	if not victory:
+	battle_ended.emit(result)
+	if result != "victory":
 		PlayerData.heal_all_creatures()
 
 @rpc("authority", "reliable")

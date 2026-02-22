@@ -1,0 +1,26 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/world/modular_scatter_3d.gd" id="1"]
+
+[sub_resource type="BoxMesh" id="patch_mesh"]
+size = Vector3(1.2, 0.03, 1.0)
+
+[sub_resource type="StandardMaterial3D" id="patch_mat"]
+albedo_color = Color(0.28, 0.42, 0.2, 1)
+roughness = 0.95
+
+[node name="GroundPatchCluster" type="Node3D"]
+
+[node name="Patches" type="MultiMeshInstance3D" parent="."]
+cast_shadow = 0
+material_override = SubResource("patch_mat")
+script = ExtResource("1")
+source_mesh = SubResource("patch_mesh")
+count = 18
+area_size = Vector2(12, 8)
+y_offset_min = 0.02
+y_offset_max = 0.05
+min_scale = Vector3(0.7, 1, 0.7)
+max_scale = Vector3(1.4, 1, 1.4)
+max_yaw_degrees = 180.0
+scatter_seed = 4242

@@ -43,7 +43,7 @@ var waiting_label: Label = null
 var battle_mgr: Node = null
 
 # Summary data accumulator
-var _summary_victory: bool = false
+var _summary_result: String = ""
 var _summary_ready: bool = false
 
 # Animation state
@@ -214,8 +214,8 @@ func _on_battle_started() -> void:
 	if hud and hud.has_method("clear_battle_transition"):
 		await hud.clear_battle_transition()
 
-func _on_battle_ended(victory: bool) -> void:
-	_summary_victory = victory
+func _on_battle_ended(result: String) -> void:
+	_summary_result = result
 	# Wait a brief moment for reward RPCs to arrive, then show summary
 	await get_tree().create_timer(0.5).timeout
 	_show_summary_screen()
@@ -914,18 +914,30 @@ func _show_summary_screen() -> void:
 
 	# Title
 	var title = Label.new()
-	if _summary_victory:
-		title.text = "Victory!"
-		title.add_theme_color_override("font_color", UITokens.STAMP_GREEN)
-	else:
-		title.text = "Defeat..."
-		title.add_theme_color_override("font_color", UITokens.STAMP_RED)
+	match _summary_result:
+		"victory":
+			title.text = "Victory!"
+			title.add_theme_color_override("font_color", UITokens.STAMP_GREEN)
+		"fled":
+			title.text = "Escaped!"
+			title.add_theme_color_override("font_color", UITokens.STAMP_GOLD)
+		_:
+			title.text = "Defeat..."
+			title.add_theme_color_override("font_color", UITokens.STAMP_RED)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	UITheme.style_heading(title)
 	vbox.add_child(title)
 
-	# XP section
-	if battle_mgr.summary_xp_results.size() > 0:
+	# Fled subtitle
+	if _summary_result == "fled":
+		var subtitle = Label.new()
+		subtitle.text = "Got away safely."
+		subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		UITheme.style_body(subtitle)
+		vbox.add_child(subtitle)
+
+	# XP section (skip when fled)
+	if _summary_result != "fled" and battle_mgr.summary_xp_results.size() > 0:
 		var xp_header = Label.new()
 		xp_header.text = "Experience:"
 		UITheme.style_body(xp_header)
@@ -941,7 +953,7 @@ func _show_summary_screen() -> void:
 				text += " (Level %d!)" % lvl
 			var lbl = Label.new()
 			lbl.text = text
-			UITheme.style_small(lbl)
+			UITheme.style_body(lbl)
 			if r.get("level_ups", []).size() > 0:
 				lbl.add_theme_color_override("font_color", UITokens.STAMP_GOLD)
 			vbox.add_child(lbl)
@@ -953,7 +965,7 @@ func _show_summary_screen() -> void:
 			var new_species = DataRegistry.get_species(evo.get("new_species_id", ""))
 			var evo_name = new_species.display_name if new_species else evo.get("new_species_id", "")
 			lbl.text = "  Evolved into %s!" % evo_name
-			UITheme.style_small(lbl)
+			UITheme.style_body(lbl)
 			lbl.add_theme_color_override("font_color", UITokens.TYPE_SWEET)
 			vbox.add_child(lbl)
 
@@ -965,7 +977,7 @@ func _show_summary_screen() -> void:
 				var move_name = move_def.display_name if move_def else nm.get("move_id", "???")
 				var lbl = Label.new()
 				lbl.text = "  Learned %s!" % move_name
-				UITheme.style_small(lbl)
+				UITheme.style_body(lbl)
 				lbl.add_theme_color_override("font_color", UITokens.STAMP_GREEN)
 				vbox.add_child(lbl)
 
@@ -980,14 +992,14 @@ func _show_summary_screen() -> void:
 			var item_name = ingredient.display_name if ingredient else item_id
 			var lbl = Label.new()
 			lbl.text = "  %s x%d" % [item_name, battle_mgr.summary_drops[item_id]]
-			UITheme.style_small(lbl)
+			UITheme.style_body(lbl)
 			vbox.add_child(lbl)
 
 	# Trainer rewards
 	if battle_mgr.summary_trainer_money > 0:
 		var lbl = Label.new()
 		lbl.text = "$%d earned!" % battle_mgr.summary_trainer_money
-		UITheme.style_small(lbl)
+		UITheme.style_body(lbl)
 		lbl.add_theme_color_override("font_color", UITokens.STAMP_GOLD)
 		vbox.add_child(lbl)
 	if battle_mgr.summary_trainer_ingredients.size() > 0:
@@ -996,7 +1008,7 @@ func _show_summary_screen() -> void:
 			var item_name = ingredient.display_name if ingredient else item_id
 			var lbl = Label.new()
 			lbl.text = "  Bonus: %s x%d" % [item_name, battle_mgr.summary_trainer_ingredients[item_id]]
-			UITheme.style_small(lbl)
+			UITheme.style_body(lbl)
 			vbox.add_child(lbl)
 
 	# PvP loss
@@ -1011,14 +1023,14 @@ func _show_summary_screen() -> void:
 			var item_name = ingredient.display_name if ingredient else item_id
 			var lbl = Label.new()
 			lbl.text = "  %s x%d" % [item_name, battle_mgr.summary_pvp_loss[item_id]]
-			UITheme.style_small(lbl)
+			UITheme.style_body(lbl)
 			vbox.add_child(lbl)
 
 	# Defeat penalty
 	if battle_mgr.summary_defeat_penalty > 0:
 		var lbl = Label.new()
 		lbl.text = "Lost $%d. Returned to camp." % battle_mgr.summary_defeat_penalty
-		UITheme.style_small(lbl)
+		UITheme.style_body(lbl)
 		lbl.add_theme_color_override("font_color", UITokens.STAMP_RED)
 		vbox.add_child(lbl)
 

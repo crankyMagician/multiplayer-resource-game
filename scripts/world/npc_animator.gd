@@ -53,7 +53,7 @@ const LOOP_ANIMS := [
 
 # --- Factory ---
 
-## Create a character with a custom appearance (Synty modular parts).
+## Create a character with a custom appearance (AR Kit modular parts).
 ## Falls back to mannequin if appearance is empty or assembly fails.
 static func create_character_from_appearance(parent: Node3D, config: Dictionary, appearance: Dictionary) -> Dictionary:
 	var model: Node3D

@@ -1,0 +1,25 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/world/modular_scatter_3d.gd" id="1"]
+
+[sub_resource type="BoxMesh" id="log_mesh"]
+size = Vector3(1.4, 0.22, 0.35)
+
+[sub_resource type="StandardMaterial3D" id="log_mat"]
+albedo_color = Color(0.42, 0.28, 0.16, 1)
+roughness = 1.0
+
+[node name="BreadcrumbClusterLogs" type="Node3D"]
+
+[node name="Logs" type="MultiMeshInstance3D" parent="."]
+material_override = SubResource("log_mat")
+script = ExtResource("1")
+source_mesh = SubResource("log_mesh")
+count = 7
+area_size = Vector2(9, 4)
+y_offset_min = 0.01
+y_offset_max = 0.05
+min_scale = Vector3(0.9, 0.9, 0.9)
+max_scale = Vector3(1.4, 1.1, 1.4)
+max_yaw_degrees = 180.0
+scatter_seed = 377

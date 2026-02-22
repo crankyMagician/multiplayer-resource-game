@@ -1,0 +1,12 @@
+[gd_scene format=3]
+
+[sub_resource type="BoxShape3D" id="wall_shape"]
+size = Vector3(8, 3, 0.6)
+
+[node name="InvisibleBoundaryWall" type="Node3D"]
+
+[node name="Body" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+
+[node name="Collision" type="CollisionShape3D" parent="Body"]
+shape = SubResource("wall_shape")

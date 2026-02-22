@@ -14,12 +14,12 @@ birthday = {
 schedule = [{
 "time_start": 0.0,
 "time_end": 0.5,
-"position": { "x": 5, "y": 7, "z": 35 },
+"position": { "x": 13, "y": 7, "z": 41 },
 "seasons": []
 }, {
 "time_start": 0.5,
 "time_end": 1.0,
-"position": { "x": 0, "y": 6, "z": 32 },
+"position": { "x": 7, "y": 7, "z": 46 },
 "seasons": []
 }]
 gift_preferences = {

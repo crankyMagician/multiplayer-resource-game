@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "npc_tailor"
 display_name = "Scarlet Winters"
-world_position = Vector3(15, 2, 5)
+world_position = Vector3(15, 0.3, 5)
 discovery_radius = 8.0
 icon_type = "social_npc"
 category = "social_npc"

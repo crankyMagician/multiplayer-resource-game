@@ -18,7 +18,7 @@ const ARENA_SCENES: Dictionary = {
 }
 
 # Tournament camera — wider FOV, higher for stadium feel
-const CAM_TOURNAMENT_NEUTRAL = { "pos": Vector3(0, 7, 10), "rot": Vector3(-30, 0, 0), "fov": 60.0 }
+const CAM_TOURNAMENT_NEUTRAL = { "pos": Vector3(0, 7, 10), "target": Vector3(0, 0.5, 0), "fov": 60.0 }
 
 var _arena_theme: String = "docks"
 
@@ -44,11 +44,12 @@ const WEATHER_LIGHT_COLORS = {
 }
 
 # Camera presets (relative to BATTLE_ARENA_OFFSET via local coords)
-const CAM_NEUTRAL = { "pos": Vector3(0, 5, 8), "rot": Vector3(-25, 0, 0), "fov": 55.0 }
-const CAM_PLAYER_ATTACK = { "pos": Vector3(-2, 3, 5), "rot": Vector3(-15, 15, 0), "fov": 50.0 }
-const CAM_ENEMY_ATTACK = { "pos": Vector3(2, 3, -1), "rot": Vector3(-15, -15, 0), "fov": 50.0 }
-const CAM_CRIT_ZOOM = { "pos": Vector3(0, 2.5, 2), "rot": Vector3(-10, 0, 0), "fov": 40.0 }
-const CAM_KO_WIDE = { "pos": Vector3(0, 8, 12), "rot": Vector3(-30, 0, 0), "fov": 65.0 }
+# "target" = point in local arena space the camera looks at (creature center-of-mass ~Y=1.0)
+const CAM_NEUTRAL = { "pos": Vector3(0, 5, 8), "target": Vector3(0, 0.5, 0), "fov": 55.0 }
+const CAM_PLAYER_ATTACK = { "pos": Vector3(-2, 3.5, 4), "target": Vector3(0, 1.0, -2), "fov": 50.0 }
+const CAM_ENEMY_ATTACK = { "pos": Vector3(2, 3.5, -1), "target": Vector3(0, 1.0, 2), "fov": 50.0 }
+const CAM_CRIT_ZOOM = { "pos": Vector3(0, 2.5, 2), "target": Vector3(0, 1.0, 0), "fov": 40.0 }
+const CAM_KO_WIDE = { "pos": Vector3(0, 8, 12), "target": Vector3(0, 0.5, 0), "fov": 65.0 }
 
 # Node references (set during build)
 var arena_camera: Camera3D
@@ -94,7 +95,7 @@ func build_arena(battle_mode: int, enemy_data: Dictionary, opponent_name: String
 	arena_camera = Camera3D.new()
 	arena_camera.name = "ArenaCamera"
 	arena_camera.position = cam_preset.pos
-	arena_camera.rotation = Vector3(deg_to_rad(cam_preset.rot.x), deg_to_rad(cam_preset.rot.y), 0)
+	arena_camera.rotation = _compute_look_rotation(cam_preset.pos, cam_preset.target)
 	arena_camera.fov = cam_preset.fov
 	add_child(arena_camera)
 
@@ -275,6 +276,11 @@ func update_enemy_creature(enemy_data: Dictionary) -> void:
 
 # === CAMERA SYSTEM (smooth tweened transitions) ===
 
+func _compute_look_rotation(from_pos: Vector3, target_pos: Vector3) -> Vector3:
+	var dir = (target_pos - from_pos).normalized()
+	var basis = Basis.looking_at(dir, Vector3.UP)
+	return basis.get_euler()
+
 func cut_camera(preset: String, duration: float = 0.35) -> void:
 	if arena_camera == null:
 		return
@@ -291,31 +297,32 @@ func cut_camera(preset: String, duration: float = 0.35) -> void:
 		_:
 			cam_data = CAM_TOURNAMENT_NEUTRAL if _arena_theme == "tournament" else CAM_NEUTRAL
 
+	var target_rot = _compute_look_rotation(cam_data.pos, cam_data.target)
+
 	if duration <= 0.0:
-		# Instant cut (for snap-to positions)
 		arena_camera.position = cam_data.pos
-		arena_camera.rotation = Vector3(deg_to_rad(cam_data.rot.x), deg_to_rad(cam_data.rot.y), deg_to_rad(cam_data.rot.z))
+		arena_camera.rotation = target_rot
 		arena_camera.fov = cam_data.fov
 		return
 
-	# Kill previous camera tween
 	if _camera_tween and _camera_tween.is_valid():
 		_camera_tween.kill()
 
-	var target_rot = Vector3(deg_to_rad(cam_data.rot.x), deg_to_rad(cam_data.rot.y), deg_to_rad(cam_data.rot.z))
-	_camera_tween = create_tween()
-	_camera_tween.set_parallel(true)
-	_camera_tween.tween_property(arena_camera, "position", cam_data.pos, duration).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_CUBIC)
-	_camera_tween.tween_property(arena_camera, "rotation", target_rot, duration).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_CUBIC)
-	_camera_tween.tween_property(arena_camera, "fov", cam_data.fov, duration).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_CUBIC)
+	_camera_tween = create_tween().set_parallel(true)
+	_camera_tween.tween_property(arena_camera, "position", cam_data.pos, duration) \
+		.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_CUBIC)
+	_camera_tween.tween_property(arena_camera, "rotation", target_rot, duration) \
+		.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_CUBIC)
+	_camera_tween.tween_property(arena_camera, "fov", cam_data.fov, duration) \
+		.set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_CUBIC)
 
 func crit_camera_punch(_side: String) -> void:
 	if arena_camera == null:
 		return
 	# Snap to crit zoom
 	cut_camera("crit_zoom", 0.0)
-	# Hold briefly, then tween back to neutral
-	var timer = get_tree().create_timer(0.15)
+	# Hold briefly, then tween back to neutral (process_always=true to ignore hit_stop time_scale)
+	var timer = get_tree().create_timer(0.15, true, false, true)
 	timer.timeout.connect(func():
 		if is_instance_valid(arena_camera):
 			cut_camera("neutral", 0.3)

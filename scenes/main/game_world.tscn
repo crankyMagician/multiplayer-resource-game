@@ -1,4 +1,4 @@
-[gd_scene load_steps=49 format=3]
+[gd_scene load_steps=68 format=3]
 
 [ext_resource type="Script" path="res://scripts/world/game_world.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/world/season_manager.gd" id="2"]
@@ -24,15 +24,40 @@
 [ext_resource type="Script" path="res://scripts/world/friend_manager.gd" id="22"]
 [ext_resource type="Script" path="res://scripts/world/excursion_manager.gd" id="23"]
 [ext_resource type="Script" path="res://scripts/world/day_night_controller.gd" id="24"]
+[ext_resource type="PackedScene" path="res://scenes/world/districts/district_town_square.tscn" id="25"]
+[ext_resource type="PackedScene" path="res://scenes/world/districts/district_wharf_walk.tscn" id="26"]
+[ext_resource type="PackedScene" path="res://scenes/world/districts/district_market_row.tscn" id="27"]
+[ext_resource type="PackedScene" path="res://scenes/world/districts/district_harbor_heights.tscn" id="28"]
+[ext_resource type="PackedScene" path="res://scenes/world/districts/district_farm_zone.tscn" id="29"]
+[ext_resource type="PackedScene" path="res://scenes/world/districts/district_wilderness.tscn" id="30"]
 
 [sub_resource type="BoxShape3D" id="ground_shape"]
-size = Vector3(200, 0.2, 200)
+size = Vector3(300, 0.2, 300)
 
 [sub_resource type="BoxMesh" id="ground_mesh"]
-size = Vector3(200, 0.2, 200)
+size = Vector3(300, 0.2, 300)
 
 [sub_resource type="StandardMaterial3D" id="ground_mat"]
 albedo_color = Color(0.3, 0.55, 0.25, 1)
+
+; --- Ground Overlay meshes & materials ---
+[sub_resource type="BoxMesh" id="town_lawn_mesh"]
+size = Vector3(60, 0.12, 50)
+
+[sub_resource type="StandardMaterial3D" id="town_lawn_mat"]
+albedo_color = Color(0.32, 0.56, 0.28, 1)
+
+[sub_resource type="BoxMesh" id="coastal_sand_mesh"]
+size = Vector3(30, 0.08, 40)
+
+[sub_resource type="StandardMaterial3D" id="coastal_sand_mat"]
+albedo_color = Color(0.52, 0.48, 0.38, 1)
+
+[sub_resource type="BoxMesh" id="wilderness_earth_mesh"]
+size = Vector3(50, 0.06, 67)
+
+[sub_resource type="StandardMaterial3D" id="wilderness_earth_mat"]
+albedo_color = Color(0.28, 0.42, 0.2, 1)
 
 [sub_resource type="BoxMesh" id="building_mesh"]
 size = Vector3(6, 4, 6)
@@ -72,6 +97,24 @@ size = Vector3(3, 0.05, 3)
 
 [sub_resource type="StandardMaterial3D" id="path_mat"]
 albedo_color = Color(0.5, 0.4, 0.25, 1)
+
+[sub_resource type="BoxMesh" id="path_spawn_south_mesh"]
+size = Vector3(3.5, 0.06, 18)
+
+[sub_resource type="BoxMesh" id="path_to_wharf_mesh"]
+size = Vector3(12, 0.06, 3.5)
+
+[sub_resource type="BoxMesh" id="path_to_harbor_mesh"]
+size = Vector3(4, 0.06, 8)
+
+[sub_resource type="BoxMesh" id="path_to_market_mesh"]
+size = Vector3(8, 0.06, 3.5)
+
+[sub_resource type="BoxMesh" id="path_to_farm_mesh"]
+size = Vector3(3.5, 0.06, 10)
+
+[sub_resource type="StandardMaterial3D" id="conn_path_mat"]
+albedo_color = Color(0.55, 0.45, 0.3, 1)
 
 [sub_resource type="BoxMesh" id="grass_blade_mesh"]
 size = Vector3(0.3, 1.2, 0.3)
@@ -197,6 +240,22 @@ material_override = SubResource("ground_mat")
 
 [node name="GroundCollision" type="CollisionShape3D" parent="Environment/Ground"]
 shape = SubResource("ground_shape")
+
+; === Ground Overlays (color zones on top of base ground) ===
+[node name="TownLawn" type="MeshInstance3D" parent="Environment"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.03, 6)
+mesh = SubResource("town_lawn_mesh")
+material_override = SubResource("town_lawn_mat")
+
+[node name="CoastalSand" type="MeshInstance3D" parent="Environment"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30, -0.05, -8)
+mesh = SubResource("coastal_sand_mesh")
+material_override = SubResource("coastal_sand_mat")
+
+[node name="WildernessEarth" type="MeshInstance3D" parent="Environment"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.03, -29)
+mesh = SubResource("wilderness_earth_mesh")
+material_override = SubResource("wilderness_earth_mat")
 
 [node name="Players" type="Node3D" parent="."]
 
@@ -930,6 +989,55 @@ script = ExtResource("23")
 ; === Day/Night Controller (client-side sky + lighting) ===
 [node name="DayNightController" type="Node" parent="."]
 script = ExtResource("24")
+
+; === Connection Paths (visual roads between districts) ===
+[node name="Paths" type="Node3D" parent="Environment"]
+
+[node name="PathSpawnSouth" type="MeshInstance3D" parent="Environment/Paths"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.04, -6)
+mesh = SubResource("path_spawn_south_mesh")
+material_override = SubResource("conn_path_mat")
+
+[node name="PathToWharf" type="MeshInstance3D" parent="Environment/Paths"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7, 0.04, -1)
+mesh = SubResource("path_to_wharf_mesh")
+material_override = SubResource("conn_path_mat")
+
+[node name="PathToHarbor" type="MeshInstance3D" parent="Environment/Paths"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0.04, 17)
+mesh = SubResource("path_to_harbor_mesh")
+material_override = SubResource("conn_path_mat")
+
+[node name="PathToMarket" type="MeshInstance3D" parent="Environment/Paths"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0.04, 5)
+mesh = SubResource("path_to_market_mesh")
+material_override = SubResource("conn_path_mat")
+
+[node name="PathToFarm" type="MeshInstance3D" parent="Environment/Paths"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22, 0.04, 3)
+mesh = SubResource("path_to_farm_mesh")
+material_override = SubResource("conn_path_mat")
+
+; === District Blockout Visuals ===
+[node name="Districts" type="Node3D" parent="."]
+
+[node name="TownSquare" parent="Districts" instance=ExtResource("25")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 6)
+
+[node name="WharfWalk" parent="Districts" instance=ExtResource("26")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0, -4)
+
+[node name="MarketRow" parent="Districts" instance=ExtResource("27")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 0, 6)
+
+[node name="HarborHeights" parent="Districts" instance=ExtResource("28")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0, 28)
+
+[node name="FarmDecor" parent="Districts" instance=ExtResource("29")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25, 0, 0)
+
+[node name="Wilderness" parent="Districts" instance=ExtResource("30")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -12)
 
 ; === UI Overlays ===
 [node name="UI" type="Node" parent="."]

@@ -14,7 +14,7 @@ birthday = {
 schedule = [{
 "time_start": 0.0,
 "time_end": 0.5,
-"position": { "x": -8, "y": 0, "z": -3 },
+"position": { "x": -12, "y": 0, "z": -9 },
 "seasons": []
 }, {
 "time_start": 0.5,

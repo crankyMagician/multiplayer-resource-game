@@ -30,8 +30,11 @@ const CATEGORY_KEYS: Dictionary = {
 
 # Categories where empty string means "none" (optional parts)
 const OPTIONAL_CATEGORIES: Array[String] = [
-	"hair", "arms", "hats", "glasses", "beard",
+	"hair", "hats", "glasses", "beard",
 ]
+
+# Torsos that lack arm geometry and should not be selectable
+const TORSO_BLOCKLIST: Array[String] = ["TORSO_01_1"]
 
 # Cache: gender → category → Array[String] of part IDs
 static var _cache: Dictionary = {}
@@ -65,6 +68,9 @@ static func get_parts(gender: String, category: String) -> Array[String]:
 		file_name = dir.get_next()
 	dir.list_dir_end()
 
+	# Filter out blocklisted torsos (no arm geometry)
+	if category == "torso":
+		parts = parts.filter(func(p: String) -> bool: return not TORSO_BLOCKLIST.has(p))
 	parts.sort()
 	_cache[cache_key] = parts
 	return parts

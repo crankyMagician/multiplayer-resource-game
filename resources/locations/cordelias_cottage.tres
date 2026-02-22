@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "cordelias_cottage"
 display_name = "Cordelia's Cottage"
-world_position = Vector3(10, 7, 38)
+world_position = Vector3(0, 7, 38)
 discovery_radius = 5.0
 icon_type = "zone"
 category = "zone"

@@ -1,0 +1,52 @@
+[gd_scene format=3]
+
+[sub_resource type="CylinderMesh" id="ring_mesh"]
+top_radius = 3.1
+bottom_radius = 3.4
+height = 0.35
+
+[sub_resource type="CylinderMesh" id="basin_mesh"]
+top_radius = 2.2
+bottom_radius = 2.4
+height = 0.4
+
+[sub_resource type="CylinderMesh" id="column_mesh"]
+top_radius = 0.5
+bottom_radius = 0.7
+height = 1.4
+
+[sub_resource type="CylinderMesh" id="water_mesh"]
+top_radius = 2.0
+bottom_radius = 2.0
+height = 0.1
+
+[sub_resource type="StandardMaterial3D" id="stone_mat"]
+albedo_color = Color(0.58, 0.58, 0.62, 1)
+
+[sub_resource type="StandardMaterial3D" id="water_mat"]
+albedo_color = Color(0.25, 0.45, 0.72, 0.55)
+transparency = 1
+roughness = 0.95
+
+[node name="FountainHubVariant" type="Node3D"]
+
+[node name="OuterRing" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.18, 0)
+mesh = SubResource("ring_mesh")
+material_override = SubResource("stone_mat")
+
+[node name="InnerBasin" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.38, 0)
+mesh = SubResource("basin_mesh")
+material_override = SubResource("stone_mat")
+
+[node name="CenterColumn" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, 0)
+mesh = SubResource("column_mesh")
+material_override = SubResource("stone_mat")
+
+[node name="WaterDisk" type="MeshInstance3D" parent="."]
+cast_shadow = 0
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.56, 0)
+mesh = SubResource("water_mesh")
+material_override = SubResource("water_mat")

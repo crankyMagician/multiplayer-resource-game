@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[sub_resource type="BoxMesh" id="bench_mesh"]
+size = Vector3(1.8, 0.45, 0.6)
+
+[sub_resource type="StandardMaterial3D" id="bench_mat"]
+albedo_color = Color(0.46, 0.3, 0.18, 1)
+
+[node name="BenchSet" type="Node3D"]
+
+[node name="BenchA" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 0.22, 0)
+mesh = SubResource("bench_mesh")
+material_override = SubResource("bench_mat")
+
+[node name="BenchB" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.2, 0.22, 0)
+mesh = SubResource("bench_mesh")
+material_override = SubResource("bench_mat")

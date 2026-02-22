@@ -19,7 +19,7 @@ schedule = [{
 }, {
 "time_start": 0.5,
 "time_end": 1.0,
-"position": { "x": -8, "y": 0, "z": -3 },
+"position": { "x": -12, "y": 0, "z": -4 },
 "seasons": []
 }]
 gift_preferences = {

@@ -149,7 +149,19 @@ static func check_critical(attacker: Dictionary, move) -> bool:
 	var threshold = CRIT_THRESHOLDS[stage]
 	return randi() % threshold == 0
 
+static func check_confusion(creature: Dictionary) -> Dictionary:
+	if creature.get("status", "") != "fermented":
+		return {"confused": false, "damage": 0}
+	if randf() < 0.33:
+		var dmg = max(1, creature.get("max_hp", 40) / 8)
+		creature["hp"] = max(0, creature.get("hp", 0) - dmg)
+		return {"confused": true, "damage": dmg}
+	return {"confused": false, "damage": 0}
+
 static func get_speed(creature: Dictionary) -> int:
+	# Chilled: always moves last
+	if creature.get("status", "") == "chilled":
+		return 1
 	var base_speed = creature.get("speed", 10)
 	var stage = creature.get("speed_stage", 0)
 	var spd = float(base_speed) * _stage_multiplier(stage)

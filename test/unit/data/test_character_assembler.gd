@@ -33,3 +33,17 @@ func test_part_categories_match_registry():
 		var registry_key: String = CharacterPartRegistry.CATEGORY_KEYS.get(category, "")
 		assert_eq(assembler_key, registry_key,
 			"Assembler and Registry disagree on key for category: " + category)
+
+
+func test_needs_customization_only_has_no_parts():
+	# An appearance dict with only needs_customization should have no valid part IDs
+	var app := {"needs_customization": true}
+	var has_parts := false
+	for category in CharacterAssembler.PART_CATEGORIES:
+		var key: String = CharacterAssembler.PART_CATEGORIES[category]
+		var val: String = app.get(key, "")
+		if val != "":
+			has_parts = true
+			break
+	assert_false(has_parts,
+		"needs_customization-only appearance should have no part IDs (mannequin fallback)")

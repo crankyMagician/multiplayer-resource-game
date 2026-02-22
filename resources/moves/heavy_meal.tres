@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="MoveDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/move_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+move_id = "heavy_meal"
+display_name = "Heavy Meal"
+type = "grain"
+category = "physical"
+power = 75
+accuracy = 90
+pp = 10
+is_contact = true
+status_effect = "stuffed"
+status_chance = 30
+description = "Slams the target with a massive meal. May stuff."

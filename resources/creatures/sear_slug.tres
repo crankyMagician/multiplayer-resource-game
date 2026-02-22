@@ -21,6 +21,6 @@ rarity = "common"
 drop_ingredient_ids = PackedStringArray("chili_powder", "soy_sauce")
 drop_min = 1
 drop_max = 1
-learnset = {3: "flame_sear", 5: "ferment", 8: "savory_slam", 11: "simmer", 14: "umami_fog"}
+learnset = {3: "flame_sear", 5: "ferment", 8: "savory_slam", 11: "simmer", 14: "umami_fog", 17: "capsaicin_rush"}
 ability_ids = PackedStringArray("flash_fry", "deep_umami")
 ev_yield = {"attack": 1}

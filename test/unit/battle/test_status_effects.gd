@@ -162,3 +162,116 @@ func test_try_apply_empty_status_string():
 	var c = {"status": ""}
 	var result = StatusEffects.try_apply_status(c, "", 100)
 	assert_false(result)
+
+# --- New statuses: fermented, stuffed, spiced, chilled ---
+
+func test_fermented_cures_after_three_turns():
+	var c = {"status": "fermented", "status_turns": 2, "hp": 80, "max_hp": 80}
+	var result = StatusEffects.apply_end_of_turn(c)
+	assert_true(result.cured)
+	assert_eq(c["status"], "")
+	assert_eq(c["status_turns"], 0)
+	assert_eq(result.message, "sobered up!")
+
+func test_fermented_persists_before_three_turns():
+	var c = {"status": "fermented", "status_turns": 1, "hp": 80, "max_hp": 80}
+	var result = StatusEffects.apply_end_of_turn(c)
+	assert_false(result.cured)
+	assert_eq(c["status"], "fermented")
+	assert_eq(result.message, "is tipsy and confused...")
+
+func test_stuffed_cures_after_three_turns():
+	var c = {"status": "stuffed", "status_turns": 2, "hp": 80, "max_hp": 80}
+	var result = StatusEffects.apply_end_of_turn(c)
+	assert_true(result.cured)
+	assert_eq(c["status"], "")
+	assert_eq(result.message, "digested its meal!")
+
+func test_stuffed_persists_before_three_turns():
+	var c = {"status": "stuffed", "status_turns": 0, "hp": 80, "max_hp": 80}
+	var result = StatusEffects.apply_end_of_turn(c)
+	assert_false(result.cured)
+	assert_eq(c["status"], "stuffed")
+
+func test_spiced_cures_after_three_turns():
+	var c = {"status": "spiced", "status_turns": 2, "hp": 80, "max_hp": 80}
+	var result = StatusEffects.apply_end_of_turn(c)
+	assert_true(result.cured)
+	assert_eq(c["status"], "")
+	assert_eq(result.message, "cooled down!")
+
+func test_spiced_persists_before_three_turns():
+	var c = {"status": "spiced", "status_turns": 1, "hp": 80, "max_hp": 80}
+	var result = StatusEffects.apply_end_of_turn(c)
+	assert_false(result.cured)
+	assert_eq(result.message, "is burning with spice!")
+
+func test_chilled_cures_after_four_turns():
+	var c = {"status": "chilled", "status_turns": 3, "hp": 80, "max_hp": 80}
+	var result = StatusEffects.apply_end_of_turn(c)
+	assert_true(result.cured)
+	assert_eq(c["status"], "")
+	assert_eq(result.message, "warmed back up!")
+
+func test_chilled_persists_before_four_turns():
+	var c = {"status": "chilled", "status_turns": 2, "hp": 80, "max_hp": 80}
+	var result = StatusEffects.apply_end_of_turn(c)
+	assert_false(result.cured)
+	assert_eq(result.message, "is chilled and sluggish...")
+
+func test_display_fermented():
+	assert_eq(StatusEffects.get_status_display_name("fermented"), "Tipsy")
+
+func test_display_stuffed():
+	assert_eq(StatusEffects.get_status_display_name("stuffed"), "Stuffed")
+
+func test_display_spiced():
+	assert_eq(StatusEffects.get_status_display_name("spiced"), "Spiced Up")
+
+func test_display_chilled():
+	assert_eq(StatusEffects.get_status_display_name("chilled"), "Chilled")
+
+func test_is_heal_blocked_when_stuffed():
+	var c = {"status": "stuffed"}
+	assert_true(StatusEffects.is_heal_blocked(c))
+
+func test_is_heal_blocked_when_not_stuffed():
+	var c = {"status": "burned"}
+	assert_false(StatusEffects.is_heal_blocked(c))
+
+func test_is_heal_blocked_no_status():
+	var c = {"status": ""}
+	assert_false(StatusEffects.is_heal_blocked(c))
+
+func test_is_heal_blocked_missing_key():
+	var c = {}
+	assert_false(StatusEffects.is_heal_blocked(c))
+
+func test_fermented_no_stat_modifier():
+	var c = {"status": "fermented"}
+	assert_eq(StatusEffects.get_stat_modifier(c, "attack"), 1.0)
+	assert_eq(StatusEffects.get_stat_modifier(c, "speed"), 1.0)
+
+func test_stuffed_no_stat_modifier():
+	var c = {"status": "stuffed"}
+	assert_eq(StatusEffects.get_stat_modifier(c, "defense"), 1.0)
+
+func test_spiced_no_stat_modifier():
+	var c = {"status": "spiced"}
+	assert_eq(StatusEffects.get_stat_modifier(c, "attack"), 1.0)
+
+func test_chilled_no_stat_modifier():
+	var c = {"status": "chilled"}
+	assert_eq(StatusEffects.get_stat_modifier(c, "speed"), 1.0)
+
+func test_spiced_damage_multiplier():
+	var c = {"status": "spiced"}
+	assert_eq(StatusEffects.get_damage_multiplier(c), 1.25)
+
+func test_no_damage_multiplier_without_spiced():
+	var c = {"status": "burned"}
+	assert_eq(StatusEffects.get_damage_multiplier(c), 1.0)
+
+func test_no_damage_multiplier_empty():
+	var c = {"status": ""}
+	assert_eq(StatusEffects.get_damage_multiplier(c), 1.0)
