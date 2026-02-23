@@ -13,6 +13,7 @@ const UITokens = preload("res://scripts/ui/ui_tokens.gd")
 
 var buff_label: Label = null
 var trainer_prompt_label: Label = null
+var _prompt_panel: PanelContainer = null
 var _trainer_prompt_timer: float = 0.0
 var now_playing_label: Label = null
 var _now_playing_tween: Tween = null
@@ -117,17 +118,34 @@ func _ready() -> void:
 	buff_label.offset_bottom = 58.0
 	add_child(buff_label)
 
-	# Trainer interaction prompt
+	# Trainer interaction prompt (wrapped in panel)
+	_prompt_panel = PanelContainer.new()
+	_prompt_panel.visible = false
+	_prompt_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var prompt_style := UITheme.make_panel_style(
+		Color(UITokens.PAPER_TAN.r, UITokens.PAPER_TAN.g, UITokens.PAPER_TAN.b, 0.85),
+		UITokens.ACCENT_CHESTNUT,
+		UITokens.CORNER_RADIUS,
+		UITokens.BORDER_WIDTH
+	)
+	prompt_style.content_margin_left = 20
+	prompt_style.content_margin_right = 20
+	prompt_style.content_margin_top = 8
+	prompt_style.content_margin_bottom = 8
+	_prompt_panel.add_theme_stylebox_override("panel", prompt_style)
+	_prompt_panel.anchor_left = 0.25
+	_prompt_panel.anchor_right = 0.75
+	_prompt_panel.anchor_top = 0.82
+	_prompt_panel.anchor_bottom = 0.88
+	_prompt_panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+
 	trainer_prompt_label = Label.new()
 	trainer_prompt_label.text = ""
-	trainer_prompt_label.visible = false
 	UITheme.style_toast(trainer_prompt_label)
 	trainer_prompt_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	trainer_prompt_label.anchor_left = 0.25
-	trainer_prompt_label.anchor_right = 0.75
-	trainer_prompt_label.anchor_top = 0.82
-	trainer_prompt_label.anchor_bottom = 0.88
-	add_child(trainer_prompt_label)
+	trainer_prompt_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_prompt_panel.add_child(trainer_prompt_label)
+	add_child(_prompt_panel)
 
 func _process(delta: float) -> void:
 	# Auto-hide stale trainer prompt
@@ -169,121 +187,138 @@ func _process(delta: float) -> void:
 		else:
 			location_label.text = "Overworld"
 
+func _make_toast_panel(text: String, font_color: Color = Color.TRANSPARENT) -> PanelContainer:
+	var panel := PanelContainer.new()
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var style := UITheme.make_panel_style(
+		Color(UITokens.PAPER_TAN.r, UITokens.PAPER_TAN.g, UITokens.PAPER_TAN.b, 0.85),
+		UITokens.ACCENT_CHESTNUT,
+		UITokens.CORNER_RADIUS,
+		UITokens.BORDER_WIDTH
+	)
+	style.content_margin_left = 16
+	style.content_margin_right = 16
+	style.content_margin_top = 6
+	style.content_margin_bottom = 6
+	panel.add_theme_stylebox_override("panel", style)
+	panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+
+	var label := Label.new()
+	label.text = text
+	UITheme.style_toast(label)
+	if font_color.a > 0:
+		label.add_theme_color_override("font_color", font_color)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(label)
+	return panel
+
 func show_pickup_notification(item_name: String, amount: int) -> void:
 	AudioManager.play_sfx("item_pickup")
-	var pickup_label = Label.new()
+	var text: String
 	if amount > 1:
-		pickup_label.text = "Picked up %s x%d" % [item_name, amount]
+		text = "Picked up %s x%d" % [item_name, amount]
 	else:
-		pickup_label.text = "Picked up %s" % item_name
-	UITheme.style_toast(pickup_label)
-	pickup_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	pickup_label.anchor_left = 0.0
-	pickup_label.anchor_right = 0.4
-	pickup_label.anchor_top = 0.7
-	pickup_label.anchor_bottom = 0.75
-	pickup_label.offset_left = -100.0
-	pickup_label.modulate.a = 0.0
-	add_child(pickup_label)
+		text = "Picked up %s" % item_name
+	var panel := _make_toast_panel(text)
+	panel.anchor_left = 0.0
+	panel.anchor_right = 0.4
+	panel.anchor_top = 0.7
+	panel.anchor_bottom = 0.75
+	panel.offset_left = -100.0
+	panel.modulate.a = 0.0
+	add_child(panel)
 	var tween = create_tween()
 	# Slide in from left + fade in
-	tween.tween_property(pickup_label, "offset_left", 12.0, 0.2).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
-	tween.parallel().tween_property(pickup_label, "modulate:a", 1.0, 0.2).set_ease(Tween.EASE_OUT)
+	tween.tween_property(panel, "offset_left", 12.0, 0.2).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	tween.parallel().tween_property(panel, "modulate:a", 1.0, 0.2).set_ease(Tween.EASE_OUT)
 	# Hold
 	tween.tween_interval(1.5)
 	# Slide out right + fade out
-	tween.tween_property(pickup_label, "offset_left", 200.0, 0.3).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
-	tween.parallel().tween_property(pickup_label, "modulate:a", 0.0, 0.3)
-	tween.tween_callback(pickup_label.queue_free)
+	tween.tween_property(panel, "offset_left", 200.0, 0.3).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
+	tween.parallel().tween_property(panel, "modulate:a", 0.0, 0.3)
+	tween.tween_callback(panel.queue_free)
 
 func show_discovery_toast(display_name: String) -> void:
 	AudioManager.play_sfx("quest_progress")
-	var toast = Label.new()
-	toast.text = "Discovered: %s" % display_name
-	UITheme.style_toast(toast)
-	toast.add_theme_color_override("font_color", UITokens.ACCENT_HONEY)
-	toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	toast.anchor_left = 0.25
-	toast.anchor_right = 0.75
-	toast.anchor_top = 0.65
-	toast.anchor_bottom = 0.7
-	toast.modulate.a = 0.0
-	toast.scale = Vector2(0.8, 0.8)
-	toast.pivot_offset = toast.size / 2.0
-	add_child(toast)
+	var panel := _make_toast_panel("Discovered: %s" % display_name, UITokens.ACCENT_HONEY)
+	panel.anchor_left = 0.25
+	panel.anchor_right = 0.75
+	panel.anchor_top = 0.65
+	panel.anchor_bottom = 0.7
+	panel.modulate.a = 0.0
+	panel.scale = Vector2(0.8, 0.8)
+	panel.pivot_offset = panel.size / 2.0
+	add_child(panel)
 	var tween = create_tween()
 	# Scale pop + fade in
-	tween.tween_property(toast, "scale", Vector2.ONE, 0.25).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
-	tween.parallel().tween_property(toast, "modulate:a", 1.0, 0.2).set_ease(Tween.EASE_OUT)
+	tween.tween_property(panel, "scale", Vector2.ONE, 0.25).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	tween.parallel().tween_property(panel, "modulate:a", 1.0, 0.2).set_ease(Tween.EASE_OUT)
 	# Brief golden shimmer
-	tween.tween_property(toast, "modulate", UITokens.SHIMMER_GOLD, 0.15)
-	tween.tween_property(toast, "modulate", Color.WHITE, 0.15)
+	tween.tween_property(panel, "modulate", UITokens.SHIMMER_GOLD, 0.15)
+	tween.tween_property(panel, "modulate", Color.WHITE, 0.15)
 	# Hold
 	tween.tween_interval(1.5)
 	# Fade out
-	tween.tween_property(toast, "modulate:a", 0.0, 0.5)
-	tween.tween_callback(toast.queue_free)
+	tween.tween_property(panel, "modulate:a", 0.0, 0.5)
+	tween.tween_callback(panel.queue_free)
 
 func show_trainer_prompt(trainer_name: String) -> void:
 	if trainer_prompt_label:
 		trainer_prompt_label.text = "Press E to challenge %s!" % trainer_name
-		trainer_prompt_label.visible = true
-		_trainer_prompt_timer = 6.0
+	if _prompt_panel:
+		_prompt_panel.visible = true
+	_trainer_prompt_timer = 6.0
 
-func show_interaction_prompt(text: String) -> void:
+func show_interaction_prompt(text: String, persistent: bool = false) -> void:
 	if trainer_prompt_label:
 		trainer_prompt_label.text = text
-		trainer_prompt_label.visible = true
+	if _prompt_panel:
+		_prompt_panel.visible = true
+	if not persistent:
 		_trainer_prompt_timer = 6.0
 
 func hide_trainer_prompt() -> void:
-	if trainer_prompt_label:
-		trainer_prompt_label.visible = false
-		_trainer_prompt_timer = 0.0
+	if _prompt_panel:
+		_prompt_panel.visible = false
+	_trainer_prompt_timer = 0.0
 
 func show_toast(message: String) -> void:
-	var toast = Label.new()
-	toast.text = message
-	UITheme.style_toast(toast)
-	toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	toast.anchor_left = 0.2
-	toast.anchor_right = 0.8
-	toast.anchor_top = 0.75
-	toast.anchor_bottom = 0.8
-	toast.modulate.a = 0.0
-	toast.pivot_offset = toast.size / 2.0
-	toast.scale = Vector2(0.9, 0.9)
-	add_child(toast)
+	var panel := _make_toast_panel(message)
+	panel.anchor_left = 0.2
+	panel.anchor_right = 0.8
+	panel.anchor_top = 0.75
+	panel.anchor_bottom = 0.8
+	panel.modulate.a = 0.0
+	panel.pivot_offset = panel.size / 2.0
+	panel.scale = Vector2(0.9, 0.9)
+	add_child(panel)
 	var tween = create_tween()
 	# Pop in
-	tween.tween_property(toast, "modulate:a", 1.0, 0.2).set_ease(Tween.EASE_OUT)
-	tween.parallel().tween_property(toast, "scale", Vector2.ONE, 0.2).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	tween.tween_property(panel, "modulate:a", 1.0, 0.2).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(panel, "scale", Vector2.ONE, 0.2).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 	# Hold
 	tween.tween_interval(1.5)
 	# Fade out
-	tween.tween_property(toast, "modulate:a", 0.0, 0.5)
-	tween.tween_callback(toast.queue_free)
+	tween.tween_property(panel, "modulate:a", 0.0, 0.5)
+	tween.tween_callback(panel.queue_free)
 
 func show_new_fish_toast(fish_name: String) -> void:
-	var toast := Label.new()
-	toast.text = "New: %s!" % fish_name
-	UITheme.style_toast(toast)
-	toast.add_theme_color_override("font_color", UITokens.ACCENT_HONEY)
-	toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	toast.anchor_left = 0.3
-	toast.anchor_right = 0.7
-	toast.anchor_top = 0.6
-	toast.anchor_bottom = 0.65
-	toast.modulate.a = 0.0
-	add_child(toast)
+	var panel := _make_toast_panel("New: %s!" % fish_name, UITokens.ACCENT_HONEY)
+	panel.anchor_left = 0.3
+	panel.anchor_right = 0.7
+	panel.anchor_top = 0.6
+	panel.anchor_bottom = 0.65
+	panel.modulate.a = 0.0
+	add_child(panel)
 	var tween := create_tween()
-	# Slide in + fade in
-	tween.tween_property(toast, "modulate:a", 1.0, 0.3).set_ease(Tween.EASE_OUT)
+	# Fade in
+	tween.tween_property(panel, "modulate:a", 1.0, 0.3).set_ease(Tween.EASE_OUT)
 	# Hold
 	tween.tween_interval(2.0)
 	# Fade out
-	tween.tween_property(toast, "modulate:a", 0.0, 0.5)
-	tween.tween_callback(toast.queue_free)
+	tween.tween_property(panel, "modulate:a", 0.0, 0.5)
+	tween.tween_callback(panel.queue_free)
 
 
 func show_grass_indicator(visible_state: bool) -> void:

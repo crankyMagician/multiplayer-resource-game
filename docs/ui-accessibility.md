@@ -74,7 +74,6 @@ UITheme.style_label3d(label, "text", "npc_name")
 | RichTextLabels | `ui_theme.gd` `style_richtext_defaults()` | Normal font size |
 | Label3D (world) | `ui_theme.gd` `style_label3d()` | Font size by role |
 | Label3D (battle) | `battle_arena.gd` | Trainer/opponent labels (28), damage numbers (48) |
-| Hotbar labels | `hotbar_ui.gd` | Item name + key number labels (FONT_TINY) |
 | Modal panels | Various `*_ui.gd` files | `scaled_vec()` for minimum sizes |
 
 ## Text Speed
@@ -218,7 +217,6 @@ container.add_child(icon)
 
 | UI Component | File | Icon Size |
 |-------------|------|-----------|
-| Hotbar slots | `hotbar_ui.gd` | 32 (dynamic swap via `_set_slot_icon()`) |
 | Inventory list | `inventory_tab.gd` | 20 |
 | Shop buy/sell | `shop_ui.gd` | 20 |
 | Trade panels | `trade_ui.gd` | 16 |

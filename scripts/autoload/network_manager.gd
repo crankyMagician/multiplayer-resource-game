@@ -308,11 +308,9 @@ func _backfill_ingredient_renames(data: Dictionary) -> void:
 	for i in range(items.size()):
 		if items[i] in INGREDIENT_RENAMES:
 			items[i] = INGREDIENT_RENAMES[items[i]]
-	# Migrate hotbar references
-	var hotbar: Array = data.get("hotbar", [])
-	for i in range(hotbar.size()):
-		if hotbar[i] is String and hotbar[i] in INGREDIENT_RENAMES:
-			hotbar[i] = INGREDIENT_RENAMES[hotbar[i]]
+	# Remove legacy hotbar data from saves
+	data.erase("hotbar")
+	data.erase("selected_hotbar_slot")
 
 const LOCATION_RENAMES := {
 	"npc_brioche": "npc_hubert",
@@ -466,11 +464,6 @@ func _finalize_join(sender_id: int, player_name: String, data: Dictionary) -> vo
 	# Backfill social data
 	if not data.has("social"):
 		data["social"] = {"friends": [], "blocked": [], "incoming_requests": [], "outgoing_requests": []}
-	# Backfill hotbar
-	if not data.has("hotbar"):
-		data["hotbar"] = []
-	if not data.has("selected_hotbar_slot"):
-		data["selected_hotbar_slot"] = 0
 	# Backfill dig cooldowns
 	if not data.has("dig_cooldowns"):
 		data["dig_cooldowns"] = {}
@@ -675,8 +668,6 @@ func _create_default_player_data(player_name: String) -> Dictionary:
 		"stats": {},
 		"compendium": {"items": [], "creatures_seen": [], "creatures_owned": []},
 		"social": {"friends": [], "blocked": [], "incoming_requests": [], "outgoing_requests": []},
-		"hotbar": [],
-		"selected_hotbar_slot": 0,
 		"discovered_locations": [],
 		"dig_cooldowns": {},
 		"appearance": {"needs_customization": true},
@@ -751,22 +742,6 @@ func server_update_party(peer_id: int, party_array: Array) -> void:
 	if peer_id not in player_data_store:
 		return
 	player_data_store[peer_id]["party"] = party_array.duplicate(true)
-
-@rpc("any_peer", "reliable")
-func request_sync_hotbar(hotbar_data: Array, selected_slot: int) -> void:
-	var sender = multiplayer.get_remote_sender_id()
-	if sender not in player_data_store:
-		return
-	if hotbar_data.size() > 8:
-		return
-	var clean: Array = []
-	for entry in hotbar_data:
-		if entry is Dictionary:
-			clean.append(entry)
-		else:
-			clean.append({})
-	player_data_store[sender]["hotbar"] = clean
-	player_data_store[sender]["selected_hotbar_slot"] = clampi(selected_slot, 0, 7)
 
 func server_use_watering_can(peer_id: int) -> bool:
 	if peer_id not in player_data_store:
@@ -993,7 +968,6 @@ func _sync_active_buffs(buffs: Array) -> void:
 @rpc("authority", "reliable")
 func _sync_equipped_tools(tools_dict: Dictionary) -> void:
 	PlayerData.equipped_tools = tools_dict.duplicate()
-	PlayerData.tool_changed.emit(PlayerData.current_tool_slot)
 
 @rpc("authority", "reliable")
 func _notify_recipe_unlocked(recipe_id: String, recipe_name: String) -> void:

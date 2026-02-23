@@ -4,7 +4,7 @@ const PLAYER_SCENE = preload("res://scenes/player/player.tscn")
 const FARM_MANAGER_PATH: NodePath = "Zones/FarmZone/FarmManager"
 
 # Current layout version — increment whenever terrain changes significantly
-const LAYOUT_VERSION: int = 2  # v1 = original flat, v2 = terrain massing
+const LAYOUT_VERSION: int = 4  # v1 = original flat, v2 = terrain massing, v3 = graybox strip, v4 = non-overlapping zones + baked geometry
 
 @onready var players_node: Node3D = $Players
 @onready var spawner: MultiplayerSpawner = $Players/MultiplayerSpawner
@@ -21,7 +21,6 @@ var dialogue_ui_scene = preload("res://scenes/ui/dialogue_ui.tscn")
 var calendar_ui_scene = preload("res://scenes/ui/calendar_ui.tscn")
 var compass_ui_scene = preload("res://scenes/ui/compass_ui.tscn")
 var creature_destination_ui_scene = preload("res://scenes/ui/creature_destination_ui.tscn")
-var hotbar_ui_scene = preload("res://scenes/ui/hotbar_ui.tscn")
 var excursion_hud_scene = preload("res://scenes/ui/excursion_hud.tscn")
 var bank_ui_scene = preload("res://scenes/ui/bank_ui.tscn")
 
@@ -30,13 +29,10 @@ func _ready() -> void:
 	DataRegistry.ensure_loaded()
 	_apply_world_label_theme()
 
-	# District visuals are now in Districts/ sub-scenes (no procedural generation)
-	_spawn_calendar_board()
+	# Static geometry (harvestables, dig spots, fishing spots, portals, calendar board)
+	# is pre-placed in game_world.tscn. Only dynamic/interaction nodes spawned here.
 	_spawn_bank_npc()
-	_generate_harvestables()
-	_generate_dig_spots()
 	_spawn_excursion_entrance()
-	_spawn_fishing_spots()
 
 	# Spawn FishingManager on ALL peers (needed for RPC routing; non-server is inert)
 	var fishing_mgr_script = load("res://scripts/world/fishing_manager.gd")
@@ -228,9 +224,6 @@ func _setup_ui() -> void:
 	var creature_destination_ui = creature_destination_ui_scene.instantiate()
 	ui_node.add_child(creature_destination_ui)
 
-	var hotbar_ui = hotbar_ui_scene.instantiate()
-	ui_node.add_child(hotbar_ui)
-
 	var excursion_hud = excursion_hud_scene.instantiate()
 	ui_node.add_child(excursion_hud)
 
@@ -275,14 +268,6 @@ func _on_appearance_confirmed(appearance: Dictionary) -> void:
 		player_node.update_appearance(appearance)
 
 
-func _spawn_calendar_board() -> void:
-	var board_script = load("res://scripts/world/calendar_board.gd")
-	var board = Area3D.new()
-	board.set_script(board_script)
-	board.name = "CalendarBoard"
-	board.position = Vector3(3, 1, 10)  # Town Square, near Town Hall
-	add_child(board)
-
 func _spawn_bank_npc() -> void:
 	var bank_script = load("res://scripts/world/bank_npc.gd")
 	var bank = Area3D.new()
@@ -292,11 +277,11 @@ func _spawn_bank_npc() -> void:
 	add_child(bank)
 
 const EXCURSION_PORTALS: Array = [
-	{"zone_type": "default", "position": Vector3(-5, 0, -15), "label": "The Wilds", "color": Color(0.6, 0.2, 0.8)},
-	{"zone_type": "coastal_wreckage", "position": Vector3(-22, 0, -8), "label": "Coastal Wreckage", "color": Color(0.2, 0.6, 0.8)},
-	{"zone_type": "fungal_hollow", "position": Vector3(5, 0, -45), "label": "Fungal Hollow", "color": Color(0.4, 0.2, 0.6)},
-	{"zone_type": "volcanic_crest", "position": Vector3(30, 0, -8), "label": "Volcanic Crest", "color": Color(0.9, 0.3, 0.1)},
-	{"zone_type": "frozen_pantry", "position": Vector3(10, 0, 25), "label": "Frozen Pantry", "color": Color(0.5, 0.8, 0.95)},
+	{"zone_type": "default", "position": Vector3(-8, 0, -25), "label": "The Wilds", "color": Color(0.6, 0.2, 0.8)},
+	{"zone_type": "coastal_wreckage", "position": Vector3(-33, 0, -12), "label": "Coastal Wreckage", "color": Color(0.2, 0.6, 0.8)},
+	{"zone_type": "fungal_hollow", "position": Vector3(8, 0, -68), "label": "Fungal Hollow", "color": Color(0.4, 0.2, 0.6)},
+	{"zone_type": "volcanic_crest", "position": Vector3(45, 0, -12), "label": "Volcanic Crest", "color": Color(0.9, 0.3, 0.1)},
+	{"zone_type": "frozen_pantry", "position": Vector3(15, 0, 38), "label": "Frozen Pantry", "color": Color(0.5, 0.8, 0.95)},
 ]
 
 func _spawn_excursion_entrance() -> void:
@@ -305,48 +290,15 @@ func _spawn_excursion_entrance() -> void:
 
 func _spawn_single_portal(portal_data: Dictionary) -> void:
 	var zone_type: String = portal_data["zone_type"]
-	var portal_color: Color = portal_data["color"]
 
+	# Portal visuals are pre-placed in game_world.tscn under Zones/WildZone/Portals.
+	# Here we only create the server-side interaction Area3D and client VFX.
 	var entrance = Node3D.new()
 	entrance.name = "ExcursionEntrance_" + zone_type
 	entrance.position = portal_data["position"]
 	entrance.add_to_group("excursion_portal")
 	entrance.set_meta("zone_type", zone_type)
 	add_child(entrance)
-
-	# Signpost
-	var post_mat = StandardMaterial3D.new()
-	post_mat.albedo_color = Color(0.4, 0.25, 0.1)
-	var post = MeshInstance3D.new()
-	var post_mesh = BoxMesh.new()
-	post_mesh.size = Vector3(0.2, 3.0, 0.2)
-	post.mesh = post_mesh
-	post.set_surface_override_material(0, post_mat)
-	post.position = Vector3(0, 1.5, 0)
-	entrance.add_child(post)
-
-	var sign_label = Label3D.new()
-	UITheme.style_label3d(sign_label, portal_data["label"], "station")
-	sign_label.font_size = 36
-	sign_label.position = Vector3(0, 3.5, 0)
-	entrance.add_child(sign_label)
-
-	# Glowing portal visual — color matches zone theme
-	var portal_mesh = MeshInstance3D.new()
-	var torus = CylinderMesh.new()
-	torus.top_radius = 2.0
-	torus.bottom_radius = 2.0
-	torus.height = 0.3
-	portal_mesh.mesh = torus
-	var portal_mat = StandardMaterial3D.new()
-	portal_mat.albedo_color = Color(portal_color.r, portal_color.g, portal_color.b, 0.5)
-	portal_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	portal_mat.emission_enabled = true
-	portal_mat.emission = portal_color
-	portal_mat.emission_energy_multiplier = 2.0
-	portal_mesh.set_surface_override_material(0, portal_mat)
-	portal_mesh.position = Vector3(0, 0.2, 0)
-	entrance.add_child(portal_mesh)
 
 	# Magic pulse VFX on portal (client-side only)
 	if not multiplayer.is_server():
@@ -376,12 +328,6 @@ func _spawn_single_portal(portal_data: Dictionary) -> void:
 		area.add_child(coll)
 
 		entrance.add_child(area)
-
-	# Hint label for clients
-	var hint = Label3D.new()
-	UITheme.style_label3d(hint, "Press E to Enter", "interaction_hint")
-	hint.position = Vector3(0, 2.5, 0)
-	entrance.add_child(hint)
 
 
 func _on_player_connected(peer_id: int, _info: Dictionary) -> void:
@@ -495,154 +441,4 @@ func _sync_world_to_client(peer_id: int) -> void:
 		if ds.has_method("sync_to_client"):
 			ds.sync_to_client(peer_id)
 
-# === World Harvestable Objects ===
-
-var harvestable_scene = preload("res://scenes/world/harvestable_object.tscn")
-
-func _generate_harvestables() -> void:
-	var harvestables_node = Node3D.new()
-	harvestables_node.name = "Harvestables"
-	add_child(harvestables_node)
-
-	# Trees: axe, 3 hits, 120s respawn
-	var tree_positions = [
-		Vector3(-8, 0, -12), Vector3(8, 0, -12),
-		Vector3(-14, 0, -32), Vector3(14, 0, -32),
-		Vector3(-14, 0, -45), Vector3(14, 0, -45),
-	]
-	for pos in tree_positions:
-		var h = harvestable_scene.instantiate()
-		h.harvestable_type = "tree"
-		h.required_tool = "axe"
-		h.max_health = 3
-		h.respawn_time = 120.0
-		h.drops = [
-			{"item_id": "wood", "min": 1, "max": 3, "weight": 1.0},
-			{"item_id": "herb_basil", "min": 1, "max": 1, "weight": 0.2},
-		]
-		h.position = pos
-		h.name = "Tree_%d_%d" % [int(pos.x), int(pos.z)]
-		harvestables_node.add_child(h)
-
-	# Rocks: axe, 4 hits, 150s respawn
-	var rock_positions = [
-		Vector3(-16, 0, -18), Vector3(16, 0, -18),
-		Vector3(-12, 0, -50), Vector3(12, 0, -50),
-	]
-	for pos in rock_positions:
-		var h = harvestable_scene.instantiate()
-		h.harvestable_type = "rock"
-		h.required_tool = "axe"
-		h.max_health = 4
-		h.respawn_time = 150.0
-		h.drops = [
-			{"item_id": "stone", "min": 1, "max": 2, "weight": 1.0},
-			{"item_id": "chili_powder", "min": 1, "max": 1, "weight": 0.1},
-		]
-		h.position = pos
-		h.name = "Rock_%d_%d" % [int(pos.x), int(pos.z)]
-		harvestables_node.add_child(h)
-
-	# Bushes: no tool (hands), 1 hit, 90s respawn
-	var bush_positions = [
-		Vector3(-10, 0, -14), Vector3(10, 0, -14),
-		Vector3(-16, 0, -38), Vector3(16, 0, -38),
-	]
-	for pos in bush_positions:
-		var h = harvestable_scene.instantiate()
-		h.harvestable_type = "bush"
-		h.required_tool = ""
-		h.max_health = 1
-		h.respawn_time = 90.0
-		h.drops = [
-			{"item_id": "berry", "min": 1, "max": 2, "weight": 1.0},
-		]
-		h.position = pos
-		h.name = "Bush_%d_%d" % [int(pos.x), int(pos.z)]
-		harvestables_node.add_child(h)
-
-# === Dig Spots ===
-
-func _generate_dig_spots() -> void:
-	var digs_node = Node3D.new()
-	digs_node.name = "DigSpots"
-	add_child(digs_node)
-
-	var dig_spot_script = load("res://scripts/world/dig_spot.gd")
-	var spots = [
-		# Herb Garden (2)
-		{"pos": Vector3(-14, 0, -13), "id": "herb_1", "loot": [{"item_id": "broth", "weight": 0.6, "min": 1, "max": 1}, {"item_id": "herb_basil", "weight": 0.4, "min": 1, "max": 2}]},
-		{"pos": Vector3(-10, 0, -17), "id": "herb_2", "loot": [{"item_id": "broth", "weight": 0.5, "min": 1, "max": 1}, {"item_id": "herb_basil", "weight": 0.5, "min": 1, "max": 2}]},
-		# Flame Kitchen (2)
-		{"pos": Vector3(14, 0, -13), "id": "flame_1", "loot": [{"item_id": "chili_powder", "weight": 0.5, "min": 1, "max": 1}, {"item_id": "chili_pepper", "weight": 0.5, "min": 1, "max": 2}]},
-		{"pos": Vector3(10, 0, -17), "id": "flame_2", "loot": [{"item_id": "chili_powder", "weight": 0.6, "min": 1, "max": 1}, {"item_id": "chili_pepper", "weight": 0.4, "min": 1, "max": 1}]},
-		# Frost Pantry (2)
-		{"pos": Vector3(-20, 0, -33), "id": "frost_1", "loot": [{"item_id": "mint", "weight": 0.6, "min": 1, "max": 2}]},
-		{"pos": Vector3(-16, 0, -37), "id": "frost_2", "loot": [{"item_id": "mint", "weight": 0.5, "min": 1, "max": 1}]},
-		# Harvest Field (2)
-		{"pos": Vector3(20, 0, -33), "id": "harvest_1", "loot": [{"item_id": "wheat", "weight": 0.6, "min": 1, "max": 2}, {"item_id": "flour", "weight": 0.3, "min": 1, "max": 1}]},
-		{"pos": Vector3(16, 0, -37), "id": "harvest_2", "loot": [{"item_id": "wheat", "weight": 0.5, "min": 1, "max": 2}, {"item_id": "flour", "weight": 0.4, "min": 1, "max": 1}]},
-		# Sour Springs (1)
-		{"pos": Vector3(20, 0, -46), "id": "sour_1", "loot": [{"item_id": "mushroom", "weight": 0.5, "min": 1, "max": 2}]},
-		# Fusion Kitchen (1)
-		{"pos": Vector3(-20, 0, -46), "id": "fusion_1", "loot": [{"item_id": "sugar", "weight": 0.4, "min": 1, "max": 1}, {"item_id": "soy_sauce", "weight": 0.3, "min": 1, "max": 1}]},
-	]
-
-	for spot in spots:
-		var ds = Area3D.new()
-		ds.set_script(dig_spot_script)
-		ds.name = "DigSpot_" + str(spot["id"])
-		ds.position = spot["pos"]
-		ds.spot_id = str(spot["id"])
-		ds.loot_table = spot["loot"]
-		digs_node.add_child(ds)
-
-# === Fishing Spots ===
-
-func _spawn_fishing_spots() -> void:
-	var fishing_node = Node3D.new()
-	fishing_node.name = "FishingSpots"
-	add_child(fishing_node)
-
-	var spots = [
-		{"pos": Vector3(-14, 0, -8), "table_id": "pond", "label": "Cove Pond"},
-		{"pos": Vector3(-12, 0, -10), "table_id": "river", "label": "Wharf Pier"},
-		{"pos": Vector3(-22, 0, 0), "table_id": "ocean", "label": "Open Ocean"},
-	]
-
-	var water_mat = StandardMaterial3D.new()
-	water_mat.albedo_color = Color(0.2, 0.4, 0.7, 0.5)
-	water_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-
-	for spot in spots:
-		var spot_node = Node3D.new()
-		spot_node.name = "FishingSpot_" + spot["table_id"]
-		spot_node.position = spot["pos"]
-		spot_node.add_to_group("fishing_spot")
-		spot_node.set_meta("fishing_table_id", spot["table_id"])
-		fishing_node.add_child(spot_node)
-
-		# Water visual (flat disc)
-		var water = MeshInstance3D.new()
-		var disc = CylinderMesh.new()
-		disc.top_radius = 3.0
-		disc.bottom_radius = 3.0
-		disc.height = 0.1
-		water.mesh = disc
-		water.set_surface_override_material(0, water_mat)
-		water.position = Vector3(0, 0.05, 0)
-		spot_node.add_child(water)
-
-		# Label
-		var label = Label3D.new()
-		UITheme.style_label3d(label, spot["label"] + " - Fishing Spot", "station")
-		label.font_size = 28
-		label.position = Vector3(0, 2.5, 0)
-		spot_node.add_child(label)
-
-		# Hint
-		var hint = Label3D.new()
-		UITheme.style_label3d(hint, "Equip Rod + Press E", "interaction_hint")
-		hint.position = Vector3(0, 2.0, 0)
-		spot_node.add_child(hint)
 

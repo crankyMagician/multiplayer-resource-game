@@ -74,6 +74,6 @@ services:
 | `starfruit_essence` | `starfruit` | Starfruit |
 | `frost_essence` | `mint` | Mint |
 
-- **Migration scope**: inventory keys, compendium items list, hotbar references
+- **Migration scope**: inventory keys, compendium items list (hotbar data auto-cleaned from legacy saves)
 - **All references updated**: recipe `.tres` files, creature drop tables, trainer rewards, NPC gifts/trades, shop listings, world item spawns, excursion loot, farm drops
 - **If adding new ingredient renames**: add to the `INGREDIENT_RENAMES` dict in `network_manager.gd` — the backfill function handles the rest automatically

@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "tides_end_inn"
 display_name = "Tide's End Inn"
-world_position = Vector3(-10, 0, -5)
+world_position = Vector3(-10, 0, -3)
 discovery_radius = 6.0
 icon_type = "zone"
 category = "zone"

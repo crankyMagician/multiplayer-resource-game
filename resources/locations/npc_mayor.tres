@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "npc_mayor"
 display_name = "Mayor Rosemary"
-world_position = Vector3(5, 0, 15)
+world_position = Vector3(5, 0, 10)
 discovery_radius = 8.0
 icon_type = "social_npc"
 category = "social_npc"

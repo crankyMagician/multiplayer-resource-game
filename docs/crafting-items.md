@@ -38,7 +38,7 @@
 - **Watering flow** (server-authoritative): Client sends `request_farm_action(plot_idx, "water", "")` RPC. Server decrements, syncs via `_sync_watering_can` RPC. Refill via `_request_refill` RPC.
 
 ## PlayerData Tool System
-- **No Tool enum** — replaced with string-based `current_tool_slot` ("", "hoe", "axe", "watering_can", "seeds")
+- **Contextual tool use** — no hotbar or manual tool selection. `player_interaction.gd` reads farm plot state and auto-dispatches the correct action. Tool ownership checked via `equipped_tools` dict.
 - `equipped_tools: Dictionary` maps tool_type -> tool_id (e.g. `{"hoe": "tool_hoe_basic", ...}`)
 - `get_watering_can_capacity()` reads from equipped ToolDef's effectiveness dict
 - `known_recipes: Array` tracks unlocked recipe IDs

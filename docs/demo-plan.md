@@ -33,6 +33,7 @@ This is the target demo plan we are building toward. The status list below track
 ### Current Build Mapping (Reference)
 - Implemented NPCs: Baker Brioche, Sage Herbalist, Old Salt, Ember Smith, Professor Umami.
 - Implemented encounter zones: Herb Garden, Flame Kitchen, Frost Pantry, Harvest Field, Sour Springs, Fusion Kitchen.
+- Implemented excursion portals: The Wilds (-8,0,-25), Coastal Wreckage (-33,0,-12), Fungal Hollow (8,0,-68), Volcanic Crest (45,0,-12), Frozen Pantry (15,0,38). Each with zone-specific terrain, encounter tables, poacher trainers, and 15-minute timer.
 - Starter Munchie: Rice Ball (Grain).
 - Restaurant is an instanced interior plus farm plots; no customer service loop yet.
 
@@ -163,10 +164,25 @@ Pokemon meets Stardew Valley through cooking. You inherit your eccentric Great-A
 - Future romance options: Clementine Smith, River Song, Alex Hartwell.
 
 ## Starter Biomes for Demo (Target)
+These are the hand-crafted overworld encounter zones — fixed areas in Cast Iron Cove where wild Munchies roam. Distinct from the procedural excursion portals below.
+
 - Fermented Hollow: Toxic, Umami, Spoiled, Earthy.
 - Blackened Crest: Spicy, Protein, Mineral.
 - Battered Bay: Liquid, Sweet, Aromatic.
 - Salted Shipwreck: Spoiled, Toxic, Bitter.
+
+## Excursion Portals (Implemented)
+Five excursion portals are spread across Cast Iron Cove, each leading to a procedurally generated 160x160 arena with zone-themed terrain, vegetation, encounter tables, and poacher trainers. Excursions are party-gated (requires a party to enter), instanced per-party, and run on a 15-minute timer. All loot is shared among party members.
+
+| Portal | Map Location | Theme | Key Creatures |
+|--------|-------------|-------|---------------|
+| The Wilds | North of town (-8, 0, -25) | Seasonal grassland/forest | Herb Guardian, Blaze Wyvern, Citrus Fiend |
+| Coastal Wreckage | West cliffs (-33, 0, -12) | Pirate shipwrecks, tropical beach | Shrimp Scout, Jellyfish Drift, Squid Mystic |
+| Fungal Hollow | Deep north (8, 0, -68) | Dark caves, giant mushrooms | Mushroom Cap, Truffle Burrower, Ferment Lord |
+| Volcanic Crest | East, past farm (45, 0, -12) | Scorched desert, cacti, lava | Ginger Snap, Dragon Wok, Obsidian Chef |
+| Frozen Pantry | South of spawn (15, 0, 38) | Snow pines, ice, knight ruins | Crab Knight, Oyster Sage, Kraken Broth |
+
+Each zone has common and rare encounter tables, a rare grove with ruins, 3-5 poacher trainers with difficulty scaling by distance from spawn, and zone-specific decorations and ambient lighting.
 
 ## Starting Area and Demo Design (Target)
 
@@ -207,6 +223,7 @@ Pokemon meets Stardew Valley through cooking. You inherit your eccentric Great-A
 - Cordelia's Cottage (your living quarters).
 - Murphy's Hillside Garden (locked early).
 - Overlook Park (sunset gathering spot).
+- **The Wilds portal** — excursion entrance north of town, glowing purple at the tree line.
 
 ### District 2: Town Square (Central Hub)
 - Town Hall (quest board, registry, calendar).
@@ -222,12 +239,18 @@ Pokemon meets Stardew Valley through cooking. You inherit your eccentric Great-A
 - Lighthouse (locked future content).
 - Beach access path and driftwood scavenging.
 - Old Warehouse (optional dungeon).
+- **Coastal Wreckage portal** — excursion entrance on the west cliffs, visible from the docks.
 
 ### District 4: Market Row (Shopping Street)
 - Threads and Needles (clothing and uniforms).
 - The Book Nook (recipes and lore).
 - Bloom and Grow Garden Center (advanced seeds).
 - Dr. Honey's Clinic (Munchie care).
+
+### Outskirts Landmarks
+- **Volcanic Crest portal** — east of the farm zone, a shimmering orange gateway amid scorched earth.
+- **Frozen Pantry portal** — south of the spawn point, an icy blue archway flanked by snow pines.
+- **Fungal Hollow portal** — deep north past the trainer gauntlet, a dim purple rift among giant mushrooms.
 
 ## Demo Flow (Target 30-40 Minutes)
 
@@ -245,22 +268,25 @@ Pokemon meets Stardew Valley through cooking. You inherit your eccentric Great-A
 4. Plant first seeds (farming basics).
 5. Cook first dish (cooking tutorial).
 6. Meet shopkeepers (economy introduction).
+7. Discover The Wilds portal while exploring north — it glows invitingly but requires a party to enter, motivating the player to make friends.
 
 ### Act 3: Community Integration (20-30 min)
 1. Morning routine: water plants and collect yields.
 2. Complete three town quests.
 3. Pepper's spice challenge mini-game.
 4. Beach exploration and combat practice.
-5. First lunch service (restaurant gameplay).
-6. Evening socializing and gift giving.
+5. Form a party and complete first excursion in The Wilds — shared loot introduces cooperative play; poacher trainers provide mid-game combat challenge.
+6. First lunch service (restaurant gameplay).
+7. Evening socializing and gift giving.
 
 ### Act 4: Mystery Hooks (30-40 min)
-1. Find Cordelia's journal.
+1. Find Cordelia's journal — it references a rare ingredient (Mystic Herb) found only in a specific excursion zone, sending the player to Coastal Wreckage or Fungal Hollow.
 2. Murphy's cryptic hint.
 3. Lighthouse mystery tease.
-4. Tournament letter arrives.
-5. Captain's revelation.
-6. Demo end celebration.
+4. Excursion expedition to the journal's target zone — ties the mystery to excursion exploration.
+5. Tournament letter arrives.
+6. Captain's revelation.
+7. Demo end celebration.
 
 ## Activities and Mini-Games (Target)
 - Spice tolerance challenge (rhythm).

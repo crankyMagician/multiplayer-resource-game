@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "bloom_grow"
 display_name = "Bloom and Grow"
-world_position = Vector3(25, 0.3, 10)
+world_position = Vector3(20, 0.3, 10)
 discovery_radius = 5.0
 icon_type = "shop"
 category = "shop"

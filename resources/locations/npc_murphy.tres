@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "npc_murphy"
 display_name = "Old Sage Murphy"
-world_position = Vector3(13, 7, 41)
+world_position = Vector3(5, 4, 35)
 discovery_radius = 8.0
 icon_type = "social_npc"
 category = "social_npc"

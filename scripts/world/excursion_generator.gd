@@ -6,10 +6,10 @@ extends RefCounted
 
 const ARENA_SIZE: float = 160.0
 const GRID_RESOLUTION: int = 160 # vertices per axis = GRID_RESOLUTION + 1
-const HEIGHT_RANGE: float = 8.0
+const HEIGHT_RANGE: float = 6.0
 const SPAWN_FLATTEN_RADIUS: float = 12.0
 const EXIT_FLATTEN_RADIUS: float = 6.0
-const PATH_HALF_WIDTH: float = 3.0
+const PATH_HALF_WIDTH: float = 4.0
 
 enum Biome { GRASSLAND, DENSE_FOREST, ROCKY_OUTCROP, WATER_EDGE, FLOWER_FIELD, RARE_GROVE }
 
@@ -474,12 +474,17 @@ static func _place_synty_static(parent: Node3D, asset_path: String, pos: Vector3
 static func _is_on_path(x: float, z: float) -> float:
 	## Returns 0.0 on path center, 1.0 fully off path.
 	## Main north-south corridor from spawn (80,150) to center (80,80).
-	var dx: float = absf(x - 80.0)
-	# Only active in the corridor z range
-	if z < 75.0 or z > 155.0:
-		return 1.0
-	var dist: float = dx / PATH_HALF_WIDTH
-	return clampf(dist, 0.0, 1.0)
+	## Plus east-west cross-path at z=80.
+	var best: float = 1.0
+	# N-S corridor
+	if z >= 75.0 and z <= 155.0:
+		var dx: float = absf(x - 80.0) / PATH_HALF_WIDTH
+		best = minf(best, clampf(dx, 0.0, 1.0))
+	# E-W cross-path at z=80 (from x=30 to x=130)
+	if x >= 25.0 and x <= 135.0:
+		var dz: float = absf(z - 80.0) / PATH_HALF_WIDTH
+		best = minf(best, clampf(dz, 0.0, 1.0))
+	return best
 
 
 # --- Public API ---
@@ -707,6 +712,9 @@ static func get_harvestable_spawn_points(seed_val: int, season: String, _offset:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_val + 300
 
+	# Get encounter zone positions for 2-unit buffer
+	var encounter_zones: Array = get_encounter_zones(seed_val, season, _offset)
+
 	var cell_size: float = 4.0
 	var grid_count: int = int(ARENA_SIZE / cell_size)
 
@@ -723,6 +731,16 @@ static func get_harvestable_spawn_points(seed_val: int, season: String, _offset:
 				continue
 			# Skip path corridor
 			if _is_on_path(cx, cz) < 0.5:
+				continue
+			# Skip 2-unit buffer around encounter zones
+			var too_close_to_encounter := false
+			for zone in encounter_zones:
+				var zpos: Vector3 = zone["position"]
+				var zradius: float = zone["radius"]
+				if Vector2(cx, cz).distance_to(Vector2(zpos.x, zpos.z)) < zradius + 2.0:
+					too_close_to_encounter = true
+					break
+			if too_close_to_encounter:
 				continue
 
 			var biome_val: float = biome_noise.get_noise_2d(cx, cz)
@@ -753,8 +771,14 @@ static func get_harvestable_spawn_points(seed_val: int, season: String, _offset:
 			if density_val < threshold:
 				continue
 
+			# Bias towards path — items within 8 units of path get higher spawn chance
+			var path_proximity: float = _is_on_path(cx, cz)
+			var spawn_chance: float = 0.25
+			if path_proximity < 0.8: # Near path edge
+				spawn_chance = 0.45
+
 			# Additional RNG thinning to hit target of ~16-24 per instance
-			if rng.randf() > 0.25:
+			if rng.randf() > spawn_chance:
 				continue
 
 			var y: float = _height_at(height_noise, detail_noise, cx, cz)
@@ -1629,29 +1653,69 @@ static func _create_exit_portal_visual() -> Node3D:
 	portal.name = "ExitPortalVisual"
 	portal.position = Vector3(80, 0, 154)
 
-	# Glowing ring
+	var portal_color := Color(0.3, 0.6, 1.0)
+
+	# Archway pillars
+	var pillar_mat := StandardMaterial3D.new()
+	pillar_mat.albedo_color = portal_color.darkened(0.3)
+	pillar_mat.emission_enabled = true
+	pillar_mat.emission = portal_color
+	pillar_mat.emission_energy_multiplier = 0.5
+
+	var pillar_mesh := BoxMesh.new()
+	pillar_mesh.size = Vector3(0.6, 5, 0.6)
+
+	var left := MeshInstance3D.new()
+	left.mesh = pillar_mesh
+	left.set_surface_override_material(0, pillar_mat)
+	left.position = Vector3(-2.5, 2.5, 0)
+	portal.add_child(left)
+
+	var right := MeshInstance3D.new()
+	right.mesh = pillar_mesh
+	right.set_surface_override_material(0, pillar_mat)
+	right.position = Vector3(2.5, 2.5, 0)
+	portal.add_child(right)
+
+	var lintel_mesh := BoxMesh.new()
+	lintel_mesh.size = Vector3(6, 0.8, 0.6)
+	var lintel := MeshInstance3D.new()
+	lintel.mesh = lintel_mesh
+	lintel.set_surface_override_material(0, pillar_mat)
+	lintel.position = Vector3(0, 5.4, 0)
+	portal.add_child(lintel)
+
+	# Glowing ground disc
 	var ring := MeshInstance3D.new()
-	var torus := CylinderMesh.new()
-	torus.top_radius = 2.5
-	torus.bottom_radius = 2.5
-	torus.height = 0.3
-	ring.mesh = torus
+	var disc := CylinderMesh.new()
+	disc.top_radius = 3.0
+	disc.bottom_radius = 3.0
+	disc.height = 0.1
+	ring.mesh = disc
 	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.3, 0.7, 1.0, 0.6)
+	mat.albedo_color = Color(0.3, 0.7, 1.0, 0.4)
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.emission_enabled = true
-	mat.emission = Color(0.3, 0.6, 1.0)
-	mat.emission_energy_multiplier = 3.0
+	mat.emission = portal_color
+	mat.emission_energy_multiplier = 2.0
 	ring.set_surface_override_material(0, mat)
-	ring.position = Vector3(0, 0.2, 0)
+	ring.position = Vector3(0, 0.05, 0)
 	portal.add_child(ring)
 
-	# Label
+	# OmniLight3D
+	var light := OmniLight3D.new()
+	light.light_color = portal_color
+	light.light_energy = 1.5
+	light.omni_range = 8.0
+	light.position = Vector3(0, 3, 0)
+	portal.add_child(light)
+
+	# Label (larger)
 	var label := Label3D.new()
 	UITheme.style_label3d(label, "Exit Portal", "zone_sign")
-	label.font_size = 36
-	label.outline_size = 6
-	label.position = Vector3(0, 3.0, 0)
+	label.font_size = 48
+	label.outline_size = 8
+	label.position = Vector3(0, 6.5, 0)
 	portal.add_child(label)
 
 	return portal

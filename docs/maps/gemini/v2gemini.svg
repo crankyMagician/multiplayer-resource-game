@@ -1,0 +1,228 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000">
+  <defs>
+    <!-- Define some consistent text styles -->
+    <style type="text/css">
+      .label-text { font-family: Arial, sans-serif; font-size: 14px; fill: #333; }
+      .legend-text { font-family: Arial, sans-serif; font-size: 12px; fill: #333; }
+      .height-label { font-family: Arial, sans-serif; font-size: 12px; fill: #111; font-weight: bold; }
+    </style>
+  </defs>
+  <rect x="0" y="0" width="1000" height="1000" fill="#e0f2f7" /> <!-- Sky/background color -->
+
+  <!-- 1) Terrain Layer -->
+  <g id="terrain">
+    <!-- Impassable Boundary (Outer Edge) - H=30m (high, rocky) -->
+    <path d="M0,0 H1000 V1000 H0 Z M40,40 L40,960 L960,960 L960,40 Z" fill="#606060" fill-rule="evenodd" />
+    <text class="height-label" x="900" y="60">H=30m</text>
+
+    <!-- Water (Cove/Ocean) - H=0m -->
+    <path d="M40,960 C40,860 160,800 300,800 C440,800 500,860 500,960 H40 Z" fill="#4fa8d8" stroke="#2a6e9a" stroke-width="2" />
+    <path d="M960,960 C960,860 840,800 700,800 C560,800 500,860 500,960 H960 Z" fill="#4fa8d8" stroke="#2a6e9a" stroke-width="2" />
+    <text class="height-label" x="270" y="880">H=0m</text>
+    <text class="height-label" x="730" y="880">H=0m</text>
+
+
+    <!-- Beach Area - H=1m -->
+    <path d="M40,960 L40,910 C150,910 250,850 300,850 C350,850 450,910 500,910 L500,960 Z" fill="#ffd700" />
+    <path d="M960,960 L960,910 C850,910 750,850 700,850 C650,850 550,910 500,910 L500,960 Z" fill="#ffd700" />
+    <text class="height-label" x="270" y="930">H=1m</text>
+    <text class="height-label" x="730" y="930">H=1m</text>
+
+    <!-- Lower Ground (Wharf Walk) - H=3m -->
+    <polygon points="40,910 300,850 700,850 960,910 960,780 700,750 300,750 40,780" fill="#a3d99d" />
+    <text class="height-label" x="500" y="820">H=3m</text>
+
+    <!-- Main Ground Area (Town Square, Market Row) - H=6m -->
+    <polygon points="150,700 300,650 700,650 850,700 850,450 700,400 300,400 150,450" fill="#80c07d" />
+    <text class="height-label" x="500" y="520">H=6m</text>
+
+    <!-- Harbor Heights (Upper Town) - H=12m -->
+    <polygon points="100,400 250,350 750,350 900,400 900,150 750,100 250,100 100,150" fill="#5cb359" />
+    <text class="height-label" x="500" y="250">H=12m</text>
+
+    <!-- Cliff Region connecting Wharf to Town - H=3m to H=6m -->
+    <path d="M150,700 C200,670 250,650 300,650 L700,650 C750,650 800,670 850,700 L850,720 C750,690 600,690 500,690 C400,690 250,690 150,720 Z" fill="#8b7b6c" />
+    <text class="height-label" x="500" y="680">H=3-6m</text>
+
+    <!-- Murphy's Hillside Garden - H=18m -->
+    <polygon points="200,100 280,80 360,100 300,60 250,40" fill="#3d823a" />
+    <text class="height-label" x="280" y="70">H=18m</text>
+
+    <!-- Overlook Park - H=22m -->
+    <circle cx="700" cy="80" r="30" fill="#2a6027" />
+    <text class="height-label" x="690" y="90">H=22m</text>
+
+    <!-- Excursion Portal areas (terrain beneath) -->
+    <!-- The Wilds portal (North of town, H=15m) -->
+    <rect x="480" y="120" width="40" height="40" fill="#6aab67" />
+    <text class="height-label" x="485" y="135">H=15m</text>
+
+    <!-- Coastal Wreckage portal (West cliffs, H=4m) -->
+    <rect x="70" y="380" width="40" height="40" fill="#c9d99d" />
+    <text class="height-label" x="75" y="395">H=4m</text>
+
+    <!-- Fungal Hollow portal (Deep north, H=10m) -->
+    <rect x="400" y="60" width="40" height="40" fill="#80b37d" />
+    <text class="height-label" x="405" y="75">H=10m</text>
+
+    <!-- Volcanic Crest portal (East, H=15m) -->
+    <rect x="850" y="380" width="40" height="40" fill="#b35a4d" />
+    <text class="height-label" x="855" y="395">H=15m</text>
+
+    <!-- Frozen Pantry portal (South, H=8m) -->
+    <rect x="580" y="700" width="40" height="40" fill="#a0c0e0" />
+    <text class="height-label" x="585" y="715">H=8m</text>
+
+  </g>
+
+  <!-- 2) Paths Layer -->
+  <g id="paths">
+    <!-- Main Road (Wharf Walk through Town Square) -->
+    <polyline points="200,770 300,700 500,680 700,700 800,770"
+              fill="none" stroke="#6b3a10" stroke-width="12" stroke-linecap="round" />
+    <!-- Main Road (Town Square to Harbor Heights) -->
+    <polyline points="500,420 500,380 500,180"
+              fill="none" stroke="#6b3a10" stroke-width="12" stroke-linecap="round" />
+    <!-- Path to Salty Ladle -->
+    <polyline points="200,420 150,380 120,300"
+              fill="none" stroke="#8b4513" stroke-width="8" stroke-dasharray="8 4" stroke-linecap="round" />
+    <!-- Path to Murphy's Hillside Garden -->
+    <polyline points="250,120 280,90"
+              fill="none" stroke="#6a351f" stroke-width="6" stroke-dasharray="5 3" stroke-linecap="round" />
+    <!-- Path to Overlook Park -->
+    <polyline points="750,120 720,100"
+              fill="none" stroke="#6a351f" stroke-width="6" stroke-dasharray="5 3" stroke-linecap="round" />
+  </g>
+
+  <!-- 3) Elevation Layer -->
+  <g id="elevation">
+    <!-- Contour lines for main ground (H=6m region) -->
+    <path d="M160,690 310,640 690,640 840,690 840,460 690,410 310,410 160,460"
+          fill="none" stroke="#777" stroke-width="1" opacity="0.6" /> <!-- H=6.5m -->
+    <path d="M170,680 320,630 680,630 830,680 830,470 680,420 320,420 170,470"
+          fill="none" stroke="#777" stroke-width="1" opacity="0.6" /> <!-- H=7m -->
+    <path d="M180,670 330,620 670,620 820,670 820,480 670,430 330,430 180,480"
+          fill="none" stroke="#777" stroke-width="1" opacity="0.6" /> <!-- H=7.5m -->
+
+    <!-- Contour lines for Harbor Heights (H=12m region) -->
+    <path d="M110,390 260,340 740,340 890,390 890,160 740,110 260,110 110,160"
+          fill="none" stroke="#777" stroke-width="1" opacity="0.6" /> <!-- H=12.5m -->
+    <path d="M120,380 270,330 730,330 880,380 880,170 730,120 270,120 120,170"
+          fill="none" stroke="#777" stroke-width="1" opacity="0.6" /> <!-- H=13m -->
+    <path d="M130,370 280,320 720,320 870,370 870,180 720,130 280,130 130,180"
+          fill="none" stroke="#777" stroke-width="1" opacity="0.6" /> <!-- H=13.5m -->
+
+    <!-- Contour lines for Murphy's Hillside Garden (H=18m region) -->
+    <path d="M210,90 270,70 350,90 290,50 260,30"
+          fill="none" stroke="#777" stroke-width="1" opacity="0.6" /> <!-- H=18.5m -->
+
+    <!-- Contour lines for Overlook Park (H=22m region) -->
+    <circle cx="700" cy="80" r="25" fill="none" stroke="#777" stroke-width="1" opacity="0.6" /> <!-- H=22.5m -->
+    <circle cx="700" cy="80" r="20" fill="none" stroke="#777" stroke-width="1" opacity="0.6" /> <!-- H=23m -->
+    <circle cx="700" cy="80" r="15" fill="none" stroke="#777" stroke-width="1" opacity="0.6" /> <!-- H=23.5m -->
+  </g>
+
+  <!-- 4) Ramps Layer -->
+  <g id="ramps">
+    <!-- Ramp from H=6m (Town) to H=12m (Harbor Heights) -->
+    <polygon points="500,420 500,380 520,380 520,420" fill="#d4c3b8" />
+    <!-- Ramp from H=12m to H=18m (Murphy's Garden) -->
+    <polygon points="250,120 280,90 300,100 270,130" fill="#d4c3b8" />
+    <!-- Ramp from H=12m to H=22m (Overlook Park) -->
+    <polygon points="750,120 720,100 730,90 760,110" fill="#d4c3b8" />
+  </g>
+
+  <!-- 5) Landmarks Layer -->
+  <g id="landmarks">
+    <!-- Your Restaurant: The Salty Ladle -->
+    <rect x="100" y="250" width="50" height="50" fill="#a0522d" stroke="#6a351f" stroke-width="2" />
+    <!-- Cordelia's Cottage (near restaurant) -->
+    <rect x="160" y="260" width="30" height="30" fill="#d2b48c" stroke="#8b7355" stroke-width="1" />
+    <!-- Town Hall -->
+    <polygon points="480,500 520,520 560,500 520,480" fill="#808080" stroke="#505050" stroke-width="2" />
+    <!-- Hubert's Bakery -->
+    <circle cx="350" cy="600" r="20" fill="#f0e68c" stroke="#b8860b" stroke-width="1" />
+    <!-- Haddock's Fishing Dock -->
+    <rect x="100" y="780" width="100" height="20" fill="#8b4513" stroke="#5a2d0a" stroke-width="2" />
+    <!-- Lighthouse -->
+    <circle cx="250" cy="760" r="15" fill="#f0f8ff" stroke="#4682b4" stroke-width="2" />
+    <!-- Overlook Park Viewpoint -->
+    <circle cx="700" cy="80" r="10" fill="#add8e6" stroke="#4682b4" stroke-width="1" />
+
+    <!-- Excursion Portals -->
+    <!-- The Wilds portal -->
+    <circle cx="500" cy="140" r="15" fill="#8a2be2" stroke="#4b0082" stroke-width="2" />
+    <!-- Coastal Wreckage portal -->
+    <circle cx="90" cy="400" r="15" fill="#008080" stroke="#004d4d" stroke-width="2" />
+    <!-- Fungal Hollow portal -->
+    <circle cx="420" cy="80" r="15" fill="#9932cc" stroke="#660099" stroke-width="2" />
+    <!-- Volcanic Crest portal -->
+    <circle cx="870" cy="400" r="15" fill="#ff4500" stroke="#cc3700" stroke-width="2" />
+    <!-- Frozen Pantry portal -->
+    <circle cx="600" cy="720" r="15" fill="#00bfff" stroke="#0080ff" stroke-width="2" />
+  </g>
+
+  <!-- 6) Labels Layer -->
+  <g id="labels">
+    <text class="label-text" x="105" y="240">The Salty Ladle</text>
+    <text class="label-text" x="165" y="250">Cordelia's Cottage</text>
+    <text class="label-text" x="500" y="470" text-anchor="middle">Town Hall</text>
+    <text class="label-text" x="330" y="590">Hubert's Bakery</text>
+    <text class="label-text" x="100" y="770">Haddock's Dock</text>
+    <text class="label-text" x="250" y="740" text-anchor="middle">Lighthouse</text>
+    <text class="label-text" x="660" y="60">Overlook Park</text>
+
+    <!-- Ramp Labels -->
+    <text class="label-text" x="480" y="360">Ramp: 6m → 12m | L=40m | θ=8.5°</text> <!-- Approx length & angle -->
+    <text class="label-text" x="260" y="160">Ramp: 12m → 18m | L=60m | θ=5.7°</text> <!-- Approx length & angle -->
+    <text class="label-text" x="720" y="140">Ramp: 12m → 22m | L=80m | θ=7.1°</text> <!-- Approx length & angle -->
+
+    <!-- Viewpoints and Sight Lines -->
+    <text class="label-text" x="650" y="40">Overlook Park Viewpoint</text>
+    <line x1="700" y1="80" x2="125" y2="275" stroke="#000" stroke-width="1" stroke-dasharray="5 5" opacity="0.5" /> <!-- To Salty Ladle -->
+    <line x1="700" y1="80" x2="520" y2="500" stroke="#000" stroke-width="1" stroke-dasharray="5 5" opacity="0.5" /> <!-- To Town Hall -->
+    <line x1="700" y1="80" x2="350" y2="600" stroke="#000" stroke-width="1" stroke-dasharray="5 5" opacity="0.5" /> <!-- To Bakery -->
+
+    <!-- Portal Labels -->
+    <text class="label-text" x="480" y="110">The Wilds Portal</text>
+    <text class="label-text" x="60" y="370">Coastal Wreckage Portal</text>
+    <text class="label-text" x="390" y="50">Fungal Hollow Portal</text>
+    <text class="label-text" x="840" y="370">Volcanic Crest Portal</text>
+    <text class="label-text" x="570" y="690">Frozen Pantry Portal</text>
+
+  </g>
+
+  <!-- 7) Legend Layer -->
+  <g id="legend">
+    <rect x="780" y="780" width="200" height="200" fill="#fff" stroke="#333" stroke-width="2" />
+    <text class="legend-text" x="800" y="800">Legend</text>
+
+    <rect x="800" y="810" width="15" height="15" fill="#80c07d" />
+    <text class="legend-text" x="820" y="822">Ground (e.g., H=6m)</text>
+
+    <rect x="800" y="830" width="15" height="15" fill="#4fa8d8" />
+    <text class="legend-text" x="820" y="842">Water (H=0m)</text>
+
+    <rect x="800" y="850" width="15" height="15" fill="#8b7b6c" />
+    <text class="legend-text" x="820" y="862">Cliffs (Gradient)</text>
+
+    <rect x="800" y="870" width="15" height="15" fill="#606060" />
+    <text class="legend-text" x="820" y="882">Impassable Boundary</text>
+
+    <line x1="800" y1="895" x2="815" y2="895" stroke="#6b3a10" stroke-width="10" stroke-linecap="round" />
+    <text class="legend-text" x="820" y="900">Main Path</text>
+
+    <line x1="800" y1="915" x2="815" y2="915" stroke="#8b4513" stroke-width="8" stroke-dasharray="8 4" stroke-linecap="round" />
+    <text class="legend-text" x="820" y="920">Side Path</text>
+
+    <line x1="800" y1="935" x2="815" y2="935" stroke="#777" stroke-width="1" opacity="0.6" />
+    <text class="legend-text" x="820" y="940">Contour Line (1m)</text>
+
+    <rect x="800" y="950" width="15" height="15" fill="#d4c3b8" />
+    <text class="legend-text" x="820" y="962">Ramp</text>
+
+    <circle cx="807.5" cy="977.5" r="7.5" fill="#a0522d" />
+    <text class="legend-text" x="820" y="982">Landmark/Portal</text>
+
+  </g>
+</svg>

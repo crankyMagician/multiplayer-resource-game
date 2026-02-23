@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "murphys_garden"
 display_name = "Murphy's Hillside Garden"
-world_position = Vector3(13, 7, 42)
+world_position = Vector3(15, 4, 46)
 discovery_radius = 6.0
 icon_type = "zone"
 category = "zone"

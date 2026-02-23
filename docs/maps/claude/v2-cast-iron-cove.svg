@@ -1,0 +1,359 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000">
+  <defs>
+    <pattern id="water-pattern" width="20" height="20" patternUnits="userSpaceOnUse">
+      <rect width="20" height="20" fill="#3a7ca5"/>
+      <path d="M0 10 Q5 7, 10 10 Q15 13, 20 10" stroke="#4a8cb5" stroke-width="0.8" fill="none"/>
+    </pattern>
+    <pattern id="swamp-pattern" width="16" height="16" patternUnits="userSpaceOnUse">
+      <rect width="16" height="16" fill="#4a6741"/>
+      <circle cx="4" cy="4" r="1.5" fill="#3d5a36"/>
+      <circle cx="12" cy="12" r="1.5" fill="#3d5a36"/>
+    </pattern>
+  </defs>
+
+  <!-- ============ TERRAIN ============ -->
+  <g id="terrain">
+    <!-- Ocean / deep water (H=0m) -->
+    <polygon points="0,0 1000,0 1000,180 950,200 900,195 850,210 800,200 750,215 700,205 650,220 600,210 550,225 500,215 450,230 400,220 350,235 300,225 250,240 200,230 150,245 100,235 50,250 0,240" fill="url(#water-pattern)"/>
+    <!-- Shallow coastal water (H=0m) -->
+    <polygon points="0,240 50,250 100,235 150,245 200,230 250,240 300,225 350,235 400,220 450,230 500,215 550,225 600,210 650,220 700,205 750,215 800,200 850,210 900,195 950,200 1000,180 1000,270 940,280 880,275 820,285 760,278 700,290 640,283 580,295 520,288 460,300 400,293 340,305 280,298 220,310 160,303 100,315 40,308 0,320" fill="#5192b8" opacity="0.7"/>
+
+    <!-- Beach strip (H=1m) -->
+    <polygon points="0,320 40,308 100,315 160,303 220,310 280,298 340,305 400,293 460,300 520,288 580,295 640,283 700,290 760,278 820,285 880,275 940,280 1000,270 1000,320 960,330 920,325 860,335 800,328 740,340 680,333 620,345 560,338 500,350 440,343 380,355 320,348 260,360 200,353 140,365 80,358 0,370" fill="#d4c5a0"/>
+
+    <!-- Wharf Walk district - low coastal ground (H=2m) -->
+    <polygon points="0,370 80,358 140,365 200,353 260,360 320,348 380,355 440,343 500,350 500,460 440,470 380,465 320,475 260,468 200,480 140,473 80,485 0,478" fill="#7db87d"/>
+
+    <!-- Main ground - Town Square + Market Row (H=4m) -->
+    <polygon points="500,350 560,338 620,345 680,333 740,340 800,328 860,335 920,325 960,330 1000,320 1000,700 940,710 860,700 780,715 700,705 620,720 540,710 500,700 460,710 400,700 340,715 280,705 220,720 160,710 100,700 40,710 0,700 0,478 80,485 140,473 200,480 260,468 320,475 380,465 440,470 500,460" fill="#6aaa6a"/>
+
+    <!-- Harbor Heights - upper town (H=7m) -->
+    <polygon points="100,700 160,710 220,720 280,705 340,715 400,700 460,710 500,700 540,710 620,720 700,705 780,715 860,700 940,710 1000,700 1000,900 920,910 840,900 760,915 680,905 600,920 520,910 440,920 360,910 280,925 200,915 120,930 40,920 0,910 0,700 40,710" fill="#5a9a5a"/>
+
+    <!-- Southern hills / Frozen Pantry approach (H=5m) -->
+    <polygon points="0,910 40,920 120,930 200,915 280,925 360,910 440,920 520,910 600,920 680,905 760,915 840,900 920,910 1000,900 1000,1000 0,1000" fill="#4d8a4d"/>
+
+    <!-- Cliff face (impassable) between beach and wharf -->
+    <polygon points="0,320 0,370 80,358 140,365 200,353 260,360 320,348 380,355 440,343 500,350 500,340 440,335 380,348 320,340 260,353 200,345 140,358 80,350 40,345 0,338" fill="#8a7560" opacity="0.6"/>
+
+    <!-- Eastern rocky outcrop (H=6m, impassable edges) -->
+    <polygon points="860,400 920,380 980,400 1000,450 1000,550 980,600 920,620 860,600 840,550 840,450" fill="#7a7060"/>
+
+    <!-- Fungal Hollow cave entrance area (H=3m) -->
+    <polygon points="420,320 500,310 560,330 540,380 480,400 420,380" fill="#4a6741"/>
+
+    <!-- Farm zone (H=3m) -->
+    <polygon points="700,450 800,430 850,460 850,560 800,590 700,570 680,530 680,470" fill="#8ab85a"/>
+  </g>
+
+  <!-- ============ PATHS ============ -->
+  <g id="paths">
+    <!-- Main coastal road -->
+    <polyline points="60,430 120,428 200,440 280,435 360,445 440,440 500,420" stroke="#c4a870" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Town square ring road -->
+    <polyline points="500,420 540,450 580,500 600,560 580,620 540,660 500,680" stroke="#c4a870" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <polyline points="500,420 460,450 420,500 400,560 420,620 460,660 500,680" stroke="#c4a870" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Road to Harbor Heights -->
+    <polyline points="500,680 500,750 480,800 500,850" stroke="#c4a870" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Salty Ladle path (overgrown) -->
+    <polyline points="500,850 540,870 600,860 660,870" stroke="#8a9a60" stroke-width="5" fill="none" stroke-linecap="round" stroke-dasharray="8,4"/>
+    <!-- Beach path -->
+    <polyline points="200,350 300,345 400,340 480,345" stroke="#d4c090" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <!-- Path to farm zone -->
+    <polyline points="600,560 650,540 700,520 740,510" stroke="#b8a060" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Northern trail to Fungal Hollow -->
+    <polyline points="480,400 480,370 475,345" stroke="#6a7a50" stroke-width="4" fill="none" stroke-dasharray="6,4" stroke-linecap="round"/>
+    <!-- Southern trail to Frozen Pantry -->
+    <polyline points="500,850 520,900 540,950 560,970" stroke="#6a8aaa" stroke-width="4" fill="none" stroke-dasharray="6,4" stroke-linecap="round"/>
+    <!-- Eastern trail to Volcanic Crest -->
+    <polyline points="740,510 790,500 840,490 880,470" stroke="#aa6a40" stroke-width="4" fill="none" stroke-dasharray="6,4" stroke-linecap="round"/>
+    <!-- Western trail to Coastal Wreckage -->
+    <polyline points="60,430 40,410 30,390 25,370" stroke="#5a8aaa" stroke-width="4" fill="none" stroke-dasharray="6,4" stroke-linecap="round"/>
+    <!-- Wharf boardwalk -->
+    <polyline points="100,400 180,420 260,410 340,425 420,415" stroke="#8a7050" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <!-- Market Row street -->
+    <polyline points="400,560 340,580 280,570 220,590 180,600" stroke="#c4a870" stroke-width="6" fill="none" stroke-linecap="round"/>
+  </g>
+
+  <!-- ============ ELEVATION (contours) ============ -->
+  <g id="elevation">
+    <!-- 1m contour - beach edge -->
+    <path d="M0,355 Q100,340 200,348 Q300,335 400,342 Q450,338 500,345" stroke="#555" stroke-width="0.6" fill="none" opacity="0.4"/>
+    <!-- 2m contour -->
+    <path d="M0,400 Q100,390 200,395 Q300,385 400,392 Q500,388 500,395" stroke="#555" stroke-width="0.6" fill="none" opacity="0.4"/>
+    <!-- 3m contour -->
+    <path d="M0,450 Q100,445 200,452 Q300,440 400,448 Q500,442 550,450 Q600,445 650,455 Q700,448 750,458" stroke="#555" stroke-width="0.6" fill="none" opacity="0.4"/>
+    <!-- 4m contour - town level -->
+    <path d="M500,470 Q550,465 600,475 Q650,468 700,478 Q800,470 860,478 Q920,472 1000,480" stroke="#555" stroke-width="0.6" fill="none" opacity="0.4"/>
+    <path d="M0,500 Q50,495 100,505 Q200,498 300,508 Q400,500 500,510" stroke="#555" stroke-width="0.6" fill="none" opacity="0.4"/>
+    <!-- 5m contour -->
+    <path d="M100,660 Q200,655 300,665 Q400,658 500,668 Q600,660 700,670 Q800,663 900,673 Q950,668 1000,675" stroke="#555" stroke-width="0.6" fill="none" opacity="0.4"/>
+    <!-- 6m contour -->
+    <path d="M40,690 Q100,685 200,695 Q300,688 400,698 Q500,690 600,700 Q700,692 800,703 Q900,695 1000,705" stroke="#555" stroke-width="0.6" fill="none" opacity="0.4"/>
+    <!-- 7m contour - Harbor Heights -->
+    <path d="M0,730 Q100,725 200,735 Q300,728 400,738 Q500,730 600,740 Q700,732 800,743 Q900,735 1000,745" stroke="#555" stroke-width="0.6" fill="none" opacity="0.4"/>
+    <!-- 8m contour -->
+    <path d="M0,820 Q100,815 200,825 Q300,818 400,828 Q500,820 600,830 Q700,822 800,833 Q900,825 1000,835" stroke="#555" stroke-width="0.6" fill="none" opacity="0.4"/>
+    <!-- 5m contour southern hills -->
+    <path d="M0,930 Q100,925 200,935 Q300,928 400,938 Q500,930 600,940 Q700,932 800,943 Q900,935 1000,920" stroke="#555" stroke-width="0.6" fill="none" opacity="0.4"/>
+  </g>
+
+  <!-- ============ RAMPS ============ -->
+  <g id="ramps">
+    <!-- Ramp: Beach to Wharf Walk (1m → 2m) -->
+    <polygon points="180,358 220,355 225,380 185,383" fill="#b8a870" opacity="0.6" stroke="#8a7050" stroke-width="1.5"/>
+    <!-- Ramp: Wharf Walk to Town Square (2m → 4m) -->
+    <polygon points="490,440 510,440 515,470 495,470" fill="#a8b870" opacity="0.6" stroke="#7a8a50" stroke-width="1.5"/>
+    <!-- Ramp: Town Square to Harbor Heights (4m → 7m) -->
+    <polygon points="490,670 510,670 515,720 495,720" fill="#98a860" opacity="0.6" stroke="#6a7a40" stroke-width="1.5"/>
+    <!-- Ramp: Harbor Heights to Southern Hills (7m → 5m, downslope) -->
+    <polygon points="510,895 530,895 535,925 515,925" fill="#7a9a8a" opacity="0.6" stroke="#5a7a6a" stroke-width="1.5"/>
+    <!-- Ramp: Town to Farm Zone (4m → 3m) -->
+    <polygon points="680,510 700,500 710,530 690,540" fill="#9aaa70" opacity="0.6" stroke="#7a8a50" stroke-width="1.5"/>
+    <!-- Ramp: Town to Rocky Outcrop (4m → 6m) -->
+    <polygon points="840,530 860,520 865,560 845,570" fill="#8a8070" opacity="0.6" stroke="#6a6050" stroke-width="1.5"/>
+  </g>
+
+  <!-- ============ LANDMARKS ============ -->
+  <g id="landmarks">
+    <!-- Town Hall (central hub) -->
+    <rect x="480" y="540" width="40" height="40" fill="#d4a050" stroke="#8a6a30" stroke-width="2" rx="3"/>
+    <rect x="492" y="550" width="16" height="20" fill="#c49040" stroke="#8a6a30" stroke-width="1"/>
+
+    <!-- Harbor Square Fountain -->
+    <circle cx="500" cy="510" r="15" fill="#6ab8d8" stroke="#4a8aaa" stroke-width="2"/>
+    <circle cx="500" cy="510" r="7" fill="#8ad0e8" stroke="#4a8aaa" stroke-width="1"/>
+
+    <!-- Hubert's Bakery -->
+    <rect x="540" y="530" width="30" height="25" fill="#e8c878" stroke="#aa9050" stroke-width="2" rx="2"/>
+
+    <!-- Pepper's Spice Emporium -->
+    <rect x="430" y="530" width="30" height="25" fill="#d86848" stroke="#aa4830" stroke-width="2" rx="2"/>
+
+    <!-- General Store -->
+    <rect x="545" y="490" width="28" height="22" fill="#b8a870" stroke="#8a7850" stroke-width="2" rx="2"/>
+
+    <!-- The Cracked Pot -->
+    <rect x="430" y="490" width="25" height="22" fill="#c8a888" stroke="#9a7868" stroke-width="2" rx="2"/>
+
+    <!-- The Salty Ladle (Restaurant) -->
+    <polygon points="660,850 690,840 700,860 690,880 660,870" fill="#c86848" stroke="#8a3828" stroke-width="2"/>
+    <rect x="665" y="852" width="20" height="16" fill="#d87858" stroke="#8a3828" stroke-width="1"/>
+
+    <!-- Cordelia's Cottage -->
+    <rect x="610" y="830" width="25" height="20" fill="#a8c8a8" stroke="#6a8a6a" stroke-width="2" rx="2"/>
+
+    <!-- Murphy's Hillside Garden -->
+    <polygon points="720,800 750,790 760,810 740,825 720,815" fill="#4aaa4a" stroke="#2a8a2a" stroke-width="2"/>
+
+    <!-- Overlook Park -->
+    <circle cx="800" cy="860" r="18" fill="#5aba5a" stroke="#3a8a3a" stroke-width="2"/>
+    <circle cx="793" cy="853" r="4" fill="#4aaa4a"/>
+    <circle cx="807" cy="867" r="4" fill="#4aaa4a"/>
+
+    <!-- Tide's End Inn -->
+    <rect x="120" y="395" width="35" height="28" fill="#a88868" stroke="#7a5848" stroke-width="2" rx="2"/>
+
+    <!-- Haddock's Fishing Dock -->
+    <rect x="280" y="358" width="40" height="8" fill="#8a7050" stroke="#6a5040" stroke-width="2"/>
+    <rect x="290" y="350" width="5" height="8" fill="#8a7050" stroke="#6a5040" stroke-width="1"/>
+    <rect x="310" y="350" width="5" height="8" fill="#8a7050" stroke="#6a5040" stroke-width="1"/>
+
+    <!-- Lighthouse -->
+    <circle cx="80" cy="345" r="10" fill="#e8d868" stroke="#aa9a40" stroke-width="2"/>
+    <circle cx="80" cy="345" r="4" fill="#f8e878" stroke="#aa9a40" stroke-width="1"/>
+
+    <!-- Old Warehouse -->
+    <rect x="370" y="400" width="35" height="25" fill="#888078" stroke="#686058" stroke-width="2" rx="1"/>
+
+    <!-- Market Row shops -->
+    <rect x="250" y="565" width="22" height="18" fill="#c8a8d8" stroke="#9878a8" stroke-width="1.5" rx="2"/> <!-- Threads -->
+    <rect x="220" y="580" width="20" height="16" fill="#a8c8e8" stroke="#7898b8" stroke-width="1.5" rx="2"/> <!-- Book Nook -->
+    <rect x="310" y="572" width="22" height="18" fill="#88c888" stroke="#58a858" stroke-width="1.5" rx="2"/> <!-- Bloom & Grow -->
+    <rect x="180" y="592" width="22" height="18" fill="#e8b8b8" stroke="#c89898" stroke-width="1.5" rx="2"/> <!-- Dr. Honey -->
+
+    <!-- Farm zone plots -->
+    <rect x="720" y="470" width="20" height="15" fill="#aad070" stroke="#7aa040" stroke-width="1"/>
+    <rect x="745" y="470" width="20" height="15" fill="#aad070" stroke="#7aa040" stroke-width="1"/>
+    <rect x="720" y="490" width="20" height="15" fill="#aad070" stroke="#7aa040" stroke-width="1"/>
+    <rect x="745" y="490" width="20" height="15" fill="#aad070" stroke="#7aa040" stroke-width="1"/>
+    <rect x="720" y="510" width="20" height="15" fill="#c8b870" stroke="#9a8a40" stroke-width="1"/>
+    <rect x="745" y="510" width="20" height="15" fill="#c8b870" stroke="#9a8a40" stroke-width="1"/>
+
+    <!-- Spawn point marker -->
+    <circle cx="500" cy="600" r="6" fill="#f8e848" stroke="#d8c828" stroke-width="2"/>
+    <circle cx="500" cy="600" r="2.5" fill="#fff" stroke="#d8c828" stroke-width="1"/>
+
+    <!-- === EXCURSION PORTALS === -->
+    <!-- The Wilds portal (north of town, purple glow) -->
+    <ellipse cx="475" cy="340" rx="14" ry="18" fill="#8a40c8" opacity="0.7" stroke="#6a20a8" stroke-width="2"/>
+    <ellipse cx="475" cy="340" rx="8" ry="12" fill="#aa60e8" opacity="0.6"/>
+
+    <!-- Coastal Wreckage portal (west cliffs, teal glow) -->
+    <ellipse cx="30" cy="365" rx="14" ry="18" fill="#40a8c8" opacity="0.7" stroke="#2088a8" stroke-width="2"/>
+    <ellipse cx="30" cy="365" rx="8" ry="12" fill="#60c8e8" opacity="0.6"/>
+
+    <!-- Fungal Hollow portal (deep north, dim purple) -->
+    <ellipse cx="475" cy="318" rx="12" ry="15" fill="#6a3088" opacity="0.7" stroke="#4a1068" stroke-width="2"/>
+    <ellipse cx="475" cy="318" rx="6" ry="9" fill="#8a50a8" opacity="0.6"/>
+
+    <!-- Volcanic Crest portal (east, orange glow) -->
+    <ellipse cx="880" cy="460" rx="14" ry="18" fill="#d87030" opacity="0.7" stroke="#b85010" stroke-width="2"/>
+    <ellipse cx="880" cy="460" rx="8" ry="12" fill="#f89050" opacity="0.6"/>
+
+    <!-- Frozen Pantry portal (south, icy blue) -->
+    <ellipse cx="560" cy="960" rx="14" ry="18" fill="#60b8e8" opacity="0.7" stroke="#4098c8" stroke-width="2"/>
+    <ellipse cx="560" cy="960" rx="8" ry="12" fill="#80d0f8" opacity="0.6"/>
+
+    <!-- Rocky outcrop tower ruin -->
+    <rect x="900" y="480" width="16" height="24" fill="#7a7060" stroke="#5a5040" stroke-width="2"/>
+    <polygon points="900,480 908,465 916,480" fill="#8a8070" stroke="#5a5040" stroke-width="1.5"/>
+
+    <!-- Sight lines from Overlook Park -->
+    <line x1="800" y1="860" x2="660" y2="855" stroke="#d8a848" stroke-width="1" stroke-dasharray="5,4" opacity="0.5"/>
+    <line x1="800" y1="860" x2="500" y2="540" stroke="#d8a848" stroke-width="1" stroke-dasharray="5,4" opacity="0.5"/>
+    <line x1="800" y1="860" x2="80" y2="345" stroke="#d8a848" stroke-width="1" stroke-dasharray="5,4" opacity="0.5"/>
+
+    <!-- Sight lines from Lighthouse -->
+    <line x1="80" y1="345" x2="280" y2="360" stroke="#e8d040" stroke-width="1" stroke-dasharray="5,4" opacity="0.5"/>
+    <line x1="80" y1="345" x2="30" y2="365" stroke="#e8d040" stroke-width="1" stroke-dasharray="5,4" opacity="0.5"/>
+
+    <!-- Sight lines from Rocky Outcrop Tower -->
+    <line x1="908" y1="480" x2="880" y2="460" stroke="#c89848" stroke-width="1" stroke-dasharray="5,4" opacity="0.5"/>
+    <line x1="908" y1="480" x2="500" y2="510" stroke="#c89848" stroke-width="1" stroke-dasharray="5,4" opacity="0.5"/>
+    <line x1="908" y1="480" x2="740" y2="490" stroke="#c89848" stroke-width="1" stroke-dasharray="5,4" opacity="0.5"/>
+  </g>
+
+  <!-- ============ LABELS ============ -->
+  <g id="labels">
+    <!-- Terrain height labels -->
+    <text x="500" y="120" font-family="Arial" font-size="13" fill="#fff" text-anchor="middle" opacity="0.7">H=0m (Ocean)</text>
+    <text x="300" y="260" font-family="Arial" font-size="11" fill="#fff" text-anchor="middle" opacity="0.7">H=0m (Shallows)</text>
+    <text x="700" y="340" font-family="Arial" font-size="11" fill="#6a5a40" text-anchor="middle">H=1m (Beach)</text>
+    <text x="250" y="440" font-family="Arial" font-size="11" fill="#fff" text-anchor="middle">H=2m (Wharf Walk)</text>
+    <text x="620" y="580" font-family="Arial" font-size="12" fill="#2a5a2a" text-anchor="middle">H=4m (Town Square)</text>
+    <text x="350" y="650" font-family="Arial" font-size="11" fill="#2a5a2a" text-anchor="middle">H=4m (Market Row)</text>
+    <text x="500" y="790" font-family="Arial" font-size="12" fill="#1a4a1a" text-anchor="middle">H=7m (Harbor Heights)</text>
+    <text x="750" y="970" font-family="Arial" font-size="11" fill="#1a4a1a" text-anchor="middle">H=5m (Southern Hills)</text>
+    <text x="910" y="530" font-family="Arial" font-size="10" fill="#4a4030" text-anchor="middle">H=6m</text>
+    <text x="750" y="545" font-family="Arial" font-size="11" fill="#3a5a1a" text-anchor="middle">H=3m (Farm)</text>
+    <text x="480" y="395" font-family="Arial" font-size="10" fill="#2a4a2a" text-anchor="middle">H=3m</text>
+
+    <!-- Landmark labels -->
+    <text x="500" y="536" font-family="Arial" font-size="11" fill="#5a3a10" text-anchor="middle" font-weight="bold">Town Hall</text>
+    <text x="500" cy="510" y="500" font-family="Arial" font-size="9" fill="#2a6a8a" text-anchor="middle">Fountain</text>
+    <text x="555" y="527" font-family="Arial" font-size="9" fill="#7a5a20" text-anchor="start">Hubert's Bakery</text>
+    <text x="418" y="527" font-family="Arial" font-size="9" fill="#8a2810" text-anchor="end">Pepper's Spice</text>
+    <text x="575" y="487" font-family="Arial" font-size="9" fill="#5a4830" text-anchor="start">General Store</text>
+    <text x="418" y="487" font-family="Arial" font-size="9" fill="#6a4838" text-anchor="end">Cracked Pot</text>
+
+    <text x="680" y="838" font-family="Arial" font-size="11" fill="#6a1808" text-anchor="middle" font-weight="bold">The Salty Ladle</text>
+    <text x="622" y="826" font-family="Arial" font-size="9" fill="#3a6a3a" text-anchor="middle">Cordelia's Cottage</text>
+    <text x="740" y="790" font-family="Arial" font-size="9" fill="#1a6a1a" text-anchor="middle">Murphy's Garden</text>
+    <text x="800" y="845" font-family="Arial" font-size="10" fill="#2a6a2a" text-anchor="middle" font-weight="bold">Overlook Park</text>
+
+    <text x="137" y="390" font-family="Arial" font-size="9" fill="#4a2818" text-anchor="middle">Tide's End Inn</text>
+    <text x="300" y="375" font-family="Arial" font-size="9" fill="#4a3020" text-anchor="middle">Fishing Dock</text>
+    <text x="80" y="332" font-family="Arial" font-size="9" fill="#8a7a30" text-anchor="middle" font-weight="bold">Lighthouse</text>
+    <text x="387" y="396" font-family="Arial" font-size="9" fill="#484038" text-anchor="middle">Warehouse</text>
+
+    <text x="261" y="560" font-family="Arial" font-size="8" fill="#6848788" text-anchor="middle">Threads</text>
+    <text x="230" y="577" font-family="Arial" font-size="8" fill="#4868888" text-anchor="middle">Book Nook</text>
+    <text x="321" y="568" font-family="Arial" font-size="8" fill="#2878388" text-anchor="middle">Bloom &amp; Grow</text>
+    <text x="191" y="614" font-family="Arial" font-size="8" fill="#986868" text-anchor="middle">Dr. Honey</text>
+
+    <text x="500" y="617" font-family="Arial" font-size="10" fill="#a89828" text-anchor="middle" font-weight="bold">SPAWN</text>
+
+    <!-- Portal labels -->
+    <text x="475" y="360" font-family="Arial" font-size="10" fill="#6a20a8" text-anchor="middle" font-weight="bold">The Wilds</text>
+    <text x="30" y="388" font-family="Arial" font-size="9" fill="#2088a8" text-anchor="middle" font-weight="bold">Coastal Wreckage</text>
+    <text x="475" y="310" font-family="Arial" font-size="9" fill="#4a1068" text-anchor="middle" font-weight="bold">Fungal Hollow</text>
+    <text x="880" y="450" font-family="Arial" font-size="9" fill="#b85010" text-anchor="middle" font-weight="bold">Volcanic Crest</text>
+    <text x="560" y="985" font-family="Arial" font-size="9" fill="#3088b8" text-anchor="middle" font-weight="bold">Frozen Pantry</text>
+
+    <text x="908" y="510" font-family="Arial" font-size="8" fill="#4a3020" text-anchor="middle">Ruined Tower</text>
+    <text x="740" y="465" font-family="Arial" font-size="9" fill="#5a7a20" text-anchor="middle" font-weight="bold">Farm Zone</text>
+
+    <!-- District labels (larger) -->
+    <text x="130" y="455" font-family="Arial" font-size="14" fill="#fff" text-anchor="middle" font-weight="bold" opacity="0.5" letter-spacing="3">WHARF WALK</text>
+    <text x="500" y="625" font-family="Arial" font-size="14" fill="#1a4a1a" text-anchor="middle" font-weight="bold" opacity="0.35" letter-spacing="3">TOWN SQUARE</text>
+    <text x="280" y="635" font-family="Arial" font-size="13" fill="#1a4a1a" text-anchor="middle" font-weight="bold" opacity="0.35" letter-spacing="2">MARKET ROW</text>
+    <text x="500" y="870" font-family="Arial" font-size="14" fill="#0a3a0a" text-anchor="middle" font-weight="bold" opacity="0.35" letter-spacing="3">HARBOR HEIGHTS</text>
+
+    <!-- Viewpoint labels -->
+    <text x="810" y="880" font-family="Arial" font-size="8" fill="#a88030" text-anchor="start" font-style="italic">Viewpoint A</text>
+    <text x="92" y="340" font-family="Arial" font-size="8" fill="#a89030" text-anchor="start" font-style="italic">Viewpoint B</text>
+    <text x="920" y="475" font-family="Arial" font-size="8" fill="#a88030" text-anchor="start" font-style="italic">Viewpoint C</text>
+
+    <!-- Ramp labels -->
+    <text x="225" y="400" font-family="Arial" font-size="7" fill="#5a4020" text-anchor="start">Ramp: 1m→2m | L=26m | θ=2.2°</text>
+    <text x="518" y="458" font-family="Arial" font-size="7" fill="#4a5020" text-anchor="start">Ramp: 2m→4m | L=30m | θ=3.8°</text>
+    <text x="518" y="700" font-family="Arial" font-size="7" fill="#3a4a10" text-anchor="start">Ramp: 4m→7m | L=50m | θ=3.4°</text>
+    <text x="540" y="918" font-family="Arial" font-size="7" fill="#3a5a4a" text-anchor="start">Ramp: 7m→5m | L=30m | θ=3.8°</text>
+    <text x="660" y="548" font-family="Arial" font-size="7" fill="#5a6a20" text-anchor="start">Ramp: 4m→3m | L=36m | θ=1.6°</text>
+    <text x="830" y="580" font-family="Arial" font-size="7" fill="#4a4020" text-anchor="start">Ramp: 4m→6m | L=45m | θ=2.5°</text>
+
+    <!-- North arrow -->
+    <polygon points="960,60 970,80 960,75 950,80" fill="#333" stroke="#222" stroke-width="1"/>
+    <text x="960" y="55" font-family="Arial" font-size="12" fill="#333" text-anchor="middle" font-weight="bold">N</text>
+
+    <!-- Title -->
+    <text x="500" y="35" font-family="Arial" font-size="22" fill="#2a4a2a" text-anchor="middle" font-weight="bold" letter-spacing="2">CAST IRON COVE</text>
+    <text x="500" y="55" font-family="Arial" font-size="12" fill="#5a7a5a" text-anchor="middle">Level Blockout — Top-Down Orthographic</text>
+  </g>
+
+  <!-- ============ LEGEND ============ -->
+  <g id="legend">
+    <rect x="15" y="15" width="220" height="310" fill="#f5f0e5" stroke="#8a7a60" stroke-width="1.5" rx="4" opacity="0.92"/>
+    <text x="125" y="36" font-family="Arial" font-size="12" fill="#3a3020" text-anchor="middle" font-weight="bold">LEGEND</text>
+    <line x1="25" y1="42" x2="225" y2="42" stroke="#8a7a60" stroke-width="0.5"/>
+
+    <!-- Terrain swatches -->
+    <rect x="25" y="50" width="14" height="10" fill="#3a7ca5" stroke="#2a5a7a" stroke-width="0.5"/>
+    <text x="44" y="59" font-family="Arial" font-size="9" fill="#333">Ocean / Water (H=0m)</text>
+    <rect x="25" y="65" width="14" height="10" fill="#d4c5a0" stroke="#a89a70" stroke-width="0.5"/>
+    <text x="44" y="74" font-family="Arial" font-size="9" fill="#333">Beach (H=1m)</text>
+    <rect x="25" y="80" width="14" height="10" fill="#7db87d" stroke="#5a8a5a" stroke-width="0.5"/>
+    <text x="44" y="89" font-family="Arial" font-size="9" fill="#333">Wharf / Low Ground (H=2m)</text>
+    <rect x="25" y="95" width="14" height="10" fill="#6aaa6a" stroke="#4a8a4a" stroke-width="0.5"/>
+    <text x="44" y="104" font-family="Arial" font-size="9" fill="#333">Town Ground (H=4m)</text>
+    <rect x="25" y="110" width="14" height="10" fill="#5a9a5a" stroke="#3a7a3a" stroke-width="0.5"/>
+    <text x="44" y="119" font-family="Arial" font-size="9" fill="#333">Upper Town (H=7m)</text>
+    <rect x="25" y="125" width="14" height="10" fill="#4d8a4d" stroke="#3a7a3a" stroke-width="0.5"/>
+    <text x="44" y="134" font-family="Arial" font-size="9" fill="#333">Southern Hills (H=5m)</text>
+    <rect x="25" y="140" width="14" height="10" fill="#8a7560" stroke="#6a5540" stroke-width="0.5"/>
+    <text x="44" y="149" font-family="Arial" font-size="9" fill="#333">Cliff / Impassable</text>
+    <rect x="25" y="155" width="14" height="10" fill="#8ab85a" stroke="#6a9a3a" stroke-width="0.5"/>
+    <text x="44" y="164" font-family="Arial" font-size="9" fill="#333">Farm Zone (H=3m)</text>
+
+    <line x1="25" y1="172" x2="225" y2="172" stroke="#8a7a60" stroke-width="0.5"/>
+
+    <!-- Path styles -->
+    <line x1="25" y1="183" x2="50" y2="183" stroke="#c4a870" stroke-width="4"/>
+    <text x="55" y="186" font-family="Arial" font-size="9" fill="#333">Main Road</text>
+    <line x1="25" y1="196" x2="50" y2="196" stroke="#8a7050" stroke-width="3"/>
+    <text x="55" y="199" font-family="Arial" font-size="9" fill="#333">Boardwalk</text>
+    <line x1="25" y1="209" x2="50" y2="209" stroke="#6a7a50" stroke-width="2" stroke-dasharray="6,4"/>
+    <text x="55" y="212" font-family="Arial" font-size="9" fill="#333">Trail (to portal)</text>
+    <line x1="25" y1="222" x2="50" y2="222" stroke="#8a9a60" stroke-width="2.5" stroke-dasharray="8,4"/>
+    <text x="55" y="225" font-family="Arial" font-size="9" fill="#333">Overgrown Path</text>
+
+    <line x1="25" y1="233" x2="225" y2="233" stroke="#8a7a60" stroke-width="0.5"/>
+
+    <!-- Special markers -->
+    <line x1="25" y1="244" x2="50" y2="244" stroke="#555" stroke-width="0.6" opacity="0.5"/>
+    <text x="55" y="247" font-family="Arial" font-size="9" fill="#333">Contour Line (1m interval)</text>
+
+    <rect x="25" y="253" width="14" height="10" fill="#b8a870" opacity="0.6" stroke="#8a7050" stroke-width="1"/>
+    <text x="44" y="262" font-family="Arial" font-size="9" fill="#333">Ramp / Slope</text>
+
+    <ellipse cx="32" cy="276" rx="7" ry="9" fill="#8a40c8" opacity="0.7" stroke="#6a20a8" stroke-width="1.5"/>
+    <text x="44" y="279" font-family="Arial" font-size="9" fill="#333">Excursion Portal</text>
+
+    <circle cx="32" cy="292" r="4" fill="#f8e848" stroke="#d8c828" stroke-width="1.5"/>
+    <text x="44" y="295" font-family="Arial" font-size="9" fill="#333">Spawn Point</text>
+
+    <line x1="25" y1="306" x2="50" y2="306" stroke="#d8a848" stroke-width="1" stroke-dasharray="5,4" opacity="0.6"/>
+    <text x="55" y="309" font-family="Arial" font-size="9" fill="#333">Sight Line (viewpoint)</text>
+  </g>
+</svg>

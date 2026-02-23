@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "lighthouse_headland"
 display_name = "Lighthouse Headland"
-world_position = Vector3(-22, 1.5, 10)
+world_position = Vector3(-36, 0, -10)
 discovery_radius = 8.0
 icon_type = "landmark"
 category = "landmark"

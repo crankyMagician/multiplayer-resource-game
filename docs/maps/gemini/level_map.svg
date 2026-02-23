@@ -1,0 +1,157 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000">
+  <g id="terrain">
+    <!-- Water (Base, 0m) -->
+    <rect x="0" y="0" width="1000" height="1000" fill="#ADD8E6" />
+
+    <!-- Island Shape (simplified main landmass, 1m) -->
+    <path d="M 100 200 L 200 100 L 800 100 L 900 200 L 900 800 L 800 900 L 200 900 L 100 800 Z" fill="#F5DEB3" />
+
+    <!-- Mid Ground (5m) - central area -->
+    <path d="M 200 300 L 300 200 L 700 200 L 800 300 L 800 700 L 700 800 L 300 800 L 200 700 Z" fill="#8FBC8F" />
+
+    <!-- High Plateau (10m) - inner area -->
+    <path d="M 300 400 L 400 300 L 600 300 L 700 400 L 700 600 L 600 700 L 400 700 L 300 600 Z" fill="#6B8E23" />
+
+    <!-- Peak (15m) - innermost area -->
+    <polygon points="450 500, 500 450, 550 500, 500 550" fill="#556B2F" />
+
+    <!-- Impassable Mountains (20m) - border -->
+    <path d="M 0 0 L 1000 0 L 1000 100 L 900 100 L 900 200 L 800 100 L 200 100 L 100 200 L 100 800 L 200 900 L 800 900 L 900 800 L 900 1000 L 1000 1000 L 1000 0 Z M 100 800 L 200 900 L 800 900 L 900 800 L 900 200 L 800 100 L 200 100 L 100 200 L 100 800 Z" fill="#808080"/>
+
+    <!-- Cliff regions - representing vertical drops -->
+    <!-- Cliff from 5m to 1m -->
+    <path d="M 200 300 L 300 200 L 700 200 L 800 300 L 800 700 L 700 800 L 300 800 L 200 700 Z M 200 700 L 100 800 L 100 200 L 200 300 Z" fill="#A9A9A9" />
+    <!-- Cliff from 10m to 5m -->
+    <path d="M 300 400 L 400 300 L 600 300 L 700 400 L 700 600 L 600 700 L 400 700 L 300 600 Z M 300 600 L 200 700 L 200 300 L 300 400 Z" fill="#A9A9A9" />
+  </g>
+
+  <g id="paths">
+    <!-- Main path winding up the island -->
+    <polyline points="150 750, 250 650, 350 550, 450 450, 500 400, 550 450, 650 550, 750 650, 850 750" stroke="#8B4513" stroke-width="8" fill="none" />
+    <!-- Secondary path -->
+    <polyline points="200 250, 300 150, 700 150, 800 250" stroke="#D2B48C" stroke-width="4" stroke-dasharray="10 5" fill="none" />
+  </g>
+
+  <g id="elevation">
+    <!-- Contour lines within Mid Ground (5m) sloping up -->
+    <polyline points="250 700, 250 300" stroke="#A9A9A9" stroke-width="1" fill="none" opacity="0.7" />
+    <polyline points="300 750, 300 250" stroke="#A9A9A9" stroke-width="1" fill="none" opacity="0.7" />
+    <polyline points="350 700, 350 300" stroke="#A9A9A9" stroke-width="1" fill="none" opacity="0.7" />
+    <polyline points="400 750, 400 250" stroke="#A9A9A9" stroke-width="1" fill="none" opacity="0.7" />
+    <polyline points="450 700, 450 300" stroke="#A9A9A9" stroke-width="1" fill="none" opacity="0.7" />
+    <polyline points="500 750, 500 250" stroke="#A9A9A9" stroke-width="1" fill="none" opacity="0.7" />
+    <!-- Additional contours for higher elevation -->
+    <polyline points="550 650, 550 350" stroke="#A9A9A9" stroke-width="1" fill="none" opacity="0.7" />
+    <polyline points="600 600, 600 400" stroke="#A9A9A9" stroke-width="1" fill="none" opacity="0.7" />
+    <polyline points="650 550, 650 450" stroke="#A9A9A9" stroke-width="1" fill="none" opacity="0.7" />
+  </g>
+
+  <g id="ramps">
+    <!-- Ramp from 1m to 5m -->
+    <polygon points="150 700, 200 650, 250 700, 200 750" fill="#CD853F" opacity="0.7" />
+    <!-- Ramp from 5m to 10m -->
+    <polygon points="350 600, 400 550, 450 600, 400 650" fill="#CD853F" opacity="0.7" />
+  </g>
+
+  <g id="landmarks">
+    <!-- Coastal Village (1m) -->
+    <rect x="120" y="770" width="60" height="40" fill="#FFD700" stroke="#B8860B" stroke-width="2" />
+    <!-- Old Mill (5m) -->
+    <circle cx="280" cy="280" r="25" fill="#FFD700" stroke="#B8860B" stroke-width="2" />
+    <!-- Ancient Shrine (10m) -->
+    <polygon points="500 380, 480 420, 520 420" fill="#FFD700" stroke="#B8860B" stroke-width="2" />
+    <!-- Watchtower (15m) -->
+    <rect x="485" y="475" width="30" height="50" fill="#FFD700" stroke="#B8860B" stroke-width="2" />
+    <!-- Mystic Gate (5m) -->
+    <polygon points="750 350, 770 350, 770 300, 750 300" fill="#FFD700" stroke="#B8860B" stroke-width="2" />
+
+    <!-- Viewpoints -->
+    <circle cx="150" cy="830" r="15" fill="#8A2BE2" stroke="#4B0082" stroke-width="2" /> <!-- Coastal Viewpoint -->
+    <circle cx="500" cy="530" r="15" fill="#8A2BE2" stroke="#4B0082" stroke-width="2" /> <!-- Tower Top -->
+    <circle cx="650" cy="350" r="15" fill="#8A2BE2" stroke="#4B0082" stroke-width="2" /> <!-- Plateau Overlook -->
+  </g>
+
+  <g id="labels">
+    <!-- Terrain Height Labels -->
+    <text x="500" y="50" text-anchor="middle" font-family="Arial, sans-serif" font-size="14px" fill="#000" font-weight="bold">H=20m</text>
+    <text x="150" y="150" text-anchor="middle" font-family="Arial, sans-serif" font-size="14px" fill="#000" font-weight="bold">H=1m</text>
+    <text x="500" y="250" text-anchor="middle" font-family="Arial, sans-serif" font-size="14px" fill="#000" font-weight="bold">H=5m</text>
+    <text x="500" y="350" text-anchor="middle" font-family="Arial, sans-serif" font-size="14px" fill="#000" font-weight="bold">H=10m</text>
+    <text x="500" y="500" text-anchor="middle" font-family="Arial, sans-serif" font-size="14px" fill="#000" font-weight="bold">H=15m</text>
+
+    <!-- Ramp Labels -->
+    <text x="175" y="730" font-family="Arial, sans-serif" font-size="14px" fill="#600">Ramp: 1m → 5m | L=70m | θ=3.2°</text>
+    <text x="375" y="630" font-family="Arial, sans-serif" font-size="14px" fill="#600">Ramp: 5m → 10m | L=70m | θ=4.1°</text>
+
+    <!-- Landmark Labels -->
+    <text x="150" y="820" text-anchor="middle" font-family="Arial, sans-serif" font-size="16px" fill="#333">Coastal Village</text>
+    <text x="280" y="320" text-anchor="middle" font-family="Arial, sans-serif" font-size="16px" fill="#333">Old Mill</text>
+    <text x="500" y="440" text-anchor="middle" font-family="Arial, sans-serif" font-size="16px" fill="#333">Ancient Shrine</text>
+    <text x="500" y="560" text-anchor="middle" font-family="Arial, sans-serif" font-size="16px" fill="#333">Watchtower</text>
+    <text x="760" y="290" text-anchor="middle" font-family="Arial, sans-serif" font-size="16px" fill="#333">Mystic Gate</text>
+
+    <!-- Viewpoint Labels -->
+    <text x="150" y="855" text-anchor="middle" font-family="Arial, sans-serif" font-size="16px" fill="#333">Coastal Viewpoint</text>
+    <text x="500" y="555" text-anchor="middle" font-family="Arial, sans-serif" font-size="16px" fill="#333">Tower Top</text>
+    <text x="650" y="375" text-anchor="middle" font-family="Arial, sans-serif" font-size="16px" fill="#333">Plateau Overlook</text>
+
+    <!-- Sight Lines -->
+    <line x1="150" y1="830" x2="280" y2="280" stroke="#808080" stroke-width="1" stroke-dasharray="5 5" fill="none" />
+    <line x1="150" y1="830" x2="500" y2="500" stroke="#808080" stroke-width="1" stroke-dasharray="5 5" fill="none" />
+    <line x1="500" y1="530" x2="760" y2="325" stroke="#808080" stroke-width="1" stroke-dasharray="5 5" fill="none" />
+    <line x1="500" y1="530" x2="150" y2="790" stroke="#808080" stroke-width="1" stroke-dasharray="5 5" fill="none" />
+    <line x1="650" y1="350" x2="500" y2="400" stroke="#808080" stroke-width="1" stroke-dasharray="5 5" fill="none" />
+    <line x1="650" y1="350" x2="280" y2="280" stroke="#808080" stroke-width="1" stroke-dasharray="5 5" fill="none" />
+  </g>
+
+  <g id="legend">
+    <!-- Legend Box -->
+    <rect x="750" y="10" width="240" height="350" fill="white" stroke="black" stroke-width="2" opacity="0.9" />
+
+    <text x="760" y="30" font-family="Arial, sans-serif" font-size="12px" fill="#333" font-weight="bold">LEGEND</text>
+
+    <!-- Terrain -->
+    <text x="760" y="50" font-family="Arial, sans-serif" font-size="12px" fill="#333">Terrain:</text>
+    <rect x="770" y="60" width="15" height="15" fill="#ADD8E6" />
+    <text x="790" y="72" font-family="Arial, sans-serif" font-size="12px" fill="#333">Water (0m)</text>
+    <rect x="770" y="80" width="15" height="15" fill="#F5DEB3" />
+    <text x="790" y="92" font-family="Arial, sans-serif" font-size="12px" fill="#333">Low Ground (1m)</text>
+    <rect x="770" y="100" width="15" height="15" fill="#8FBC8F" />
+    <text x="790" y="112" font-family="Arial, sans-serif" font-size="12px" fill="#333">Mid Ground (5m)</text>
+    <rect x="770" y="120" width="15" height="15" fill="#6B8E23" />
+    <text x="790" y="132" font-family="Arial, sans-serif" font-size="12px" fill="#333">High Plateau (10m)</text>
+    <rect x="770" y="140" width="15" height="15" fill="#556B2F" />
+    <text x="790" y="152" font-family="Arial, sans-serif" font-size="12px" fill="#333">Peak (15m)</text>
+    <rect x="770" y="160" width="15" height="15" fill="#808080" />
+    <text x="790" y="172" font-family="Arial, sans-serif" font-size="12px" fill="#333">Impassable (20m)</text>
+    <rect x="770" y="180" width="15" height="15" fill="#A9A9A9" />
+    <text x="790" y="192" font-family="Arial, sans-serif" font-size="12px" fill="#333">Cliff Face</text>
+
+    <!-- Paths -->
+    <text x="760" y="210" font-family="Arial, sans-serif" font-size="12px" fill="#333">Paths:</text>
+    <line x1="770" y1="220" x2="785" y2="220" stroke="#8B4513" stroke-width="4" fill="none" />
+    <text x="790" y="222" font-family="Arial, sans-serif" font-size="12px" fill="#333">Main Road</text>
+    <line x1="770" y1="235" x2="785" y2="235" stroke="#D2B48C" stroke-width="4" stroke-dasharray="10 5" fill="none" />
+    <text x="790" y="237" font-family="Arial, sans-serif" font-size="12px" fill="#333">Secondary Path</text>
+
+    <!-- Elevation -->
+    <text x="760" y="255" font-family="Arial, sans-serif" font-size="12px" fill="#333">Elevation:</text>
+    <line x1="770" y1="265" x2="785" y2="265" stroke="#A9A9A9" stroke-width="1" fill="none" opacity="0.7" />
+    <text x="790" y="267" font-family="Arial, sans-serif" font-size="12px" fill="#333">Contour Line (1m)</text>
+
+    <!-- Ramps -->
+    <text x="760" y="285" font-family="Arial, sans-serif" font-size="12px" fill="#333">Ramps:</text>
+    <rect x="770" y="295" width="15" height="15" fill="#CD853F" opacity="0.7" />
+    <text x="790" y="307" font-family="Arial, sans-serif" font-size="12px" fill="#333">Ramp Area</text>
+
+    <!-- Landmarks -->
+    <text x="760" y="325" font-family="Arial, sans-serif" font-size="12px" fill="#333">Landmarks:</text>
+    <rect x="770" y="335" width="15" height="15" fill="#FFD700" stroke="#B8860B" stroke-width="2" />
+    <text x="790" y="347" font-family="Arial, sans-serif" font-size="12px" fill="#333">Landmark Icon</text>
+
+    <!-- Sight Lines -->
+    <text x="760" y="365" font-family="Arial, sans-serif" font-size="12px" fill="#333">Sight Lines:</text>
+    <line x1="770" y1="375" x2="785" y2="375" stroke="#808080" stroke-width="1" stroke-dasharray="5 5" fill="none" />
+    <text x="790" y="377" font-family="Arial, sans-serif" font-size="12px" fill="#333">Viewpoint Line</text>
+  </g>
+</svg>

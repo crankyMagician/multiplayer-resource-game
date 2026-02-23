@@ -502,6 +502,7 @@ func _load_settings() -> void:
 func _apply_defaults() -> void:
 	for bus_name in BUS_NAMES:
 		set_bus_volume(bus_name, BUS_DEFAULTS.get(bus_name, 0.8))
+	_save_settings()
 
 func _save_settings() -> void:
 	var config := ConfigFile.new()

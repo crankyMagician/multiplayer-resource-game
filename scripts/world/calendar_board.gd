@@ -7,43 +7,46 @@ func _ready() -> void:
 	collision_layer = 0
 	collision_mask = 3 # bits 1+2 to detect players
 
-	# Collision shape
+	# Collision shape (always created at runtime)
 	var shape = CollisionShape3D.new()
 	var sphere = SphereShape3D.new()
 	sphere.radius = 3.0
 	shape.shape = sphere
 	add_child(shape)
 
-	# Visual: wooden board
-	var board_mesh = MeshInstance3D.new()
-	var box = BoxMesh.new()
-	box.size = Vector3(1.2, 1.8, 0.15)
-	board_mesh.mesh = box
-	var mat = StandardMaterial3D.new()
-	mat.albedo_color = Color(0.45, 0.3, 0.15)
-	board_mesh.set_surface_override_material(0, mat)
-	board_mesh.position = Vector3(0, 1.2, 0)
-	add_child(board_mesh)
+	# Visuals are pre-placed in game_world.tscn as child MeshInstance3D/Label3D nodes.
+	# Only create them if missing (e.g. spawned dynamically).
+	if not get_node_or_null("BoardMesh"):
+		var board_mesh = MeshInstance3D.new()
+		board_mesh.name = "BoardMesh"
+		var box = BoxMesh.new()
+		box.size = Vector3(1.2, 1.8, 0.15)
+		board_mesh.mesh = box
+		var mat = StandardMaterial3D.new()
+		mat.albedo_color = Color(0.45, 0.3, 0.15)
+		board_mesh.set_surface_override_material(0, mat)
+		board_mesh.position = Vector3(0, 1.2, 0)
+		add_child(board_mesh)
 
-	# Post
-	var post_mesh = MeshInstance3D.new()
-	var cyl = CylinderMesh.new()
-	cyl.top_radius = 0.08
-	cyl.bottom_radius = 0.1
-	cyl.height = 2.0
-	post_mesh.mesh = cyl
-	var post_mat = StandardMaterial3D.new()
-	post_mat.albedo_color = Color(0.35, 0.2, 0.1)
-	post_mesh.set_surface_override_material(0, post_mat)
-	post_mesh.position = Vector3(0, 1.0, 0)
-	add_child(post_mesh)
+		var post_mesh = MeshInstance3D.new()
+		post_mesh.name = "PostMesh"
+		var cyl = CylinderMesh.new()
+		cyl.top_radius = 0.08
+		cyl.bottom_radius = 0.1
+		cyl.height = 2.0
+		post_mesh.mesh = cyl
+		var post_mat = StandardMaterial3D.new()
+		post_mat.albedo_color = Color(0.35, 0.2, 0.1)
+		post_mesh.set_surface_override_material(0, post_mat)
+		post_mesh.position = Vector3(0, 1.0, 0)
+		add_child(post_mesh)
 
-	# Label
-	var label = Label3D.new()
-	UITheme.style_label3d(label, "Town Calendar", "station")
-	label.font_size = 32
-	label.position = Vector3(0, 2.5, 0)
-	add_child(label)
+		var label = Label3D.new()
+		label.name = "BoardLabel"
+		UITheme.style_label3d(label, "Town Calendar", "station")
+		label.font_size = 32
+		label.position = Vector3(0, 2.5, 0)
+		add_child(label)
 
 	body_entered.connect(_on_body_entered)
 	body_exited.connect(_on_body_exited)
@@ -73,10 +76,8 @@ func _on_body_exited(body: Node3D) -> void:
 @rpc("authority", "reliable")
 func _show_prompt() -> void:
 	var hud = get_node_or_null("/root/Main/GameWorld/UI/HUD")
-	if hud and hud.has_method("show_trainer_prompt"):
-		hud.trainer_prompt_label.text = "Press E to view Calendar"
-		hud.trainer_prompt_label.visible = true
-		hud._trainer_prompt_timer = 6.0
+	if hud and hud.has_method("show_interaction_prompt"):
+		hud.show_interaction_prompt("Press E to view Calendar")
 
 @rpc("authority", "reliable")
 func _hide_prompt() -> void:

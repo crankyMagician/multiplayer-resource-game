@@ -2,7 +2,6 @@ extends Node
 
 signal inventory_changed()
 signal party_changed()
-signal tool_changed(tool_name: String)
 signal known_recipes_changed()
 signal buffs_changed()
 signal storage_changed()
@@ -15,8 +14,6 @@ signal stats_changed()
 signal compendium_changed()
 signal player_friends_changed()
 signal player_party_updated()  # player-to-player party (not creature party)
-signal hotbar_changed()
-signal hotbar_selection_changed(slot_index: int)
 signal fishing_log_changed()
 
 # Location tracking (client-side mirror of server state)
@@ -37,10 +34,6 @@ var money: int = 0
 # Defeated trainers: trainer_id -> unix timestamp of last defeat
 var defeated_trainers: Dictionary = {}
 
-# Current tool slot
-var current_tool_slot: String = "" # "hoe", "axe", "watering_can", "shovel", "seeds", "" for hands
-var selected_seed_id: String = ""
-
 # Equipped tools: slot -> tool_id
 var equipped_tools: Dictionary = {
 	"hoe": "tool_hoe_basic",
@@ -48,11 +41,6 @@ var equipped_tools: Dictionary = {
 	"watering_can": "tool_watering_can_basic",
 	"shovel": "tool_shovel_basic",
 }
-
-# Hotbar: 8 configurable slots (all start empty, player assigns items)
-const HOTBAR_SIZE: int = 8
-var hotbar: Array = []  # 8 entries, each {} or {"item_id": String, "item_type": String}
-var selected_hotbar_slot: int = 0
 
 # Watering can state (synced from server)
 var watering_can_current: int = 10
@@ -221,27 +209,8 @@ func load_from_server(data: Dictionary) -> void:
 	fishing_log = data.get("fishing_log", {}).duplicate(true)
 	# Load player social (friends are synced separately via FriendManager, but incoming/outgoing stored in save)
 	# Social data is synced on-demand via FriendManager.request_friends_sync()
-	# Load hotbar
-	var hb = data.get("hotbar", [])
-	hotbar.clear()
-	for entry in hb:
-		if entry is Dictionary:
-			hotbar.append(entry.duplicate())
-		else:
-			hotbar.append({})
-	_init_hotbar()
-	# Restore selected hotbar slot from server data
-	selected_hotbar_slot = clampi(int(data.get("selected_hotbar_slot", 0)), 0, HOTBAR_SIZE - 1)
-	# Reset tool
-	current_tool_slot = ""
-	selected_seed_id = ""
+	# Reset
 	compass_target_id = ""
-	print("[Hotbar Debug] load_from_server: hotbar=", hotbar)
-	print("[Hotbar Debug] load_from_server: selected_hotbar_slot=", selected_hotbar_slot)
-	print("[Hotbar Debug] load_from_server: current_tool_slot RESET to ''")
-	# NOTE: current_tool_slot stays "" until user presses a hotbar key.
-	# selected_hotbar_slot is restored but select_hotbar_slot() is NOT called,
-	# so the tool isn't actually activated after login.
 	# Reset party group (ephemeral, not persisted)
 	group_party_id = -1
 	group_party_leader_id = ""
@@ -283,15 +252,11 @@ func to_dict() -> Dictionary:
 		"stats": stats.duplicate(true),
 		"compendium": compendium.duplicate(true),
 		"fishing_log": fishing_log.duplicate(true),
-		"hotbar": hotbar.duplicate(true),
-		"selected_hotbar_slot": selected_hotbar_slot,
 	}
 
 func reset() -> void:
 	inventory.clear()
 	party.clear()
-	current_tool_slot = ""
-	selected_seed_id = ""
 	equipped_tools = {
 		"hoe": "tool_hoe_basic",
 		"axe": "tool_axe_basic",
@@ -299,9 +264,6 @@ func reset() -> void:
 		"shovel": "tool_shovel_basic",
 	}
 	watering_can_current = 10
-	hotbar.clear()
-	_init_hotbar()
-	selected_hotbar_slot = 0
 	player_id = ""
 	player_name = "Player"
 	player_color = Color(0.2, 0.5, 0.9)
@@ -387,65 +349,6 @@ func heal_all_creatures() -> void:
 		creature["hp"] = creature["max_hp"]
 		pass
 	party_changed.emit()
-
-func set_tool(tool_slot: String) -> void:
-	print("[Hotbar Debug] set_tool('", tool_slot, "') — current_tool_slot changing from '", current_tool_slot, "' to '", tool_slot, "'")
-	current_tool_slot = tool_slot
-	tool_changed.emit(tool_slot)
-
-func _init_hotbar() -> void:
-	if hotbar.size() == HOTBAR_SIZE:
-		return
-	hotbar.clear()
-	# All slots start empty — player assigns items from inventory
-	while hotbar.size() < HOTBAR_SIZE:
-		hotbar.append({})
-
-func _sync_hotbar_to_server() -> void:
-	if multiplayer.has_multiplayer_peer() and not multiplayer.is_server() and multiplayer.get_unique_id() != 1:
-		NetworkManager.request_sync_hotbar.rpc_id(1, hotbar, selected_hotbar_slot)
-
-func select_hotbar_slot(index: int) -> void:
-	if index < 0 or index >= HOTBAR_SIZE:
-		return
-	selected_hotbar_slot = index
-	hotbar_selection_changed.emit(index)
-	_sync_hotbar_to_server()
-	# Translate to existing tool system for backward compat
-	var slot_data = hotbar[index]
-	if slot_data.is_empty():
-		set_tool("")
-		return
-	var item_type: String = str(slot_data.get("item_type", ""))
-	var item_id: String = str(slot_data.get("item_id", ""))
-	print("[Hotbar Debug] select_hotbar_slot(", index, ") slot_data=", slot_data, " -> item_type=", item_type, " item_id=", item_id)
-	match item_type:
-		"tool_slot":
-			set_tool(item_id)
-		"seed":
-			set_tool("seeds")
-		_:
-			set_tool("")
-
-func assign_hotbar_slot(index: int, item_id: String, item_type: String) -> void:
-	print("[Hotbar Debug] assign_hotbar_slot(", index, ", ", item_id, ", ", item_type, ")")
-	if index < 0 or index >= HOTBAR_SIZE:
-		return
-	hotbar[index] = {"item_id": item_id, "item_type": item_type}
-	hotbar_changed.emit()
-	_sync_hotbar_to_server()
-	# Re-apply selection if this was the active slot
-	if index == selected_hotbar_slot:
-		select_hotbar_slot(index)
-
-func clear_hotbar_slot(index: int) -> void:
-	if index < 0 or index >= HOTBAR_SIZE:
-		return
-	hotbar[index] = {}
-	hotbar_changed.emit()
-	_sync_hotbar_to_server()
-	if index == selected_hotbar_slot:
-		select_hotbar_slot(index)
 
 func refill_watering_can() -> void:
 	watering_can_current = get_watering_can_capacity()

@@ -112,9 +112,9 @@ func _exit_restaurant(peer_id: int) -> void:
 	# Restore overworld position (offset +3 Z to avoid landing inside door collision)
 	if peer_id in overworld_positions:
 		var saved_pos = overworld_positions[peer_id]
-		# Push away from restaurant row (z=12) to avoid re-triggering door
-		if saved_pos.z > 9 and saved_pos.z < 15:
-			saved_pos.z = 8
+		# Push away from restaurant row (z=5) to avoid re-triggering door
+		if saved_pos.z > 2 and saved_pos.z < 8:
+			saved_pos.z = 1
 		player_node.position = saved_pos
 		overworld_positions.erase(peer_id)
 	else:

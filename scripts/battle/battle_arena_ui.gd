@@ -452,22 +452,8 @@ func _build_move_cards_overlay() -> void:
 		card_vbox.add_child(tags_flow)
 
 		# Invisible click button overlaying the card
-		var click_btn = Button.new()
+		var click_btn = _make_invisible_overlay_btn()
 		click_btn.name = "ClickBtn"
-		click_btn.flat = true
-		click_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		click_btn.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		# Make button transparent
-		var btn_style = StyleBoxEmpty.new()
-		click_btn.add_theme_stylebox_override("normal", btn_style)
-		click_btn.add_theme_stylebox_override("hover", btn_style)
-		click_btn.add_theme_stylebox_override("pressed", btn_style)
-		click_btn.add_theme_stylebox_override("focus", btn_style)
-		click_btn.add_theme_stylebox_override("disabled", StyleBoxEmpty.new())
-		click_btn.add_theme_color_override("font_color", Color(0, 0, 0, 0))
-		click_btn.add_theme_color_override("font_hover_color", Color(0, 0, 0, 0))
-		click_btn.add_theme_color_override("font_pressed_color", Color(0, 0, 0, 0))
-		click_btn.add_theme_color_override("font_disabled_color", Color(0, 0, 0, 0))
 		card.add_child(click_btn)
 
 		var idx = i
@@ -828,9 +814,6 @@ func _on_battle_started() -> void:
 	var compass = get_node_or_null("/root/Main/GameWorld/UI/CompassUI")
 	if compass:
 		compass.visible = false
-	var hotbar = get_node_or_null("/root/Main/GameWorld/UI/HotbarUI")
-	if hotbar:
-		hotbar.visible = false
 	var excursion_hud = get_node_or_null("/root/Main/GameWorld/UI/ExcursionHUD")
 	if excursion_hud:
 		excursion_hud.visible = false
@@ -997,10 +980,10 @@ func _cleanup_panels() -> void:
 	if summary_panel:
 		summary_panel.queue_free()
 		summary_panel = null
-	if switch_panel:
+	if is_instance_valid(switch_panel):
 		switch_panel.queue_free()
 		switch_panel = null
-	if item_panel:
+	if is_instance_valid(item_panel):
 		item_panel.queue_free()
 		item_panel = null
 	if move_replace_panel:
@@ -1011,9 +994,6 @@ func _restore_game_world_ui() -> void:
 	var compass = get_node_or_null("/root/Main/GameWorld/UI/CompassUI")
 	if compass:
 		compass.visible = true
-	var hotbar = get_node_or_null("/root/Main/GameWorld/UI/HotbarUI")
-	if hotbar:
-		hotbar.visible = true
 	var excursion_hud = get_node_or_null("/root/Main/GameWorld/UI/ExcursionHUD")
 	if excursion_hud:
 		excursion_hud.visible = true
@@ -1689,6 +1669,23 @@ func _on_switch_pressed() -> void:
 
 # === ITEM PANEL ===
 
+func _make_invisible_overlay_btn() -> Button:
+	var btn = Button.new()
+	btn.flat = true
+	btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	btn.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var s = StyleBoxEmpty.new()
+	btn.add_theme_stylebox_override("normal", s)
+	btn.add_theme_stylebox_override("hover", s)
+	btn.add_theme_stylebox_override("pressed", s)
+	btn.add_theme_stylebox_override("focus", s)
+	btn.add_theme_stylebox_override("disabled", StyleBoxEmpty.new())
+	btn.add_theme_color_override("font_color", Color(0, 0, 0, 0))
+	btn.add_theme_color_override("font_hover_color", Color(0, 0, 0, 0))
+	btn.add_theme_color_override("font_pressed_color", Color(0, 0, 0, 0))
+	btn.add_theme_color_override("font_disabled_color", Color(0, 0, 0, 0))
+	return btn
+
 func _make_dark_card_style(accent_color: Color = Color(0.5, 0.42, 0.3)) -> StyleBoxFlat:
 	var s = StyleBoxFlat.new()
 	s.bg_color = Color(0.18, 0.15, 0.12, 0.95)
@@ -1710,7 +1707,9 @@ func _make_dark_card_hover_style(accent_color: Color = Color(0.5, 0.42, 0.3)) ->
 	return s
 
 func _show_item_panel() -> void:
-	if item_panel:
+	if battle_mgr == null or action_layer == null:
+		return
+	if is_instance_valid(item_panel):
 		item_panel.queue_free()
 	item_panel = PanelContainer.new()
 	item_panel.anchors_preset = Control.PRESET_CENTER
@@ -1769,15 +1768,7 @@ func _show_item_panel() -> void:
 		text_vbox.add_child(desc_label)
 
 		# Invisible click button overlay
-		var click_btn = Button.new()
-		click_btn.flat = true
-		click_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		click_btn.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		var btn_style = StyleBoxEmpty.new()
-		click_btn.add_theme_stylebox_override("normal", btn_style)
-		click_btn.add_theme_stylebox_override("hover", btn_style)
-		click_btn.add_theme_stylebox_override("pressed", btn_style)
-		click_btn.add_theme_stylebox_override("focus", btn_style)
+		var click_btn = _make_invisible_overlay_btn()
 		card.add_child(click_btn)
 
 		var iid = item_id
@@ -1801,20 +1792,23 @@ func _show_item_panel() -> void:
 	cancel.text = "Cancel"
 	UITheme.style_button(cancel, "secondary")
 	cancel.pressed.connect(func():
-		item_panel.queue_free()
+		if is_instance_valid(item_panel):
+			item_panel.queue_free()
 		item_panel = null
 	)
 	vbox.add_child(cancel)
 	action_layer.add_child(item_panel)
 
 func _on_item_selected(item_id: String, effect_type: String) -> void:
-	if item_panel:
+	if is_instance_valid(item_panel):
 		item_panel.queue_free()
-		item_panel = null
+	item_panel = null
 	_show_item_target_panel(item_id, effect_type)
 
 func _show_item_target_panel(item_id: String, effect_type: String) -> void:
-	if item_panel:
+	if action_layer == null:
+		return
+	if is_instance_valid(item_panel):
 		item_panel.queue_free()
 	item_panel = PanelContainer.new()
 	item_panel.anchors_preset = Control.PRESET_CENTER
@@ -1903,15 +1897,7 @@ func _show_item_target_panel(item_id: String, effect_type: String) -> void:
 		hp_row.add_child(hp_text)
 
 		# Invisible click button overlay
-		var click_btn = Button.new()
-		click_btn.flat = true
-		click_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		click_btn.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		var btn_style = StyleBoxEmpty.new()
-		click_btn.add_theme_stylebox_override("normal", btn_style)
-		click_btn.add_theme_stylebox_override("hover", btn_style)
-		click_btn.add_theme_stylebox_override("pressed", btn_style)
-		click_btn.add_theme_stylebox_override("focus", btn_style)
+		var click_btn = _make_invisible_overlay_btn()
 		card.add_child(click_btn)
 
 		var cidx = i
@@ -1928,9 +1914,9 @@ func _show_item_target_panel(item_id: String, effect_type: String) -> void:
 					_set_phase(BattlePhase.WAITING)
 				else:
 					_set_phase(BattlePhase.ANIMATING)
-			if item_panel:
+			if is_instance_valid(item_panel):
 				item_panel.queue_free()
-				item_panel = null
+			item_panel = null
 		)
 		vbox.add_child(card)
 
@@ -1938,7 +1924,8 @@ func _show_item_target_panel(item_id: String, effect_type: String) -> void:
 	cancel.text = "Cancel"
 	UITheme.style_button(cancel, "secondary")
 	cancel.pressed.connect(func():
-		item_panel.queue_free()
+		if is_instance_valid(item_panel):
+			item_panel.queue_free()
 		item_panel = null
 	)
 	vbox.add_child(cancel)
@@ -1947,7 +1934,9 @@ func _show_item_target_panel(item_id: String, effect_type: String) -> void:
 # === SWITCH PANEL ===
 
 func _show_switch_panel() -> void:
-	if switch_panel:
+	if battle_mgr == null or action_layer == null:
+		return
+	if is_instance_valid(switch_panel):
 		switch_panel.queue_free()
 	switch_panel = PanelContainer.new()
 	switch_panel.anchors_preset = Control.PRESET_CENTER
@@ -2071,15 +2060,7 @@ func _show_switch_panel() -> void:
 		# Click handler — only for available (not active, not fainted)
 		if not is_active and not is_fainted:
 			found_any = true
-			var click_btn = Button.new()
-			click_btn.flat = true
-			click_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-			click_btn.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-			var btn_style = StyleBoxEmpty.new()
-			click_btn.add_theme_stylebox_override("normal", btn_style)
-			click_btn.add_theme_stylebox_override("hover", btn_style)
-			click_btn.add_theme_stylebox_override("pressed", btn_style)
-			click_btn.add_theme_stylebox_override("focus", btn_style)
+			var click_btn = _make_invisible_overlay_btn()
 			card.add_child(click_btn)
 
 			var idx = i
@@ -2094,7 +2075,8 @@ func _show_switch_panel() -> void:
 					_set_phase(BattlePhase.WAITING)
 				else:
 					_set_phase(BattlePhase.ANIMATING)
-				switch_panel.queue_free()
+				if is_instance_valid(switch_panel):
+					switch_panel.queue_free()
 				switch_panel = null
 			)
 
@@ -2110,7 +2092,8 @@ func _show_switch_panel() -> void:
 	cancel_btn.text = "Cancel"
 	UITheme.style_button(cancel_btn, "secondary")
 	cancel_btn.pressed.connect(func():
-		switch_panel.queue_free()
+		if is_instance_valid(switch_panel):
+			switch_panel.queue_free()
 		switch_panel = null
 	)
 	vbox.add_child(cancel_btn)

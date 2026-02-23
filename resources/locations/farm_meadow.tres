@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "farm_meadow"
 display_name = "Farm Meadow"
-world_position = Vector3(25, 0.8, 0)
+world_position = Vector3(25, 0, 0)
 discovery_radius = 10.0
 icon_type = "landmark"
 category = "landmark"

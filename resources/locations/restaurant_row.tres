@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "restaurant_row"
 display_name = "Restaurant Row"
-world_position = Vector3(0, 0, 12)
+world_position = Vector3(0, 0, 5)
 discovery_radius = 8.0
 icon_type = "zone"
 category = "zone"

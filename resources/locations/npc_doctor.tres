@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "npc_doctor"
 display_name = "Dr. Honey"
-world_position = Vector3(15, 0.3, 11)
+world_position = Vector3(22, 0.3, 3)
 discovery_radius = 8.0
 icon_type = "social_npc"
 category = "social_npc"

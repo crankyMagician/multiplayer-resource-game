@@ -5,7 +5,6 @@ const UITokens = preload("res://scripts/ui/ui_tokens.gd")
 
 var tab_bar: TabBar
 var card_grid: GridContainer
-var seed_label: Label
 var content_scroll: ScrollContainer
 var current_tab: int = 0
 
@@ -47,13 +46,6 @@ func _build_ui() -> void:
 	card_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	content_scroll.add_child(card_grid)
 
-	# Selected seed display
-	var seed_row := HBoxContainer.new()
-	vbox.add_child(seed_row)
-	seed_label = Label.new()
-	seed_label.text = "Selected Seed: None"
-	UITheme.style_small(seed_label)
-	seed_row.add_child(seed_label)
 
 func _on_tab_changed(tab_idx: int) -> void:
 	current_tab = tab_idx
@@ -95,7 +87,6 @@ func _refresh() -> void:
 		var card := _build_item_card(item_id, info, count)
 		card_grid.add_child(card)
 
-	_update_seed_label()
 
 # === CARD BUILDING ===
 
@@ -205,16 +196,6 @@ func _build_card_back(item_id: String, info: Dictionary, count: int) -> VBoxCont
 	# Action buttons
 	var is_seed_item = _is_seed_item(item_id)
 	match category:
-		"ingredient":
-			if is_seed_item:
-				var seed_btn := Button.new()
-				seed_btn.text = "Select Seed"
-				seed_btn.custom_minimum_size.y = 24
-				UITheme.style_button(seed_btn, "primary")
-				var sid = item_id
-				seed_btn.pressed.connect(func(): _select_seed(sid))
-				vbox.add_child(seed_btn)
-				_add_hotbar_button(vbox, item_id, "seed")
 		"food":
 			var food = DataRegistry.get_food(item_id)
 			if food:
@@ -234,7 +215,6 @@ func _build_card_back(item_id: String, info: Dictionary, count: int) -> VBoxCont
 					var sid = item_id
 					sell_btn.pressed.connect(func(): _sell_item(sid))
 					vbox.add_child(sell_btn)
-				_add_hotbar_button(vbox, item_id, "food")
 		"recipe_scroll":
 			var use_btn := Button.new()
 			use_btn.text = "Use"
@@ -243,8 +223,6 @@ func _build_card_back(item_id: String, info: Dictionary, count: int) -> VBoxCont
 			var sid = item_id
 			use_btn.pressed.connect(func(): _use_scroll(sid))
 			vbox.add_child(use_btn)
-		"battle_item":
-			_add_hotbar_button(vbox, item_id, "battle_item")
 		"tool":
 			var tool_def = DataRegistry.get_tool(item_id)
 			if tool_def:
@@ -264,7 +242,6 @@ func _build_card_back(item_id: String, info: Dictionary, count: int) -> VBoxCont
 					UITheme.style_small(lbl)
 					lbl.add_theme_color_override("font_color", UITokens.TEXT_SUCCESS)
 					vbox.add_child(lbl)
-				_add_hotbar_button(vbox, tool_def.tool_type, "tool_slot")
 
 	return vbox
 
@@ -292,23 +269,6 @@ func _on_card_clicked(card: PanelContainer) -> void:
 
 # === ACTION METHODS ===
 
-func _add_hotbar_button(parent: VBoxContainer, item_id: String, item_type: String) -> void:
-	var hb_btn := Button.new()
-	hb_btn.text = "Hotbar"
-	hb_btn.custom_minimum_size.y = 24
-	UITheme.style_button(hb_btn, "secondary")
-	var hb_id = item_id
-	var hb_type = item_type
-	hb_btn.pressed.connect(func(): _show_hotbar_assign(hb_id, hb_type))
-	parent.add_child(hb_btn)
-
-func _update_seed_label() -> void:
-	if PlayerData.selected_seed_id != "":
-		var ingredient = DataRegistry.get_ingredient(PlayerData.selected_seed_id)
-		seed_label.text = "Selected Seed: %s" % (ingredient.display_name if ingredient else PlayerData.selected_seed_id)
-	else:
-		seed_label.text = "Selected Seed: None"
-
 func _is_seed_item(item_id: String) -> bool:
 	var ingredient = DataRegistry.get_ingredient(item_id)
 	if ingredient == null:
@@ -318,11 +278,6 @@ func _is_seed_item(item_id: String) -> bool:
 	if item_id.ends_with("_seed"):
 		return true
 	return ingredient.display_name.to_lower().ends_with(" seed")
-
-func _select_seed(seed_id: String) -> void:
-	PlayerData.selected_seed_id = seed_id
-	PlayerData.set_tool("seeds")
-	_refresh()
 
 func _use_food(food_id: String) -> void:
 	NetworkManager.request_use_food.rpc_id(1, food_id)
@@ -335,39 +290,6 @@ func _use_scroll(scroll_id: String) -> void:
 
 func _equip_tool(tool_id: String) -> void:
 	NetworkManager.request_equip_tool.rpc_id(1, tool_id)
-
-var _hotbar_popup: PopupPanel = null
-
-func _show_hotbar_assign(item_id: String, item_type: String) -> void:
-	if _hotbar_popup and is_instance_valid(_hotbar_popup):
-		_hotbar_popup.queue_free()
-	_hotbar_popup = PopupPanel.new()
-	var vbox := VBoxContainer.new()
-	_hotbar_popup.add_child(vbox)
-	var title := Label.new()
-	title.text = "Assign to slot:"
-	UITheme.style_small(title)
-	vbox.add_child(title)
-	var grid := GridContainer.new()
-	grid.columns = 4
-	vbox.add_child(grid)
-	var key_labels = ["1", "2", "3", "4", "5", "6", "7", "8"]
-	for i in range(PlayerData.HOTBAR_SIZE):
-		var btn := Button.new()
-		btn.text = key_labels[i]
-		btn.custom_minimum_size = Vector2(36, 36)
-		UITheme.style_button(btn, "secondary")
-		var slot_idx = i
-		var sid = item_id
-		var stype = item_type
-		btn.pressed.connect(func():
-			PlayerData.assign_hotbar_slot(slot_idx, sid, stype)
-			if _hotbar_popup and is_instance_valid(_hotbar_popup):
-				_hotbar_popup.hide()
-		)
-		grid.add_child(btn)
-	add_child(_hotbar_popup)
-	_hotbar_popup.popup_centered(Vector2(200, 120))
 
 func _clear_children(node: Control) -> void:
 	for child in node.get_children():

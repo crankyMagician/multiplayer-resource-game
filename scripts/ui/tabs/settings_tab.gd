@@ -179,8 +179,7 @@ K - Journal
 F - Friends & Party
 N - NPCs
 
-1-8 - Hotbar slots
-Scroll - Cycle hotbar"""
+"""
 	UITheme.style_small(controls_label)
 	controls_label.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_SMALL))
 	controls_label.add_theme_color_override("font_color", UITokens.INK_MEDIUM)

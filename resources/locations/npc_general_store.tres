@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "npc_general_store"
 display_name = "Hazel Mapleton"
-world_position = Vector3(8, 0, 7)
+world_position = Vector3(8, 0, 5)
 discovery_radius = 8.0
 icon_type = "social_npc"
 category = "social_npc"

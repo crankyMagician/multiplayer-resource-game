@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "book_nook"
 display_name = "The Book Nook"
-world_position = Vector3(20, 0.3, 6)
+world_position = Vector3(18, 0.3, 8)
 discovery_radius = 5.0
 icon_type = "shop"
 category = "shop"

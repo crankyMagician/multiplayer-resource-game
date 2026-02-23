@@ -1,0 +1,173 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000">
+  <g id="terrain">
+    <path d="M20 20 H980 V980 H20 Z M80 80 H920 V920 H80 Z" fill="#3a3631" stroke="#27241f" stroke-width="2" fill-rule="evenodd"/>
+    <polygon points="100,130 250,100 430,120 590,105 760,130 860,220 890,360 875,500 900,650 860,790 760,870 620,900 470,885 330,905 210,845 130,735 110,600 125,470 100,340 90,230" fill="#b7c98d" stroke="#748753" stroke-width="2"/>
+    <polygon points="260,240 360,190 500,195 590,250 560,350 440,390 320,360 250,300" fill="#a7bf7a" stroke="#6d8451" stroke-width="2"/>
+    <polygon points="550,560 660,530 770,565 825,650 805,755 700,815 575,790 525,690" fill="#a2ba75" stroke="#6a824c" stroke-width="2"/>
+    <polygon points="150,260 250,220 330,255 315,360 220,430 145,385" fill="#8f7b65" stroke="#63513f" stroke-width="2"/>
+    <polygon points="470,165 560,145 640,180 630,260 550,300 470,250" fill="#8c775f" stroke="#5e4b38" stroke-width="2"/>
+    <polygon points="700,250 820,245 875,330 840,435 730,465 680,365" fill="#876f57" stroke="#5a4633" stroke-width="2"/>
+    <polygon points="410,600 480,580 530,610 520,670 460,700 405,665" fill="#c5d39a" stroke="#7d8d5c" stroke-width="2"/>
+    <polygon points="80,500 180,440 300,430 420,470 510,560 540,650 520,760 430,850 300,900 170,880 90,810 80,720" fill="#5eaad6" stroke="#3f7ea4" stroke-width="2"/>
+    <polygon points="740,690 820,670 880,730 865,815 805,865 730,840 710,760" fill="#4f98c4" stroke="#366b8a" stroke-width="2"/>
+  </g>
+  <g id="paths">
+    <polyline points="860,450 760,440 680,450 600,465 560,470 500,495 430,470 360,420 320,370" fill="none" stroke="#8b6a43" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" opacity="0.92"/>
+    <polyline points="560,470 500,560 430,630 360,700 260,760 200,790" fill="none" stroke="#aa8455" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="14 8" opacity="0.92"/>
+    <polyline points="680,450 730,520 760,610 740,700 690,790" fill="none" stroke="#6f6f6f" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4 8" opacity="0.9"/>
+    <polyline points="320,370 260,300 190,300 160,330 230,220 360,190 500,130 610,120 730,180 820,340" fill="none" stroke="#9a7a50" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="10 10" opacity="0.9"/>
+    <polyline points="600,465 610,560 640,640 690,790" fill="none" stroke="#9a7a50" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="10 10" opacity="0.9"/>
+  </g>
+  <g id="elevation">
+    <path d="M155 250 L280 200 L430 210 L575 200 L705 230 L790 310 L805 390 L760 430 L670 450 L560 445 L470 430 L380 440 L300 425 L235 390 L200 340 L182 295 Z" fill="none" stroke="#4f5f42" stroke-width="1" opacity="0.62"/>
+    <path d="M185 270 L300 230 L430 240 L560 230 L675 255 L748 322 L760 380 L720 420 L650 435 L560 430 L485 420 L410 428 L340 418 L285 390 L248 350 L236 310 Z" fill="none" stroke="#4f5f42" stroke-width="1" opacity="0.62"/>
+    <path d="M225 295 L325 265 L430 275 L535 265 L625 290 L682 340 L695 385 L662 418 L610 430 L545 425 L485 415 L430 420 L370 410 L325 390 L292 360 L280 325 Z" fill="none" stroke="#4f5f42" stroke-width="1" opacity="0.62"/>
+    <path d="M265 315 L350 292 L435 300 L515 292 L585 314 L630 354 L640 388 L615 410 L575 420 L525 416 L480 408 L438 412 L390 404 L354 386 L332 360 L325 335 Z" fill="none" stroke="#4f5f42" stroke-width="1" opacity="0.62"/>
+    <path d="M305 248 L385 215 L485 220 L550 258 L534 332 L470 370 L392 360 L325 322 Z" fill="none" stroke="#4f5f42" stroke-width="1" opacity="0.62"/>
+    <path d="M338 262 L402 236 L480 242 L525 272 L513 322 L462 350 L404 344 L355 315 Z" fill="none" stroke="#4f5f42" stroke-width="1" opacity="0.62"/>
+    <path d="M472 173 L542 158 L610 183 L615 238 L556 262 L492 243 Z" fill="none" stroke="#4f5f42" stroke-width="1" opacity="0.62"/>
+    <path d="M498 188 L548 177 L592 194 L595 224 L557 241 L512 228 Z" fill="none" stroke="#4f5f42" stroke-width="1" opacity="0.62"/>
+    <path d="M550 590 L630 565 L700 585 L735 640 L720 710 L665 748 L585 732 L548 682 Z" fill="none" stroke="#4f5f42" stroke-width="1" opacity="0.62"/>
+    <path d="M575 610 L635 592 L690 607 L715 648 L704 700 L661 728 L603 716 L574 686 Z" fill="none" stroke="#4f5f42" stroke-width="1" opacity="0.62"/>
+  </g>
+  <g id="ramps">
+    <polygon points="360,398 435,350 450,374 375,421" fill="#d5b37a" stroke="#8b6a3f" stroke-width="2" opacity="0.95"/>
+    <polygon points="500,318 560,285 573,307 513,341" fill="#d5b37a" stroke="#8b6a3f" stroke-width="2" opacity="0.95"/>
+    <polygon points="530,705 610,675 624,700 544,730" fill="#d5b37a" stroke="#8b6a3f" stroke-width="2" opacity="0.95"/>
+  </g>
+  <g id="landmarks">
+    <line x1="380" y1="300" x2="560" y2="470" stroke="#4c6170" stroke-width="1.4" stroke-dasharray="6 6" opacity="0.58"/>
+    <line x1="380" y1="300" x2="690" y2="430" stroke="#4c6170" stroke-width="1.4" stroke-dasharray="6 6" opacity="0.58"/>
+    <line x1="380" y1="300" x2="500" y2="130" stroke="#4c6170" stroke-width="1.4" stroke-dasharray="6 6" opacity="0.58"/>
+    <line x1="170" y1="270" x2="160" y2="330" stroke="#4c6170" stroke-width="1.4" stroke-dasharray="6 6" opacity="0.58"/>
+    <line x1="170" y1="270" x2="320" y2="370" stroke="#4c6170" stroke-width="1.4" stroke-dasharray="6 6" opacity="0.58"/>
+    <line x1="170" y1="270" x2="350" y2="700" stroke="#4c6170" stroke-width="1.4" stroke-dasharray="6 6" opacity="0.58"/>
+    <line x1="220" y1="730" x2="350" y2="700" stroke="#4c6170" stroke-width="1.4" stroke-dasharray="6 6" opacity="0.58"/>
+    <line x1="220" y1="730" x2="560" y2="470" stroke="#4c6170" stroke-width="1.4" stroke-dasharray="6 6" opacity="0.58"/>
+    <line x1="220" y1="730" x2="690" y2="790" stroke="#4c6170" stroke-width="1.4" stroke-dasharray="6 6" opacity="0.58"/>
+
+    <circle cx="380" cy="300" r="7" fill="#fff4c8" stroke="#7b6940" stroke-width="2"/>
+    <circle cx="170" cy="270" r="7" fill="#fff4c8" stroke="#7b6940" stroke-width="2"/>
+    <circle cx="220" cy="730" r="7" fill="#fff4c8" stroke="#7b6940" stroke-width="2"/>
+
+    <rect x="842" y="436" width="36" height="20" fill="#c9b28d" stroke="#6e563c" stroke-width="2"/>
+    <line x1="844" y1="458" x2="878" y2="458" stroke="#6e563c" stroke-width="2"/>
+    <line x1="848" y1="432" x2="848" y2="462" stroke="#6e563c" stroke-width="1.5"/>
+    <line x1="872" y1="432" x2="872" y2="462" stroke="#6e563c" stroke-width="1.5"/>
+
+    <rect x="672" y="412" width="34" height="28" fill="#cda882" stroke="#7a5738" stroke-width="2"/>
+    <polygon points="670,412 689,394 708,412" fill="#9d6d45" stroke="#7a5738" stroke-width="2"/>
+
+    <circle cx="560" cy="470" r="18" fill="none" stroke="#3e6a87" stroke-width="3"/>
+    <circle cx="560" cy="470" r="7" fill="#7fc3e8" stroke="#3e6a87" stroke-width="2"/>
+
+    <rect x="452" y="506" width="28" height="22" fill="#d6b58d" stroke="#785639" stroke-width="2"/>
+    <polygon points="450,506 466,492 482,506" fill="#a06d44" stroke="#785639" stroke-width="1.5"/>
+
+    <rect x="300" y="350" width="44" height="28" fill="#b9c8b0" stroke="#5e6d56" stroke-width="2"/>
+    <polygon points="298,350 322,332 346,350" fill="#8fa287" stroke="#5e6d56" stroke-width="1.5"/>
+
+    <rect x="336" y="686" width="42" height="14" fill="#9a7b52" stroke="#5e452d" stroke-width="2"/>
+    <line x1="344" y1="700" x2="344" y2="730" stroke="#5e452d" stroke-width="2"/>
+    <line x1="364" y1="700" x2="364" y2="734" stroke="#5e452d" stroke-width="2"/>
+
+    <rect x="208" y="742" width="22" height="40" fill="#d9d3c5" stroke="#6b655b" stroke-width="2"/>
+    <polygon points="206,742 219,724 232,742" fill="#8c867a" stroke="#6b655b" stroke-width="2"/>
+    <rect x="214" y="758" width="10" height="8" fill="#6b655b"/>
+
+    <circle cx="500" cy="130" r="17" fill="none" stroke="#7750b8" stroke-width="4"/>
+    <circle cx="500" cy="130" r="8" fill="none" stroke="#b392e6" stroke-width="3"/>
+
+    <circle cx="160" cy="330" r="17" fill="none" stroke="#2f8fb3" stroke-width="4"/>
+    <circle cx="160" cy="330" r="8" fill="none" stroke="#88cde8" stroke-width="3"/>
+
+    <circle cx="610" cy="120" r="17" fill="none" stroke="#6a3ea5" stroke-width="4"/>
+    <circle cx="610" cy="120" r="8" fill="none" stroke="#b284d9" stroke-width="3"/>
+
+    <circle cx="820" cy="340" r="17" fill="none" stroke="#c76b2a" stroke-width="4"/>
+    <circle cx="820" cy="340" r="8" fill="none" stroke="#efb077" stroke-width="3"/>
+
+    <circle cx="690" cy="790" r="17" fill="none" stroke="#4b76c2" stroke-width="4"/>
+    <circle cx="690" cy="790" r="8" fill="none" stroke="#9cc0f1" stroke-width="3"/>
+  </g>
+  <g id="labels" font-family="Arial" fill="#1f1f1f">
+    <text x="500" y="58" font-size="13" text-anchor="middle">H=14m</text>
+    <text x="505" y="610" font-size="14">H=2m</text>
+    <text x="410" y="285" font-size="14">H=5m</text>
+    <text x="640" y="685" font-size="14">H=4m</text>
+    <text x="205" y="325" font-size="14">H=9m</text>
+    <text x="540" y="215" font-size="14">H=7m</text>
+    <text x="782" y="340" font-size="14">H=10m</text>
+    <text x="458" y="648" font-size="14">H=1m</text>
+    <text x="260" y="710" font-size="14">H=0m</text>
+    <text x="790" y="770" font-size="14">H=0m</text>
+
+    <text x="170" y="252" font-size="12" fill="#36492c">1m</text>
+    <text x="198" y="278" font-size="12" fill="#36492c">2m</text>
+    <text x="245" y="308" font-size="12" fill="#36492c">3m</text>
+    <text x="284" y="330" font-size="12" fill="#36492c">4m</text>
+    <text x="312" y="242" font-size="12" fill="#36492c">5m</text>
+    <text x="345" y="256" font-size="12" fill="#36492c">6m</text>
+    <text x="475" y="168" font-size="12" fill="#36492c">7m</text>
+    <text x="503" y="184" font-size="12" fill="#36492c">8m</text>
+
+    <text x="808" y="428" font-size="15" font-weight="bold">Station Platform</text>
+    <text x="646" y="398" font-size="15" font-weight="bold">Town Hall</text>
+    <text x="505" y="450" font-size="15" font-weight="bold">Harbor Square Fountain</text>
+    <text x="418" y="500" font-size="15" font-weight="bold">Hubert's Bakery</text>
+    <text x="245" y="338" font-size="15" font-weight="bold">The Salty Ladle</text>
+    <text x="300" y="678" font-size="15" font-weight="bold">Haddock's Dock</text>
+    <text x="160" y="726" font-size="15" font-weight="bold">Lighthouse</text>
+    <text x="448" y="108" font-size="14" font-weight="bold">The Wilds Portal</text>
+    <text x="62" y="325" font-size="14" font-weight="bold">Coastal Wreckage Portal</text>
+    <text x="622" y="98" font-size="14" font-weight="bold">Fungal Hollow Portal</text>
+    <text x="804" y="318" font-size="14" font-weight="bold">Volcanic Crest Portal</text>
+    <text x="648" y="824" font-size="14" font-weight="bold">Frozen Pantry Portal</text>
+
+    <text x="370" y="294" font-size="13">Redwood Overlook</text>
+    <text x="160" y="264" font-size="13">Fog Point</text>
+    <text x="212" y="724" font-size="13">Lighthouse Crown</text>
+
+    <text x="286" y="344" font-size="13" fill="#2a2418">Ramp: 2m → 5m | L=35m | θ=4.9°</text>
+    <text x="472" y="282" font-size="13" fill="#2a2418">Ramp: 5m → 7m | L=24m | θ=4.8°</text>
+    <text x="500" y="748" font-size="13" fill="#2a2418">Ramp: 1m → 4m | L=30m | θ=5.7°</text>
+  </g>
+  <g id="legend" font-family="Arial" fill="#1f1f1f">
+    <rect x="630" y="640" width="340" height="330" fill="#f7f5ef" stroke="#2b2b2b" stroke-width="2" opacity="0.96"/>
+    <text x="646" y="666" font-size="20" font-weight="bold">Legend</text>
+
+    <text x="646" y="688" font-size="13" font-weight="bold">Terrain</text>
+    <rect x="646" y="696" width="18" height="12" fill="#b7c98d" stroke="#66774a" stroke-width="1"/>
+    <text x="672" y="706" font-size="12">Ground</text>
+    <rect x="646" y="714" width="18" height="12" fill="#a7bf7a" stroke="#66774a" stroke-width="1"/>
+    <text x="672" y="724" font-size="12">Elevated ground</text>
+    <rect x="646" y="732" width="18" height="12" fill="#5eaad6" stroke="#3f7ea4" stroke-width="1"/>
+    <text x="672" y="742" font-size="12">Water</text>
+    <rect x="646" y="750" width="18" height="12" fill="#8f7b65" stroke="#63513f" stroke-width="1"/>
+    <text x="672" y="760" font-size="12">Cliff / steep</text>
+    <rect x="646" y="768" width="18" height="12" fill="#3a3631" stroke="#27241f" stroke-width="1"/>
+    <text x="672" y="778" font-size="12">Impassable boundary</text>
+
+    <text x="646" y="800" font-size="13" font-weight="bold">Paths</text>
+    <line x1="646" y1="810" x2="700" y2="810" stroke="#8b6a43" stroke-width="8" stroke-linecap="round"/>
+    <text x="708" y="814" font-size="12">Main road</text>
+    <line x1="646" y1="828" x2="700" y2="828" stroke="#aa8455" stroke-width="6" stroke-dasharray="14 8" stroke-linecap="round"/>
+    <text x="708" y="832" font-size="12">Boardwalk path</text>
+    <line x1="646" y1="846" x2="700" y2="846" stroke="#6f6f6f" stroke-width="5" stroke-dasharray="4 8" stroke-linecap="round"/>
+    <text x="708" y="850" font-size="12">Service lane</text>
+    <line x1="646" y1="864" x2="700" y2="864" stroke="#9a7a50" stroke-width="5" stroke-dasharray="10 10" stroke-linecap="round"/>
+    <text x="708" y="868" font-size="12">Excursion trail</text>
+
+    <text x="646" y="892" font-size="13" font-weight="bold">Elevation + Access</text>
+    <line x1="646" y1="902" x2="700" y2="902" stroke="#4f5f42" stroke-width="1"/>
+    <text x="708" y="906" font-size="12">Contour line (1m interval)</text>
+    <polygon points="646,914 700,914 700,928 646,928" fill="#d5b37a" stroke="#8b6a3f" stroke-width="1"/>
+    <text x="708" y="925" font-size="12">Ramp</text>
+
+    <text x="646" y="946" font-size="13" font-weight="bold">Landmarks + Sight Lines</text>
+    <circle cx="655" cy="958" r="7" fill="none" stroke="#7750b8" stroke-width="3"/>
+    <text x="672" y="962" font-size="12">Landmark icon / portal</text>
+    <line x1="646" y1="972" x2="700" y2="972" stroke="#4c6170" stroke-width="1.5" stroke-dasharray="6 6"/>
+    <text x="708" y="976" font-size="12">Viewpoint sight line</text>
+  </g>
+</svg>

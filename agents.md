@@ -7,7 +7,6 @@
 | UI Theme | `scripts/ui/ui_theme.gd`, `scripts/ui/ui_tokens.gd` | UITheme is `class_name` — never preload. UITokens has no `class_name` — must preload. |
 | Settings | `scripts/ui/tabs/settings_tab.gd` | Font scale + text speed + volume. Persisted to `user://settings.cfg`. |
 | Battle Arena | `scripts/battle/battle_arena.gd`, `scripts/battle/battle_arena_ui.gd` | 3D arena is client-only. Label3D sizes must use `UITheme.scaled()`. |
-| Hotbar | `scripts/ui/hotbar_ui.gd` | CanvasLayer overlay. Font sizes must use `UITheme.scaled()`. |
 | Animation | `scripts/player/player_controller.gd`, `tools/build_animation_library.gd` | AnimationTree as standalone AnimationMixer (no separate AnimationPlayer). See CLAUDE.md Animation System. |
 | Player Physics | `scripts/player/player_controller.gd` (line ~578), `scenes/player/player.tscn` | `_update_crouch_collision()` MUST lerp both capsule height AND CollisionShape3D Y. See CLAUDE.md Player/Camera Notes. |
 | Networking | `scripts/autoload/network_manager.gd` | Server-authoritative. See CLAUDE.md Networking Rules. |

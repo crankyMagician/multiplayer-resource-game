@@ -16,9 +16,7 @@ Quick reference for how input is declared and consumed across the project.
 | Action | Default key | What it does | Main code path |
 | --- | --- | --- | --- |
 | `move_forward/back/left/right` | `W/S/A/D` | Captured locally for movement input; sent via `InputSync`; server applies motion. | `scripts/player/player_controller.gd` |
-| `interact` | `E` | Contextual world interaction: calendar board, social/shop/trainer NPCs, restaurant door, storage, crafting station, water source refill, farm plot actions (harvest/hoe/axe/water/plant). | `scripts/player/player_interaction.gd` |
-| `hotbar_1`…`hotbar_8` | `1–8` | Select hotbar slots (items/tools). | `player_interaction.gd` |
-| `hotbar_next` / `hotbar_prev` | Mouse wheel up/down | Cycle hotbar selection. | `player_interaction.gd` |
+| `interact` | `E` | Contextual world interaction: auto-selects the correct tool based on what the player is near (farm plots read plot state → clear/till/plant/water/harvest; dig spots; fishing spots; NPCs; crafting stations; etc.). No hotbar — tools are applied contextually. | `scripts/player/player_interaction.gd` |
 | `pvp_challenge` | `V` | Finds nearest player ≤5 units and sends PvP challenge. | `player_interaction.gd` |
 | `trade` | `T` | Finds nearest player ≤5 units and requests trade. | `player_interaction.gd` |
 | `open_party` | `P` | Toggle party UI; marks player busy while open. | `scripts/ui/party_ui.gd` |

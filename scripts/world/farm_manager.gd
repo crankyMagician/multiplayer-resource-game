@@ -68,6 +68,9 @@ func request_farm_action(plot_index: int, action: String, extra: String) -> void
 		"harvest":
 			cd_action = "farm_harvest"
 			cd_tool = ""
+		"uproot":
+			cd_action = "farm_till"
+			cd_tool = "hoe"
 	if cd_action != "" and not NetworkManager.check_tool_cooldown(sender, cd_action, cd_tool):
 		var remaining = NetworkManager.get_remaining_cooldown_ms(sender, cd_action, cd_tool)
 		_farm_cooldown_rejected.rpc_id(sender, action, remaining)
@@ -104,6 +107,8 @@ func request_farm_action(plot_index: int, action: String, extra: String) -> void
 			else:
 				_farm_action_result.rpc_id(sender, plot_index, action, false)
 				return
+		"uproot":
+			success = plot.try_uproot(sender)
 		"harvest":
 			result = plot.try_harvest(sender)
 			if result.size() > 0:
@@ -116,7 +121,7 @@ func request_farm_action(plot_index: int, action: String, extra: String) -> void
 	# Trigger tool animation on player if action succeeded
 	if success:
 		var anim_map = {"clear": &"axe", "till": &"hoe", "water": &"water",
-						"plant": &"harvest", "harvest": &"harvest"}
+						"plant": &"harvest", "harvest": &"harvest", "uproot": &"hoe"}
 		var player_node = NetworkManager._get_player_node(sender)
 		if player_node and player_node.has_method("play_tool_action"):
 			player_node.play_tool_action(anim_map.get(action, &"harvest"))
@@ -127,7 +132,7 @@ func _farm_action_result(_plot_index: int, _action: String, _success: bool) -> v
 	# Client receives result - play SFX based on action type
 	if _success:
 		match _action:
-			"till":
+			"till", "uproot":
 				AudioManager.play_sfx("tool_hoe")
 			"plant":
 				AudioManager.play_sfx("tool_hoe")
@@ -146,7 +151,7 @@ func _farm_action_result(_plot_index: int, _action: String, _success: bool) -> v
 
 @rpc("authority", "reliable")
 func _farm_cooldown_rejected(_action: String, _remaining_ms: int) -> void:
-	# Client receives cooldown rejection — hotbar UI handles visual feedback
+	# Client receives cooldown rejection — toast handles visual feedback
 	pass
 
 @rpc("authority", "reliable")
@@ -185,6 +190,11 @@ func get_save_data() -> Array:
 func load_save_data(data: Array) -> void:
 	for i in range(min(data.size(), plots.size())):
 		plots[i].load_save_data(data[i])
+
+func get_plot(index: int) -> Node:
+	if index >= 0 and index < plots.size():
+		return plots[index]
+	return null
 
 func get_nearest_plot(world_pos: Vector3, max_distance: float = 3.0) -> int:
 	var closest_dist = max_distance

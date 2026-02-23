@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "excursion_portal"
 display_name = "Excursion Portal"
-world_position = Vector3(-15, 0, 0)
+world_position = Vector3(-8, 0, -25)
 discovery_radius = 8.0
 icon_type = "landmark"
 category = "landmark"

@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "threads_needles"
 display_name = "Threads and Needles"
-world_position = Vector3(15, 0.3, 6)
+world_position = Vector3(15, 0.3, 5)
 discovery_radius = 5.0
 icon_type = "shop"
 category = "shop"

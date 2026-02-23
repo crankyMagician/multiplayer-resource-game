@@ -467,7 +467,6 @@ func show_casting() -> void:
 	_result_panel.visible = false
 	_difficulty_card.visible = false
 	_quit_button.visible = true
-	_set_hotbar_visible(false)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 	# Casting label entrance tween (offset-based for anchor layout)
@@ -764,7 +763,6 @@ func close() -> void:
 	_red_vignette = 0.0
 	_white_flash = 0.0
 	_update_pp_uniforms()
-	_set_hotbar_visible(true)
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 
@@ -1059,12 +1057,6 @@ func _get_reel_hint() -> String:
 	if Input.get_connected_joypads().size() > 0:
 		return "Hold [A] to reel"
 	return "Hold [E] to reel"
-
-
-func _set_hotbar_visible(show: bool) -> void:
-	var hotbar = get_node_or_null("/root/Main/GameWorld/UI/HotbarUI")
-	if hotbar:
-		hotbar.visible = show
 
 
 func _on_quit_pressed() -> void:

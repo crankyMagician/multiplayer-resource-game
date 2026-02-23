@@ -126,6 +126,16 @@ func try_water(_peer_id: int) -> bool:
 		set_state(PlotState.GROWING)
 	return true
 
+func try_uproot(_peer_id: int) -> bool:
+	if plot_state not in [PlotState.PLANTED, PlotState.GROWING, PlotState.WILTING]:
+		return false
+	planted_seed_id = ""
+	growth_progress = 0.0
+	water_level = 0.0
+	wilt_timer = 0
+	set_state(PlotState.TILLED)
+	return true
+
 func try_harvest(_peer_id: int) -> Dictionary:
 	if plot_state != PlotState.READY:
 		return {}

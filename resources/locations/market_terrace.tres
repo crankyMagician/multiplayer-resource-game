@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "market_terrace"
 display_name = "Market Terrace"
-world_position = Vector3(20, 0.6, 9)
+world_position = Vector3(22, 0.3, 8)
 discovery_radius = 8.0
 icon_type = "landmark"
 category = "landmark"

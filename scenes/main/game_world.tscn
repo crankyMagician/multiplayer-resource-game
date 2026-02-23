@@ -30,7 +30,11 @@
 [ext_resource type="PackedScene" path="res://scenes/world/districts/district_harbor_heights.tscn" id="28"]
 [ext_resource type="PackedScene" path="res://scenes/world/districts/district_farm_zone.tscn" id="29"]
 [ext_resource type="PackedScene" path="res://scenes/world/districts/district_wilderness.tscn" id="30"]
+[ext_resource type="PackedScene" path="res://scenes/world/harvestable_object.tscn" id="31"]
+[ext_resource type="Script" path="res://scripts/world/dig_spot.gd" id="32"]
+[ext_resource type="Script" path="res://scripts/world/calendar_board.gd" id="33"]
 
+; --- Base ground ---
 [sub_resource type="BoxShape3D" id="ground_shape"]
 size = Vector3(300, 0.2, 300)
 
@@ -40,175 +44,211 @@ size = Vector3(300, 0.2, 300)
 [sub_resource type="StandardMaterial3D" id="ground_mat"]
 albedo_color = Color(0.3, 0.55, 0.25, 1)
 
-; --- Ground Overlay meshes & materials ---
-[sub_resource type="BoxMesh" id="town_lawn_mesh"]
-size = Vector3(60, 0.12, 50)
-
-[sub_resource type="StandardMaterial3D" id="town_lawn_mat"]
-albedo_color = Color(0.32, 0.56, 0.28, 1)
-
-[sub_resource type="BoxMesh" id="coastal_sand_mesh"]
-size = Vector3(30, 0.08, 40)
-
-[sub_resource type="StandardMaterial3D" id="coastal_sand_mat"]
-albedo_color = Color(0.52, 0.48, 0.38, 1)
-
-[sub_resource type="BoxMesh" id="wilderness_earth_mesh"]
-size = Vector3(50, 0.06, 67)
-
-[sub_resource type="StandardMaterial3D" id="wilderness_earth_mat"]
-albedo_color = Color(0.28, 0.42, 0.2, 1)
-
-[sub_resource type="BoxMesh" id="building_mesh"]
-size = Vector3(6, 4, 6)
-
-[sub_resource type="StandardMaterial3D" id="building_mat"]
-albedo_color = Color(0.6, 0.6, 0.65, 1)
-
+; --- Functional collision shapes ---
 [sub_resource type="BoxShape3D" id="building_shape"]
 size = Vector3(6, 4, 6)
-
-[sub_resource type="BoxMesh" id="table_mesh"]
-size = Vector3(2, 1, 1)
-
-[sub_resource type="StandardMaterial3D" id="table_mat"]
-albedo_color = Color(0.5, 0.3, 0.15, 1)
 
 [sub_resource type="BoxShape3D" id="table_interact_shape"]
 size = Vector3(3, 2, 2)
 
-[sub_resource type="BoxMesh" id="fence_mesh"]
-size = Vector3(0.2, 1.5, 14)
-
-[sub_resource type="StandardMaterial3D" id="fence_mat"]
-albedo_color = Color(0.45, 0.3, 0.15, 1)
-
-[sub_resource type="BoxMesh" id="water_mesh"]
-size = Vector3(2, 0.8, 2)
-
-[sub_resource type="StandardMaterial3D" id="water_mat"]
-albedo_color = Color(0.2, 0.4, 0.9, 1)
-
-[sub_resource type="BoxShape3D" id="water_interact_shape"]
-size = Vector3(3, 2, 3)
-
-[sub_resource type="BoxMesh" id="path_mesh"]
-size = Vector3(3, 0.05, 3)
-
-[sub_resource type="StandardMaterial3D" id="path_mat"]
-albedo_color = Color(0.5, 0.4, 0.25, 1)
-
-[sub_resource type="BoxMesh" id="path_spawn_south_mesh"]
-size = Vector3(3.5, 0.06, 18)
-
-[sub_resource type="BoxMesh" id="path_to_wharf_mesh"]
-size = Vector3(12, 0.06, 3.5)
-
-[sub_resource type="BoxMesh" id="path_to_harbor_mesh"]
-size = Vector3(4, 0.06, 8)
-
-[sub_resource type="BoxMesh" id="path_to_market_mesh"]
-size = Vector3(8, 0.06, 3.5)
-
-[sub_resource type="BoxMesh" id="path_to_farm_mesh"]
-size = Vector3(3.5, 0.06, 10)
-
-[sub_resource type="StandardMaterial3D" id="conn_path_mat"]
-albedo_color = Color(0.55, 0.45, 0.3, 1)
-
-[sub_resource type="BoxMesh" id="grass_blade_mesh"]
-size = Vector3(0.3, 1.2, 0.3)
-
-[sub_resource type="StandardMaterial3D" id="grass_green_mat"]
-albedo_color = Color(0.2, 0.6, 0.2, 0.7)
-transparency = 1
-
-[sub_resource type="StandardMaterial3D" id="grass_red_mat"]
-albedo_color = Color(0.6, 0.3, 0.2, 0.7)
-transparency = 1
-
-[sub_resource type="StandardMaterial3D" id="grass_gold_mat"]
-albedo_color = Color(0.6, 0.55, 0.2, 0.7)
-transparency = 1
-
-[sub_resource type="StandardMaterial3D" id="grass_blue_mat"]
-albedo_color = Color(0.3, 0.4, 0.7, 0.7)
-transparency = 1
-
-[sub_resource type="StandardMaterial3D" id="grass_yellow_mat"]
-albedo_color = Color(0.7, 0.8, 0.2, 0.7)
-transparency = 1
-
-[sub_resource type="StandardMaterial3D" id="grass_purple_mat"]
-albedo_color = Color(0.6, 0.3, 0.6, 0.7)
-transparency = 1
-
-[sub_resource type="BoxMesh" id="storage_mesh"]
-size = Vector3(1.5, 1.8, 1.0)
-
-[sub_resource type="StandardMaterial3D" id="storage_mat"]
-albedo_color = Color(0.55, 0.55, 0.6, 1)
-
 [sub_resource type="BoxShape3D" id="storage_interact_shape"]
 size = Vector3(3, 2, 2.5)
-
-[sub_resource type="BoxMesh" id="workbench_mesh"]
-size = Vector3(2, 1.2, 1.2)
-
-[sub_resource type="StandardMaterial3D" id="workbench_mat"]
-albedo_color = Color(0.35, 0.22, 0.1, 1)
 
 [sub_resource type="BoxShape3D" id="station_interact_shape"]
 size = Vector3(3.5, 2, 2.5)
 
-[sub_resource type="BoxMesh" id="cauldron_mesh"]
-size = Vector3(1.5, 1.2, 1.5)
-
-[sub_resource type="StandardMaterial3D" id="cauldron_mat"]
-albedo_color = Color(0.25, 0.15, 0.3, 1)
-
-[sub_resource type="SphereShape3D" id="pickup_shape"]
-radius = 2.0
+[sub_resource type="BoxShape3D" id="water_interact_shape"]
+size = Vector3(3, 2, 3)
 
 [sub_resource type="BoxShape3D" id="grass_area_shape"]
 size = Vector3(8, 2, 8)
 
-; --- Restaurant Row landmark meshes & materials ---
-[sub_resource type="BoxMesh" id="archway_box_mesh"]
-size = Vector3(14, 1.5, 0.6)
+[sub_resource type="SphereShape3D" id="pickup_shape"]
+radius = 2.0
 
-[sub_resource type="StandardMaterial3D" id="archway_material"]
-albedo_color = Color(0.7, 0.15, 0.1, 1)
+; --- Ground overlay meshes & materials ---
+[sub_resource type="BoxMesh" id="zone_town_mesh"]
+size = Vector3(28, 0.12, 22)
+
+[sub_resource type="StandardMaterial3D" id="zone_town_mat"]
+albedo_color = Color(0.78, 0.72, 0.62, 1)
+
+[sub_resource type="BoxMesh" id="zone_wharf_mesh"]
+size = Vector3(26, 0.12, 22)
+
+[sub_resource type="StandardMaterial3D" id="zone_wharf_mat"]
+albedo_color = Color(0.45, 0.42, 0.38, 1)
+
+[sub_resource type="BoxMesh" id="zone_market_mesh"]
+size = Vector3(16, 0.12, 20)
+
+[sub_resource type="StandardMaterial3D" id="zone_market_mat"]
+albedo_color = Color(0.65, 0.45, 0.35, 1)
+
+[sub_resource type="BoxMesh" id="zone_harbor_mesh"]
+size = Vector3(30, 0.12, 28)
+
+[sub_resource type="StandardMaterial3D" id="zone_harbor_mat"]
+albedo_color = Color(0.35, 0.6, 0.3, 1)
+
+[sub_resource type="BoxShape3D" id="zone_harbor_col_shape"]
+size = Vector3(30, 0.3, 28)
+
+[sub_resource type="BoxMesh" id="zone_farm_mesh"]
+size = Vector3(18, 0.12, 18)
+
+[sub_resource type="StandardMaterial3D" id="zone_farm_mat"]
+albedo_color = Color(0.5, 0.4, 0.25, 1)
+
+[sub_resource type="BoxMesh" id="zone_wild_mesh"]
+size = Vector3(50, 0.12, 60)
+
+[sub_resource type="StandardMaterial3D" id="zone_wild_mat"]
+albedo_color = Color(0.22, 0.4, 0.18, 1)
+
+; --- Path meshes ---
+[sub_resource type="BoxMesh" id="path_spawn_south_mesh"]
+size = Vector3(4, 0.06, 18)
+
+[sub_resource type="BoxMesh" id="path_to_wharf_mesh"]
+size = Vector3(14, 0.06, 4)
+
+[sub_resource type="BoxMesh" id="path_to_market_mesh"]
+size = Vector3(14, 0.06, 4)
+
+[sub_resource type="BoxMesh" id="path_to_farm_mesh"]
+size = Vector3(12, 0.06, 4)
+
+[sub_resource type="BoxMesh" id="path_to_harbor_mesh"]
+size = Vector3(4, 0.06, 12)
+
+; --- Path material ---
+[sub_resource type="StandardMaterial3D" id="path_mat"]
+albedo_color = Color(0.6, 0.5, 0.35, 1)
+
+; --- Ramp mesh + collision ---
+[sub_resource type="BoxMesh" id="ramp_mesh"]
+size = Vector3(6, 0.3, 28.3)
+
+[sub_resource type="StandardMaterial3D" id="ramp_mat"]
+albedo_color = Color(0.5, 0.55, 0.4, 1)
+
+[sub_resource type="BoxShape3D" id="ramp_col_shape"]
+size = Vector3(6, 0.3, 28.3)
+
+; --- Portal archway meshes ---
+[sub_resource type="BoxMesh" id="portal_pillar_mesh"]
+size = Vector3(0.6, 5, 0.6)
+
+[sub_resource type="BoxMesh" id="portal_lintel_mesh"]
+size = Vector3(5, 0.8, 0.6)
+
+[sub_resource type="CylinderMesh" id="portal_disc_mesh"]
+top_radius = 2.5
+bottom_radius = 2.5
+height = 0.1
+
+; --- Portal materials (one per portal color) ---
+[sub_resource type="StandardMaterial3D" id="portal_mat_default"]
+albedo_color = Color(0.42, 0.14, 0.56, 1)
 emission_enabled = true
-emission = Color(0.8, 0.2, 0.1, 1)
-emission_energy_multiplier = 0.6
-
-[sub_resource type="BoxMesh" id="pillar_mesh"]
-size = Vector3(1.2, 5, 1.2)
-
-[sub_resource type="StandardMaterial3D" id="pillar_material"]
-albedo_color = Color(0.75, 0.55, 0.15, 1)
-emission_enabled = true
-emission = Color(0.9, 0.7, 0.2, 1)
+emission = Color(0.6, 0.2, 0.8, 1)
 emission_energy_multiplier = 0.4
 
-[sub_resource type="BoxMesh" id="carpet_mesh"]
-size = Vector3(10, 0.05, 6)
-
-[sub_resource type="StandardMaterial3D" id="carpet_material"]
-albedo_color = Color(0.7, 0.1, 0.1, 1)
+[sub_resource type="StandardMaterial3D" id="portal_disc_mat_default"]
+albedo_color = Color(0.6, 0.2, 0.8, 0.3)
+transparency = 1
 emission_enabled = true
-emission = Color(0.6, 0.05, 0.05, 1)
-emission_energy_multiplier = 0.3
+emission = Color(0.6, 0.2, 0.8, 1)
+emission_energy_multiplier = 1.5
 
-[sub_resource type="BoxMesh" id="gold_trim_mesh"]
-size = Vector3(14, 0.08, 0.4)
-
-[sub_resource type="StandardMaterial3D" id="gold_trim_material"]
-albedo_color = Color(1, 0.85, 0.2, 1)
+[sub_resource type="StandardMaterial3D" id="portal_mat_coastal"]
+albedo_color = Color(0.14, 0.42, 0.56, 1)
 emission_enabled = true
-emission = Color(1, 0.8, 0.1, 1)
-emission_energy_multiplier = 0.8
+emission = Color(0.2, 0.6, 0.8, 1)
+emission_energy_multiplier = 0.4
+
+[sub_resource type="StandardMaterial3D" id="portal_disc_mat_coastal"]
+albedo_color = Color(0.2, 0.6, 0.8, 0.3)
+transparency = 1
+emission_enabled = true
+emission = Color(0.2, 0.6, 0.8, 1)
+emission_energy_multiplier = 1.5
+
+[sub_resource type="StandardMaterial3D" id="portal_mat_fungal"]
+albedo_color = Color(0.28, 0.14, 0.42, 1)
+emission_enabled = true
+emission = Color(0.4, 0.2, 0.6, 1)
+emission_energy_multiplier = 0.4
+
+[sub_resource type="StandardMaterial3D" id="portal_disc_mat_fungal"]
+albedo_color = Color(0.4, 0.2, 0.6, 0.3)
+transparency = 1
+emission_enabled = true
+emission = Color(0.4, 0.2, 0.6, 1)
+emission_energy_multiplier = 1.5
+
+[sub_resource type="StandardMaterial3D" id="portal_mat_volcanic"]
+albedo_color = Color(0.63, 0.21, 0.07, 1)
+emission_enabled = true
+emission = Color(0.9, 0.3, 0.1, 1)
+emission_energy_multiplier = 0.4
+
+[sub_resource type="StandardMaterial3D" id="portal_disc_mat_volcanic"]
+albedo_color = Color(0.9, 0.3, 0.1, 0.3)
+transparency = 1
+emission_enabled = true
+emission = Color(0.9, 0.3, 0.1, 1)
+emission_energy_multiplier = 1.5
+
+[sub_resource type="StandardMaterial3D" id="portal_mat_frozen"]
+albedo_color = Color(0.35, 0.56, 0.665, 1)
+emission_enabled = true
+emission = Color(0.5, 0.8, 0.95, 1)
+emission_energy_multiplier = 0.4
+
+[sub_resource type="StandardMaterial3D" id="portal_disc_mat_frozen"]
+albedo_color = Color(0.5, 0.8, 0.95, 0.3)
+transparency = 1
+emission_enabled = true
+emission = Color(0.5, 0.8, 0.95, 1)
+emission_energy_multiplier = 1.5
+
+; --- Calendar board meshes ---
+[sub_resource type="BoxMesh" id="calendar_board_mesh"]
+size = Vector3(1.2, 1.8, 0.15)
+
+[sub_resource type="StandardMaterial3D" id="calendar_board_mat"]
+albedo_color = Color(0.45, 0.3, 0.15, 1)
+
+[sub_resource type="CylinderMesh" id="calendar_post_mesh"]
+top_radius = 0.08
+bottom_radius = 0.1
+height = 2.0
+
+[sub_resource type="StandardMaterial3D" id="calendar_post_mat"]
+albedo_color = Color(0.35, 0.2, 0.1, 1)
+
+; --- Fishing spot meshes ---
+[sub_resource type="CylinderMesh" id="fishing_disc_mesh"]
+top_radius = 3.0
+bottom_radius = 3.0
+height = 0.1
+
+[sub_resource type="StandardMaterial3D" id="fishing_water_mat"]
+albedo_color = Color(0.2, 0.4, 0.7, 0.5)
+transparency = 1
+
+; --- Containment wall collision ---
+[sub_resource type="BoxShape3D" id="wall_ns_shape"]
+size = Vector3(120, 10, 2)
+
+[sub_resource type="BoxShape3D" id="wall_ew_shape"]
+size = Vector3(2, 10, 180)
+
+; ============================================================
+; SCENE TREE
+; ============================================================
 
 [node name="GameWorld" type="Node3D"]
 script = ExtResource("1")
@@ -225,12 +265,14 @@ script = ExtResource("4")
 [node name="CraftingSystem" type="Node" parent="."]
 script = ExtResource("5")
 
+; ==================== ENVIRONMENT ====================
 [node name="Environment" type="Node3D" parent="."]
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="Environment"]
 transform = Transform3D(0.866, -0.354, 0.354, 0, 0.707, 0.707, -0.5, -0.612, 0.612, 0, 15, 10)
 shadow_enabled = true
 
+; --- Base ground (300x300 flat plane) ---
 [node name="Ground" type="StaticBody3D" parent="Environment"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
 
@@ -241,28 +283,129 @@ material_override = SubResource("ground_mat")
 [node name="GroundCollision" type="CollisionShape3D" parent="Environment/Ground"]
 shape = SubResource("ground_shape")
 
-; === Ground Overlays (color zones on top of base ground) ===
-[node name="TownLawn" type="MeshInstance3D" parent="Environment"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.03, 6)
-mesh = SubResource("town_lawn_mesh")
-material_override = SubResource("town_lawn_mat")
+; --- District ground overlays (colored zones at y=0.02) ---
+[node name="GroundOverlays" type="Node3D" parent="Environment"]
 
-[node name="CoastalSand" type="MeshInstance3D" parent="Environment"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30, -0.05, -8)
-mesh = SubResource("coastal_sand_mesh")
-material_override = SubResource("coastal_sand_mat")
+[node name="TownSquareGround" type="MeshInstance3D" parent="Environment/GroundOverlays"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 8)
+mesh = SubResource("zone_town_mesh")
+material_override = SubResource("zone_town_mat")
 
-[node name="WildernessEarth" type="MeshInstance3D" parent="Environment"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.03, -29)
-mesh = SubResource("wilderness_earth_mesh")
-material_override = SubResource("wilderness_earth_mat")
+[node name="WharfWalkGround" type="MeshInstance3D" parent="Environment/GroundOverlays"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -28, 0.02, -4)
+mesh = SubResource("zone_wharf_mesh")
+material_override = SubResource("zone_wharf_mat")
 
+[node name="MarketRowGround" type="MeshInstance3D" parent="Environment/GroundOverlays"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22, 0.02, 8)
+mesh = SubResource("zone_market_mesh")
+material_override = SubResource("zone_market_mat")
+
+[node name="HarborHeightsGround" type="MeshInstance3D" parent="Environment/GroundOverlays"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 4.02, 42)
+mesh = SubResource("zone_harbor_mesh")
+material_override = SubResource("zone_harbor_mat")
+
+[node name="FarmZoneGround" type="MeshInstance3D" parent="Environment/GroundOverlays"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 37, 0.02, 0)
+mesh = SubResource("zone_farm_mesh")
+material_override = SubResource("zone_farm_mat")
+
+[node name="WildernessGround" type="MeshInstance3D" parent="Environment/GroundOverlays"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, -48)
+mesh = SubResource("zone_wild_mesh")
+material_override = SubResource("zone_wild_mat")
+
+; --- Path strips (y=0.05, width 4) ---
+[node name="Paths" type="Node3D" parent="Environment"]
+
+; Spawn south to Wilderness entry: (0, 0.05, -3) down to (0, 0.05, -18)
+[node name="PathSpawnSouth" type="MeshInstance3D" parent="Environment/Paths"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, -6)
+mesh = SubResource("path_spawn_south_mesh")
+material_override = SubResource("path_mat")
+
+; Town Square to Wharf Walk: along z=-1, x=-14 to x=-15 (bridge gap)
+[node name="PathToWharf" type="MeshInstance3D" parent="Environment/Paths"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -21, 0.05, -1)
+mesh = SubResource("path_to_wharf_mesh")
+material_override = SubResource("path_mat")
+
+; Town Square to Market Row: along z=8, x=14 to x=14 (bridge gap)
+[node name="PathToMarket" type="MeshInstance3D" parent="Environment/Paths"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 21, 0.05, 8)
+mesh = SubResource("path_to_market_mesh")
+material_override = SubResource("path_mat")
+
+; Market Row to Farm Zone: from (30, 0.05, 2) to (28, 0.05, 0)
+[node name="PathToFarm" type="MeshInstance3D" parent="Environment/Paths"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 34, 0.05, 2)
+mesh = SubResource("path_to_farm_mesh")
+material_override = SubResource("path_mat")
+
+; Town Square north to Harbor Heights ramp base
+[node name="PathToHarbor" type="MeshInstance3D" parent="Environment/Paths"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0.05, 22)
+mesh = SubResource("path_to_harbor_mesh")
+material_override = SubResource("path_mat")
+
+; --- Path meshes (inline sub-resources via mesh overrides) ---
+
+; --- Harbor Heights elevated platform (StaticBody3D at y=4) ---
+[node name="HarborPlatform" type="StaticBody3D" parent="Environment"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 3.85, 42)
+
+[node name="PlatformCollision" type="CollisionShape3D" parent="Environment/HarborPlatform"]
+shape = SubResource("zone_harbor_col_shape")
+
+; --- Harbor Heights walkable ramp (y=0 to y=4, z=20 to z=23) ---
+; Ramp center at (4, 2, 28), rotated around X to slope from y=0 at z=14 to y=4 at z=42
+; angle = atan(4/28) ≈ 8.13 deg, cos=0.99, sin=0.142
+[node name="HarborRamp" type="StaticBody3D" parent="Environment"]
+transform = Transform3D(1, 0, 0, 0, 0.99, 0.142, 0, -0.142, 0.99, 4, 2, 28)
+
+[node name="RampMesh" type="MeshInstance3D" parent="Environment/HarborRamp"]
+mesh = SubResource("ramp_mesh")
+material_override = SubResource("ramp_mat")
+
+[node name="RampCollision" type="CollisionShape3D" parent="Environment/HarborRamp"]
+shape = SubResource("ramp_col_shape")
+
+; --- Containment walls (invisible) ---
+[node name="Containment" type="Node3D" parent="Environment"]
+
+[node name="WallNorth" type="StaticBody3D" parent="Environment/Containment"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, 65)
+
+[node name="WallNorthCol" type="CollisionShape3D" parent="Environment/Containment/WallNorth"]
+shape = SubResource("wall_ns_shape")
+
+[node name="WallSouth" type="StaticBody3D" parent="Environment/Containment"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, -90)
+
+[node name="WallSouthCol" type="CollisionShape3D" parent="Environment/Containment/WallSouth"]
+shape = SubResource("wall_ns_shape")
+
+[node name="WallWest" type="StaticBody3D" parent="Environment/Containment"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -50, 5, 0)
+
+[node name="WallWestCol" type="CollisionShape3D" parent="Environment/Containment/WallWest"]
+shape = SubResource("wall_ew_shape")
+
+[node name="WallEast" type="StaticBody3D" parent="Environment/Containment"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 60, 5, 0)
+
+[node name="WallEastCol" type="CollisionShape3D" parent="Environment/Containment/WallEast"]
+shape = SubResource("wall_ew_shape")
+
+; ==================== PLAYERS ====================
 [node name="Players" type="Node3D" parent="."]
 
 [node name="MultiplayerSpawner" type="MultiplayerSpawner" parent="Players"]
 _spawnable_scenes = PackedStringArray("res://scenes/player/player.tscn")
 spawn_path = NodePath("..")
 
+; ==================== ZONES ====================
 [node name="Zones" type="Node3D" parent="."]
 
 ; === RESTAURANT ZONE (hub area around spawn) ===
@@ -271,19 +414,11 @@ spawn_path = NodePath("..")
 [node name="Building" type="StaticBody3D" parent="Zones/RestaurantZone"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, -2)
 
-[node name="BuildingMesh" type="MeshInstance3D" parent="Zones/RestaurantZone/Building"]
-mesh = SubResource("building_mesh")
-material_override = SubResource("building_mat")
-
 [node name="BuildingCollision" type="CollisionShape3D" parent="Zones/RestaurantZone/Building"]
 shape = SubResource("building_shape")
 
 [node name="CraftingTable" type="StaticBody3D" parent="Zones/RestaurantZone"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0.5, 1)
-
-[node name="TableMesh" type="MeshInstance3D" parent="Zones/RestaurantZone/CraftingTable"]
-mesh = SubResource("table_mesh")
-material_override = SubResource("table_mat")
 
 [node name="InteractArea" type="Area3D" parent="Zones/RestaurantZone/CraftingTable"]
 script = ExtResource("12")
@@ -303,10 +438,6 @@ modulate = Color(1, 0.8, 0.3, 1)
 [node name="Pantry" type="StaticBody3D" parent="Zones/RestaurantZone"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0.9, -1)
 
-[node name="PantryMesh" type="MeshInstance3D" parent="Zones/RestaurantZone/Pantry"]
-mesh = SubResource("storage_mesh")
-material_override = SubResource("storage_mat")
-
 [node name="InteractArea" type="Area3D" parent="Zones/RestaurantZone/Pantry"]
 script = ExtResource("14")
 
@@ -323,39 +454,15 @@ modulate = Color(0.5, 0.7, 0.9, 1)
 [node name="SpawnPoint" type="Marker3D" parent="Zones/RestaurantZone"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
 
-; === FARM ZONE (25, 0, 0) — east of hub ===
+; === FARM ZONE (25, 0, 0) ===
 [node name="FarmZone" type="Node3D" parent="Zones"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25, 0, 0)
 
 [node name="FarmManager" type="Node3D" parent="Zones/FarmZone"]
 script = ExtResource("6")
 
-[node name="FenceLeft" type="MeshInstance3D" parent="Zones/FarmZone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7, 0.75, 0)
-mesh = SubResource("fence_mesh")
-material_override = SubResource("fence_mat")
-
-[node name="FenceRight" type="MeshInstance3D" parent="Zones/FarmZone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0.75, 0)
-mesh = SubResource("fence_mesh")
-material_override = SubResource("fence_mat")
-
-[node name="FenceFront" type="MeshInstance3D" parent="Zones/FarmZone"]
-transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 0.75, 7)
-mesh = SubResource("fence_mesh")
-material_override = SubResource("fence_mat")
-
-[node name="FenceBack" type="MeshInstance3D" parent="Zones/FarmZone"]
-transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 0.75, -7)
-mesh = SubResource("fence_mesh")
-material_override = SubResource("fence_mat")
-
 [node name="WaterSource" type="StaticBody3D" parent="Zones/FarmZone"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0.4, 6)
-
-[node name="WaterMesh" type="MeshInstance3D" parent="Zones/FarmZone/WaterSource"]
-mesh = SubResource("water_mesh")
-material_override = SubResource("water_mat")
 
 [node name="WaterArea" type="Area3D" parent="Zones/FarmZone/WaterSource" groups=["water_source"]]
 
@@ -365,10 +472,6 @@ shape = SubResource("water_interact_shape")
 ; === WORKBENCH (near spawn) ===
 [node name="Workbench" type="StaticBody3D" parent="Zones/RestaurantZone"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0.6, 5)
-
-[node name="WorkbenchMesh" type="MeshInstance3D" parent="Zones/RestaurantZone/Workbench"]
-mesh = SubResource("workbench_mesh")
-material_override = SubResource("workbench_mat")
 
 [node name="InteractArea" type="Area3D" parent="Zones/RestaurantZone/Workbench"]
 script = ExtResource("12")
@@ -384,10 +487,9 @@ font_size = 48
 outline_size = 8
 modulate = Color(0.8, 0.5, 0.2, 1)
 
-; === WILD ZONE (at origin — all encounter zones use absolute positions) ===
+; === WILD ZONE ===
 [node name="WildZone" type="Node3D" parent="Zones"]
 
-; Herb Garden (-12, 0, -15) — easy, west branch
 [node name="HerbGarden" type="Area3D" parent="Zones/WildZone"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0, -15)
 script = ExtResource("7")
@@ -397,32 +499,6 @@ grass_color = Color(0.2, 0.6, 0.2, 0.7)
 [node name="GrassShape" type="CollisionShape3D" parent="Zones/WildZone/HerbGarden"]
 shape = SubResource("grass_area_shape")
 
-[node name="Grass1" type="MeshInstance3D" parent="Zones/WildZone/HerbGarden"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.6, -1)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_green_mat")
-
-[node name="Grass2" type="MeshInstance3D" parent="Zones/WildZone/HerbGarden"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, 1)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_green_mat")
-
-[node name="Grass3" type="MeshInstance3D" parent="Zones/WildZone/HerbGarden"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0.5, -2)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_green_mat")
-
-[node name="Grass4" type="MeshInstance3D" parent="Zones/WildZone/HerbGarden"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0.65, 2)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_green_mat")
-
-[node name="Grass5" type="MeshInstance3D" parent="Zones/WildZone/HerbGarden"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0.55, 0)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_green_mat")
-
-; Flame Kitchen (12, 0, -15) — easy, east branch
 [node name="FlameKitchen" type="Area3D" parent="Zones/WildZone"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0, -15)
 script = ExtResource("7")
@@ -432,27 +508,6 @@ grass_color = Color(0.6, 0.3, 0.2, 0.7)
 [node name="GrassShape" type="CollisionShape3D" parent="Zones/WildZone/FlameKitchen"]
 shape = SubResource("grass_area_shape")
 
-[node name="Grass1" type="MeshInstance3D" parent="Zones/WildZone/FlameKitchen"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 0.6, -1.5)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_red_mat")
-
-[node name="Grass2" type="MeshInstance3D" parent="Zones/WildZone/FlameKitchen"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0.7, 0)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_red_mat")
-
-[node name="Grass3" type="MeshInstance3D" parent="Zones/WildZone/FlameKitchen"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 0.5, 2)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_red_mat")
-
-[node name="Grass4" type="MeshInstance3D" parent="Zones/WildZone/FlameKitchen"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0.65, -1)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_red_mat")
-
-; Frost Pantry (-18, 0, -35) — medium, west
 [node name="FrostPantry" type="Area3D" parent="Zones/WildZone"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18, 0, -35)
 script = ExtResource("7")
@@ -462,27 +517,6 @@ grass_color = Color(0.3, 0.4, 0.7, 0.7)
 [node name="GrassShape" type="CollisionShape3D" parent="Zones/WildZone/FrostPantry"]
 shape = SubResource("grass_area_shape")
 
-[node name="Grass1" type="MeshInstance3D" parent="Zones/WildZone/FrostPantry"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0.6, 1)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_blue_mat")
-
-[node name="Grass2" type="MeshInstance3D" parent="Zones/WildZone/FrostPantry"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0.7, -1)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_blue_mat")
-
-[node name="Grass3" type="MeshInstance3D" parent="Zones/WildZone/FrostPantry"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0.5, 2)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_blue_mat")
-
-[node name="Grass4" type="MeshInstance3D" parent="Zones/WildZone/FrostPantry"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.65, -2)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_blue_mat")
-
-; Harvest Field (18, 0, -35) — medium, east
 [node name="HarvestField" type="Area3D" parent="Zones/WildZone"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 0, -35)
 script = ExtResource("7")
@@ -492,27 +526,6 @@ grass_color = Color(0.6, 0.55, 0.2, 0.7)
 [node name="GrassShape" type="CollisionShape3D" parent="Zones/WildZone/HarvestField"]
 shape = SubResource("grass_area_shape")
 
-[node name="Grass1" type="MeshInstance3D" parent="Zones/WildZone/HarvestField"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0.6, -1)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_gold_mat")
-
-[node name="Grass2" type="MeshInstance3D" parent="Zones/WildZone/HarvestField"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0.7, 1.5)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_gold_mat")
-
-[node name="Grass3" type="MeshInstance3D" parent="Zones/WildZone/HarvestField"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_gold_mat")
-
-[node name="Grass4" type="MeshInstance3D" parent="Zones/WildZone/HarvestField"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.65, 2)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_gold_mat")
-
-; Sour Springs (18, 0, -48) — hard, east
 [node name="SourSprings" type="Area3D" parent="Zones/WildZone"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 0, -48)
 script = ExtResource("7")
@@ -522,27 +535,6 @@ grass_color = Color(0.7, 0.8, 0.2, 0.7)
 [node name="GrassShape" type="CollisionShape3D" parent="Zones/WildZone/SourSprings"]
 shape = SubResource("grass_area_shape")
 
-[node name="Grass1" type="MeshInstance3D" parent="Zones/WildZone/SourSprings"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.6, -1)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_yellow_mat")
-
-[node name="Grass2" type="MeshInstance3D" parent="Zones/WildZone/SourSprings"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0.7, 1)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_yellow_mat")
-
-[node name="Grass3" type="MeshInstance3D" parent="Zones/WildZone/SourSprings"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 2)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_yellow_mat")
-
-[node name="Grass4" type="MeshInstance3D" parent="Zones/WildZone/SourSprings"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0.65, -2)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_yellow_mat")
-
-; Fusion Kitchen (-18, 0, -48) — hard, west
 [node name="FusionKitchen" type="Area3D" parent="Zones/WildZone"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18, 0, -48)
 script = ExtResource("7")
@@ -552,29 +544,6 @@ grass_color = Color(0.6, 0.3, 0.6, 0.7)
 [node name="GrassShape" type="CollisionShape3D" parent="Zones/WildZone/FusionKitchen"]
 shape = SubResource("grass_area_shape")
 
-[node name="Grass1" type="MeshInstance3D" parent="Zones/WildZone/FusionKitchen"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0.6, -2)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_purple_mat")
-
-[node name="Grass2" type="MeshInstance3D" parent="Zones/WildZone/FusionKitchen"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0.7, 0)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_purple_mat")
-
-[node name="Grass3" type="MeshInstance3D" parent="Zones/WildZone/FusionKitchen"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 1)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_purple_mat")
-
-[node name="Grass4" type="MeshInstance3D" parent="Zones/WildZone/FusionKitchen"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.65, 2)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_purple_mat")
-
-; === NEW ENCOUNTER ZONES (Cast Iron Cove demo) ===
-
-; Fermented Hollow (-25, 0, -20) — Toxic/Umami/Earthy
 [node name="FermentedHollow" type="Area3D" parent="Zones/WildZone"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -25, 0, -20)
 script = ExtResource("7")
@@ -584,22 +553,6 @@ grass_color = Color(0.4, 0.35, 0.2, 0.7)
 [node name="GrassShape" type="CollisionShape3D" parent="Zones/WildZone/FermentedHollow"]
 shape = SubResource("grass_area_shape")
 
-[node name="Grass1" type="MeshInstance3D" parent="Zones/WildZone/FermentedHollow"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 0.6, -1)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_gold_mat")
-
-[node name="Grass2" type="MeshInstance3D" parent="Zones/WildZone/FermentedHollow"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0.7, 1.5)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_gold_mat")
-
-[node name="Grass3" type="MeshInstance3D" parent="Zones/WildZone/FermentedHollow"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0.5, -2)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_gold_mat")
-
-; Blackened Crest (25, 3, -20) — Spicy/Protein/Mineral
 [node name="BlackenedCrest" type="Area3D" parent="Zones/WildZone"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25, 3, -20)
 script = ExtResource("7")
@@ -609,22 +562,6 @@ grass_color = Color(0.5, 0.2, 0.15, 0.7)
 [node name="GrassShape" type="CollisionShape3D" parent="Zones/WildZone/BlackenedCrest"]
 shape = SubResource("grass_area_shape")
 
-[node name="Grass1" type="MeshInstance3D" parent="Zones/WildZone/BlackenedCrest"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0.6, -1)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_red_mat")
-
-[node name="Grass2" type="MeshInstance3D" parent="Zones/WildZone/BlackenedCrest"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0.7, 1)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_red_mat")
-
-[node name="Grass3" type="MeshInstance3D" parent="Zones/WildZone/BlackenedCrest"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 2)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_red_mat")
-
-; Battered Bay (-20, 0, -30) — Liquid/Sweet/Aromatic
 [node name="BatteredBay" type="Area3D" parent="Zones/WildZone"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 0, -30)
 script = ExtResource("7")
@@ -634,22 +571,6 @@ grass_color = Color(0.3, 0.5, 0.7, 0.7)
 [node name="GrassShape" type="CollisionShape3D" parent="Zones/WildZone/BatteredBay"]
 shape = SubResource("grass_area_shape")
 
-[node name="Grass1" type="MeshInstance3D" parent="Zones/WildZone/BatteredBay"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.6, 1)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_blue_mat")
-
-[node name="Grass2" type="MeshInstance3D" parent="Zones/WildZone/BatteredBay"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0.7, -1)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_blue_mat")
-
-[node name="Grass3" type="MeshInstance3D" parent="Zones/WildZone/BatteredBay"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_blue_mat")
-
-; Salted Shipwreck (20, 0, -30) — Liquid/Mineral/Toxic
 [node name="SaltedShipwreck" type="Area3D" parent="Zones/WildZone"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 0, -30)
 script = ExtResource("7")
@@ -659,28 +580,9 @@ grass_color = Color(0.5, 0.55, 0.45, 0.7)
 [node name="GrassShape" type="CollisionShape3D" parent="Zones/WildZone/SaltedShipwreck"]
 shape = SubResource("grass_area_shape")
 
-[node name="Grass1" type="MeshInstance3D" parent="Zones/WildZone/SaltedShipwreck"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0.6, -2)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_green_mat")
-
-[node name="Grass2" type="MeshInstance3D" parent="Zones/WildZone/SaltedShipwreck"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0.7, 1)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_green_mat")
-
-[node name="Grass3" type="MeshInstance3D" parent="Zones/WildZone/SaltedShipwreck"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 2)
-mesh = SubResource("grass_blade_mesh")
-material_override = SubResource("grass_green_mat")
-
-; === CAULDRON (0, 0, -55) — deepest point ===
+; === CAULDRON (0, 0, -55) ===
 [node name="Cauldron" type="StaticBody3D" parent="Zones/WildZone"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, -55)
-
-[node name="CauldronMesh" type="MeshInstance3D" parent="Zones/WildZone/Cauldron"]
-mesh = SubResource("cauldron_mesh")
-material_override = SubResource("cauldron_mat")
 
 [node name="InteractArea" type="Area3D" parent="Zones/WildZone/Cauldron"]
 script = ExtResource("12")
@@ -699,7 +601,6 @@ modulate = Color(0.6, 0.3, 0.8, 1)
 ; === RECIPE PICKUPS ===
 [node name="RecipePickups" type="Node3D" parent="Zones/WildZone"]
 
-; Near Herb Garden
 [node name="PickupHerbGarden" type="Area3D" parent="Zones/WildZone/RecipePickups"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0, -15)
 script = ExtResource("13")
@@ -709,7 +610,6 @@ pickup_id = "pickup_herb_garden_1"
 [node name="PickupShape" type="CollisionShape3D" parent="Zones/WildZone/RecipePickups/PickupHerbGarden"]
 shape = SubResource("pickup_shape")
 
-; Near Frost Pantry
 [node name="PickupFrostPantry" type="Area3D" parent="Zones/WildZone/RecipePickups"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 0, -35)
 script = ExtResource("13")
@@ -719,7 +619,6 @@ pickup_id = "pickup_frost_pantry_1"
 [node name="PickupShape" type="CollisionShape3D" parent="Zones/WildZone/RecipePickups/PickupFrostPantry"]
 shape = SubResource("pickup_shape")
 
-; Near Sour Springs
 [node name="PickupSourSprings" type="Area3D" parent="Zones/WildZone/RecipePickups"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22, 0, -48)
 script = ExtResource("13")
@@ -729,7 +628,6 @@ pickup_id = "pickup_sour_springs_1"
 [node name="PickupShape" type="CollisionShape3D" parent="Zones/WildZone/RecipePickups/PickupSourSprings"]
 shape = SubResource("pickup_shape")
 
-; Near Fusion Kitchen
 [node name="PickupFusionKitchen" type="Area3D" parent="Zones/WildZone/RecipePickups"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 0, -48)
 script = ExtResource("13")
@@ -739,48 +637,553 @@ pickup_id = "pickup_fusion_kitchen_1"
 [node name="PickupShape" type="CollisionShape3D" parent="Zones/WildZone/RecipePickups/PickupFusionKitchen"]
 shape = SubResource("pickup_shape")
 
+; === HARVESTABLES (pre-placed, visuals built by _build_visuals()) ===
+[node name="Harvestables" type="Node3D" parent="Zones/WildZone"]
+
+[node name="Tree_n8_n12" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, -12)
+harvestable_type = "tree"
+required_tool = "axe"
+max_health = 3
+respawn_time = 120.0
+drops = [{"item_id": "wood", "min": 1, "max": 3, "weight": 1.0}, {"item_id": "herb_basil", "min": 1, "max": 1, "weight": 0.2}]
+
+[node name="Tree_8_n12" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, -12)
+harvestable_type = "tree"
+required_tool = "axe"
+max_health = 3
+respawn_time = 120.0
+drops = [{"item_id": "wood", "min": 1, "max": 3, "weight": 1.0}, {"item_id": "herb_basil", "min": 1, "max": 1, "weight": 0.2}]
+
+[node name="Tree_n14_n32" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 0, -32)
+harvestable_type = "tree"
+required_tool = "axe"
+max_health = 3
+respawn_time = 120.0
+drops = [{"item_id": "wood", "min": 1, "max": 3, "weight": 1.0}, {"item_id": "herb_basil", "min": 1, "max": 1, "weight": 0.2}]
+
+[node name="Tree_14_n32" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 0, -32)
+harvestable_type = "tree"
+required_tool = "axe"
+max_health = 3
+respawn_time = 120.0
+drops = [{"item_id": "wood", "min": 1, "max": 3, "weight": 1.0}, {"item_id": "herb_basil", "min": 1, "max": 1, "weight": 0.2}]
+
+[node name="Tree_n14_n45" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 0, -45)
+harvestable_type = "tree"
+required_tool = "axe"
+max_health = 3
+respawn_time = 120.0
+drops = [{"item_id": "wood", "min": 1, "max": 3, "weight": 1.0}, {"item_id": "herb_basil", "min": 1, "max": 1, "weight": 0.2}]
+
+[node name="Tree_14_n45" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 0, -45)
+harvestable_type = "tree"
+required_tool = "axe"
+max_health = 3
+respawn_time = 120.0
+drops = [{"item_id": "wood", "min": 1, "max": 3, "weight": 1.0}, {"item_id": "herb_basil", "min": 1, "max": 1, "weight": 0.2}]
+
+[node name="Rock_n16_n18" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0, -18)
+harvestable_type = "rock"
+required_tool = "axe"
+max_health = 4
+respawn_time = 150.0
+drops = [{"item_id": "stone", "min": 1, "max": 2, "weight": 1.0}, {"item_id": "chili_powder", "min": 1, "max": 1, "weight": 0.1}]
+
+[node name="Rock_16_n18" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0, -18)
+harvestable_type = "rock"
+required_tool = "axe"
+max_health = 4
+respawn_time = 150.0
+drops = [{"item_id": "stone", "min": 1, "max": 2, "weight": 1.0}, {"item_id": "chili_powder", "min": 1, "max": 1, "weight": 0.1}]
+
+[node name="Rock_n12_n50" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0, -50)
+harvestable_type = "rock"
+required_tool = "axe"
+max_health = 4
+respawn_time = 150.0
+drops = [{"item_id": "stone", "min": 1, "max": 2, "weight": 1.0}, {"item_id": "chili_powder", "min": 1, "max": 1, "weight": 0.1}]
+
+[node name="Rock_12_n50" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0, -50)
+harvestable_type = "rock"
+required_tool = "axe"
+max_health = 4
+respawn_time = 150.0
+drops = [{"item_id": "stone", "min": 1, "max": 2, "weight": 1.0}, {"item_id": "chili_powder", "min": 1, "max": 1, "weight": 0.1}]
+
+[node name="Bush_n10_n14" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0, -14)
+harvestable_type = "bush"
+required_tool = ""
+max_health = 1
+respawn_time = 90.0
+drops = [{"item_id": "berry", "min": 1, "max": 2, "weight": 1.0}]
+
+[node name="Bush_10_n14" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0, -14)
+harvestable_type = "bush"
+required_tool = ""
+max_health = 1
+respawn_time = 90.0
+drops = [{"item_id": "berry", "min": 1, "max": 2, "weight": 1.0}]
+
+[node name="Bush_n16_n38" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0, -38)
+harvestable_type = "bush"
+required_tool = ""
+max_health = 1
+respawn_time = 90.0
+drops = [{"item_id": "berry", "min": 1, "max": 2, "weight": 1.0}]
+
+[node name="Bush_16_n38" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0, -38)
+harvestable_type = "bush"
+required_tool = ""
+max_health = 1
+respawn_time = 90.0
+drops = [{"item_id": "berry", "min": 1, "max": 2, "weight": 1.0}]
+
+; === DIG SPOTS ===
+[node name="DigSpots" type="Node3D" parent="Zones/WildZone"]
+
+[node name="DigSpot_herb_1" type="Area3D" parent="Zones/WildZone/DigSpots"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 0, -13)
+script = ExtResource("32")
+spot_id = "herb_1"
+loot_table = [{"item_id": "broth", "weight": 0.6, "min": 1, "max": 1}, {"item_id": "herb_basil", "weight": 0.4, "min": 1, "max": 2}]
+
+[node name="DigSpot_herb_2" type="Area3D" parent="Zones/WildZone/DigSpots"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0, -17)
+script = ExtResource("32")
+spot_id = "herb_2"
+loot_table = [{"item_id": "broth", "weight": 0.5, "min": 1, "max": 1}, {"item_id": "herb_basil", "weight": 0.5, "min": 1, "max": 2}]
+
+[node name="DigSpot_flame_1" type="Area3D" parent="Zones/WildZone/DigSpots"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 0, -13)
+script = ExtResource("32")
+spot_id = "flame_1"
+loot_table = [{"item_id": "chili_powder", "weight": 0.5, "min": 1, "max": 1}, {"item_id": "chili_pepper", "weight": 0.5, "min": 1, "max": 2}]
+
+[node name="DigSpot_flame_2" type="Area3D" parent="Zones/WildZone/DigSpots"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0, -17)
+script = ExtResource("32")
+spot_id = "flame_2"
+loot_table = [{"item_id": "chili_powder", "weight": 0.6, "min": 1, "max": 1}, {"item_id": "chili_pepper", "weight": 0.4, "min": 1, "max": 1}]
+
+[node name="DigSpot_frost_1" type="Area3D" parent="Zones/WildZone/DigSpots"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 0, -33)
+script = ExtResource("32")
+spot_id = "frost_1"
+loot_table = [{"item_id": "mint", "weight": 0.6, "min": 1, "max": 2}]
+
+[node name="DigSpot_frost_2" type="Area3D" parent="Zones/WildZone/DigSpots"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0, -37)
+script = ExtResource("32")
+spot_id = "frost_2"
+loot_table = [{"item_id": "mint", "weight": 0.5, "min": 1, "max": 1}]
+
+[node name="DigSpot_harvest_1" type="Area3D" parent="Zones/WildZone/DigSpots"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 0, -33)
+script = ExtResource("32")
+spot_id = "harvest_1"
+loot_table = [{"item_id": "wheat", "weight": 0.6, "min": 1, "max": 2}, {"item_id": "flour", "weight": 0.3, "min": 1, "max": 1}]
+
+[node name="DigSpot_harvest_2" type="Area3D" parent="Zones/WildZone/DigSpots"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0, -37)
+script = ExtResource("32")
+spot_id = "harvest_2"
+loot_table = [{"item_id": "wheat", "weight": 0.5, "min": 1, "max": 2}, {"item_id": "flour", "weight": 0.4, "min": 1, "max": 1}]
+
+[node name="DigSpot_sour_1" type="Area3D" parent="Zones/WildZone/DigSpots"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 0, -46)
+script = ExtResource("32")
+spot_id = "sour_1"
+loot_table = [{"item_id": "mushroom", "weight": 0.5, "min": 1, "max": 2}]
+
+[node name="DigSpot_fusion_1" type="Area3D" parent="Zones/WildZone/DigSpots"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 0, -46)
+script = ExtResource("32")
+spot_id = "fusion_1"
+loot_table = [{"item_id": "sugar", "weight": 0.4, "min": 1, "max": 1}, {"item_id": "soy_sauce", "weight": 0.3, "min": 1, "max": 1}]
+
+; === FISHING SPOTS ===
+[node name="FishingSpots" type="Node3D" parent="Zones"]
+
+[node name="FishingSpot_pond" type="Node3D" parent="Zones/FishingSpots" groups=["fishing_spot"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 0, -6)
+metadata/fishing_table_id = "pond"
+
+[node name="WaterDisc" type="MeshInstance3D" parent="Zones/FishingSpots/FishingSpot_pond"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
+mesh = SubResource("fishing_disc_mesh")
+material_override = SubResource("fishing_water_mat")
+
+[node name="SpotLabel" type="Label3D" parent="Zones/FishingSpots/FishingSpot_pond"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+text = "Cove Pond - Fishing Spot"
+font_size = 28
+outline_size = 6
+modulate = Color(0.6, 0.75, 0.9, 1)
+billboard = 1
+
+[node name="HintLabel" type="Label3D" parent="Zones/FishingSpots/FishingSpot_pond"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.0, 0)
+text = "Equip Rod + Press E"
+font_size = 20
+outline_size = 4
+modulate = Color(0.8, 0.8, 0.8, 0.8)
+billboard = 1
+
+[node name="FishingSpot_river" type="Node3D" parent="Zones/FishingSpots" groups=["fishing_spot"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -24, 0, -10)
+metadata/fishing_table_id = "river"
+
+[node name="WaterDisc" type="MeshInstance3D" parent="Zones/FishingSpots/FishingSpot_river"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
+mesh = SubResource("fishing_disc_mesh")
+material_override = SubResource("fishing_water_mat")
+
+[node name="SpotLabel" type="Label3D" parent="Zones/FishingSpots/FishingSpot_river"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+text = "Wharf Pier - Fishing Spot"
+font_size = 28
+outline_size = 6
+modulate = Color(0.6, 0.75, 0.9, 1)
+billboard = 1
+
+[node name="HintLabel" type="Label3D" parent="Zones/FishingSpots/FishingSpot_river"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.0, 0)
+text = "Equip Rod + Press E"
+font_size = 20
+outline_size = 4
+modulate = Color(0.8, 0.8, 0.8, 0.8)
+billboard = 1
+
+[node name="FishingSpot_ocean" type="Node3D" parent="Zones/FishingSpots" groups=["fishing_spot"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -32, 0, -2)
+metadata/fishing_table_id = "ocean"
+
+[node name="WaterDisc" type="MeshInstance3D" parent="Zones/FishingSpots/FishingSpot_ocean"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
+mesh = SubResource("fishing_disc_mesh")
+material_override = SubResource("fishing_water_mat")
+
+[node name="SpotLabel" type="Label3D" parent="Zones/FishingSpots/FishingSpot_ocean"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+text = "Open Ocean - Fishing Spot"
+font_size = 28
+outline_size = 6
+modulate = Color(0.6, 0.75, 0.9, 1)
+billboard = 1
+
+[node name="HintLabel" type="Label3D" parent="Zones/FishingSpots/FishingSpot_ocean"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.0, 0)
+text = "Equip Rod + Press E"
+font_size = 20
+outline_size = 4
+modulate = Color(0.8, 0.8, 0.8, 0.8)
+billboard = 1
+
+; === PORTAL VISUALS (static archways — interaction Area3D still spawned at runtime) ===
+[node name="Portals" type="Node3D" parent="Zones/WildZone"]
+
+; --- The Wilds portal ---
+[node name="Portal_default" type="Node3D" parent="Zones/WildZone/Portals"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, -25)
+
+[node name="PillarL" type="MeshInstance3D" parent="Zones/WildZone/Portals/Portal_default"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 2.5, 0)
+mesh = SubResource("portal_pillar_mesh")
+material_override = SubResource("portal_mat_default")
+
+[node name="PillarR" type="MeshInstance3D" parent="Zones/WildZone/Portals/Portal_default"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 2.5, 0)
+mesh = SubResource("portal_pillar_mesh")
+material_override = SubResource("portal_mat_default")
+
+[node name="Lintel" type="MeshInstance3D" parent="Zones/WildZone/Portals/Portal_default"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.4, 0)
+mesh = SubResource("portal_lintel_mesh")
+material_override = SubResource("portal_mat_default")
+
+[node name="Disc" type="MeshInstance3D" parent="Zones/WildZone/Portals/Portal_default"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
+mesh = SubResource("portal_disc_mesh")
+material_override = SubResource("portal_disc_mat_default")
+
+[node name="Light" type="OmniLight3D" parent="Zones/WildZone/Portals/Portal_default"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+light_color = Color(0.6, 0.2, 0.8, 1)
+light_energy = 1.5
+omni_range = 6.0
+
+[node name="SignLabel" type="Label3D" parent="Zones/WildZone/Portals/Portal_default"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6.5, 0)
+text = "The Wilds"
+font_size = 48
+outline_size = 10
+modulate = Color(0.6, 0.2, 0.8, 1)
+billboard = 1
+
+[node name="HintLabel" type="Label3D" parent="Zones/WildZone/Portals/Portal_default"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+text = "Press E to Enter"
+font_size = 24
+outline_size = 6
+modulate = Color(0.8, 0.8, 0.8, 0.8)
+billboard = 1
+
+; --- Coastal Wreckage portal ---
+[node name="Portal_coastal" type="Node3D" parent="Zones/WildZone/Portals"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -33, 0, -12)
+
+[node name="PillarL" type="MeshInstance3D" parent="Zones/WildZone/Portals/Portal_coastal"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 2.5, 0)
+mesh = SubResource("portal_pillar_mesh")
+material_override = SubResource("portal_mat_coastal")
+
+[node name="PillarR" type="MeshInstance3D" parent="Zones/WildZone/Portals/Portal_coastal"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 2.5, 0)
+mesh = SubResource("portal_pillar_mesh")
+material_override = SubResource("portal_mat_coastal")
+
+[node name="Lintel" type="MeshInstance3D" parent="Zones/WildZone/Portals/Portal_coastal"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.4, 0)
+mesh = SubResource("portal_lintel_mesh")
+material_override = SubResource("portal_mat_coastal")
+
+[node name="Disc" type="MeshInstance3D" parent="Zones/WildZone/Portals/Portal_coastal"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
+mesh = SubResource("portal_disc_mesh")
+material_override = SubResource("portal_disc_mat_coastal")
+
+[node name="Light" type="OmniLight3D" parent="Zones/WildZone/Portals/Portal_coastal"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+light_color = Color(0.2, 0.6, 0.8, 1)
+light_energy = 1.5
+omni_range = 6.0
+
+[node name="SignLabel" type="Label3D" parent="Zones/WildZone/Portals/Portal_coastal"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6.5, 0)
+text = "Coastal Wreckage"
+font_size = 48
+outline_size = 10
+modulate = Color(0.2, 0.6, 0.8, 1)
+billboard = 1
+
+[node name="HintLabel" type="Label3D" parent="Zones/WildZone/Portals/Portal_coastal"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+text = "Press E to Enter"
+font_size = 24
+outline_size = 6
+modulate = Color(0.8, 0.8, 0.8, 0.8)
+billboard = 1
+
+; --- Fungal Hollow portal ---
+[node name="Portal_fungal" type="Node3D" parent="Zones/WildZone/Portals"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, -68)
+
+[node name="PillarL" type="MeshInstance3D" parent="Zones/WildZone/Portals/Portal_fungal"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 2.5, 0)
+mesh = SubResource("portal_pillar_mesh")
+material_override = SubResource("portal_mat_fungal")
+
+[node name="PillarR" type="MeshInstance3D" parent="Zones/WildZone/Portals/Portal_fungal"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 2.5, 0)
+mesh = SubResource("portal_pillar_mesh")
+material_override = SubResource("portal_mat_fungal")
+
+[node name="Lintel" type="MeshInstance3D" parent="Zones/WildZone/Portals/Portal_fungal"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.4, 0)
+mesh = SubResource("portal_lintel_mesh")
+material_override = SubResource("portal_mat_fungal")
+
+[node name="Disc" type="MeshInstance3D" parent="Zones/WildZone/Portals/Portal_fungal"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
+mesh = SubResource("portal_disc_mesh")
+material_override = SubResource("portal_disc_mat_fungal")
+
+[node name="Light" type="OmniLight3D" parent="Zones/WildZone/Portals/Portal_fungal"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+light_color = Color(0.4, 0.2, 0.6, 1)
+light_energy = 1.5
+omni_range = 6.0
+
+[node name="SignLabel" type="Label3D" parent="Zones/WildZone/Portals/Portal_fungal"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6.5, 0)
+text = "Fungal Hollow"
+font_size = 48
+outline_size = 10
+modulate = Color(0.4, 0.2, 0.6, 1)
+billboard = 1
+
+[node name="HintLabel" type="Label3D" parent="Zones/WildZone/Portals/Portal_fungal"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+text = "Press E to Enter"
+font_size = 24
+outline_size = 6
+modulate = Color(0.8, 0.8, 0.8, 0.8)
+billboard = 1
+
+; --- Volcanic Crest portal ---
+[node name="Portal_volcanic" type="Node3D" parent="Zones/WildZone/Portals"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 45, 0, -12)
+
+[node name="PillarL" type="MeshInstance3D" parent="Zones/WildZone/Portals/Portal_volcanic"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 2.5, 0)
+mesh = SubResource("portal_pillar_mesh")
+material_override = SubResource("portal_mat_volcanic")
+
+[node name="PillarR" type="MeshInstance3D" parent="Zones/WildZone/Portals/Portal_volcanic"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 2.5, 0)
+mesh = SubResource("portal_pillar_mesh")
+material_override = SubResource("portal_mat_volcanic")
+
+[node name="Lintel" type="MeshInstance3D" parent="Zones/WildZone/Portals/Portal_volcanic"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.4, 0)
+mesh = SubResource("portal_lintel_mesh")
+material_override = SubResource("portal_mat_volcanic")
+
+[node name="Disc" type="MeshInstance3D" parent="Zones/WildZone/Portals/Portal_volcanic"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
+mesh = SubResource("portal_disc_mesh")
+material_override = SubResource("portal_disc_mat_volcanic")
+
+[node name="Light" type="OmniLight3D" parent="Zones/WildZone/Portals/Portal_volcanic"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+light_color = Color(0.9, 0.3, 0.1, 1)
+light_energy = 1.5
+omni_range = 6.0
+
+[node name="SignLabel" type="Label3D" parent="Zones/WildZone/Portals/Portal_volcanic"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6.5, 0)
+text = "Volcanic Crest"
+font_size = 48
+outline_size = 10
+modulate = Color(0.9, 0.3, 0.1, 1)
+billboard = 1
+
+[node name="HintLabel" type="Label3D" parent="Zones/WildZone/Portals/Portal_volcanic"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+text = "Press E to Enter"
+font_size = 24
+outline_size = 6
+modulate = Color(0.8, 0.8, 0.8, 0.8)
+billboard = 1
+
+; --- Frozen Pantry portal ---
+[node name="Portal_frozen" type="Node3D" parent="Zones/WildZone/Portals"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 0, 38)
+
+[node name="PillarL" type="MeshInstance3D" parent="Zones/WildZone/Portals/Portal_frozen"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 2.5, 0)
+mesh = SubResource("portal_pillar_mesh")
+material_override = SubResource("portal_mat_frozen")
+
+[node name="PillarR" type="MeshInstance3D" parent="Zones/WildZone/Portals/Portal_frozen"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 2.5, 0)
+mesh = SubResource("portal_pillar_mesh")
+material_override = SubResource("portal_mat_frozen")
+
+[node name="Lintel" type="MeshInstance3D" parent="Zones/WildZone/Portals/Portal_frozen"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.4, 0)
+mesh = SubResource("portal_lintel_mesh")
+material_override = SubResource("portal_mat_frozen")
+
+[node name="Disc" type="MeshInstance3D" parent="Zones/WildZone/Portals/Portal_frozen"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
+mesh = SubResource("portal_disc_mesh")
+material_override = SubResource("portal_disc_mat_frozen")
+
+[node name="Light" type="OmniLight3D" parent="Zones/WildZone/Portals/Portal_frozen"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+light_color = Color(0.5, 0.8, 0.95, 1)
+light_energy = 1.5
+omni_range = 6.0
+
+[node name="SignLabel" type="Label3D" parent="Zones/WildZone/Portals/Portal_frozen"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6.5, 0)
+text = "Frozen Pantry"
+font_size = 48
+outline_size = 10
+modulate = Color(0.5, 0.8, 0.95, 1)
+billboard = 1
+
+[node name="HintLabel" type="Label3D" parent="Zones/WildZone/Portals/Portal_frozen"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+text = "Press E to Enter"
+font_size = 24
+outline_size = 6
+modulate = Color(0.8, 0.8, 0.8, 0.8)
+billboard = 1
+
+; === CALENDAR BOARD (pre-placed visuals, script creates interaction Area3D) ===
+[node name="CalendarBoard" type="Area3D" parent="Zones/RestaurantZone"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 1, 10)
+script = ExtResource("33")
+
+[node name="BoardMesh" type="MeshInstance3D" parent="Zones/RestaurantZone/CalendarBoard"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
+mesh = SubResource("calendar_board_mesh")
+material_override = SubResource("calendar_board_mat")
+
+[node name="PostMesh" type="MeshInstance3D" parent="Zones/RestaurantZone/CalendarBoard"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0)
+mesh = SubResource("calendar_post_mesh")
+material_override = SubResource("calendar_post_mat")
+
+[node name="BoardLabel" type="Label3D" parent="Zones/RestaurantZone/CalendarBoard"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+text = "Town Calendar"
+font_size = 32
+outline_size = 6
+modulate = Color(0.8, 0.6, 0.3, 1)
+billboard = 1
+
 ; === TRAINER NPCs ===
 [node name="Trainers" type="Node3D" parent="Zones"]
 
-; Sous Chef Pepper — optional, near Herb Garden
 [node name="SousChefPepper" type="Area3D" parent="Zones/Trainers"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0, -10)
 script = ExtResource("9")
 trainer_id = "sous_chef_pepper"
 
-; Farmer Green — optional, near Flame Kitchen
 [node name="FarmerGreen" type="Area3D" parent="Zones/Trainers"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0, -10)
 script = ExtResource("9")
 trainer_id = "farmer_green"
 
-; Chef Umami — GATEKEEPER #1, guards mid zones
 [node name="ChefUmami" type="Area3D" parent="Zones/Trainers"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -20)
 script = ExtResource("9")
 trainer_id = "chef_umami"
 is_gatekeeper = true
 
-; Pastry Chef Dulce — optional, near Frost Pantry
 [node name="PastryChefDulce" type="Area3D" parent="Zones/Trainers"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18, 0, -28)
 script = ExtResource("9")
 trainer_id = "pastry_chef_dulce"
 
-; Brinemaster Vlad — optional, near Harvest Field
 [node name="BrinemasterVlad" type="Area3D" parent="Zones/Trainers"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 0, -28)
 script = ExtResource("9")
 trainer_id = "brinemaster_vlad"
 
-; Head Chef Roux — GATEKEEPER #2, guards hard zones
 [node name="HeadChefRoux" type="Area3D" parent="Zones/Trainers"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -40)
 script = ExtResource("9")
 trainer_id = "head_chef_roux"
 is_gatekeeper = true
 
-; Grand Chef Michelin — optional final boss, near Cauldron
 [node name="GrandChefMichelin" type="Area3D" parent="Zones/Trainers"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -25, 0, -55)
 script = ExtResource("9")
@@ -789,19 +1192,16 @@ trainer_id = "grand_chef_michelin"
 ; === SHOP NPCs ===
 [node name="Shops" type="Node3D" parent="Zones"]
 
-; General Store — near spawn hub
 [node name="GeneralStore" type="Area3D" parent="Zones/Shops"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, 5)
 script = ExtResource("17")
 shop_id = "general_store"
 
-; Battle Supplies — mid-game area
 [node name="BattleSupplies" type="Area3D" parent="Zones/Shops"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, -15)
 script = ExtResource("17")
 shop_id = "battle_supplies"
 
-; Rare Goods — deep zone
 [node name="RareGoods" type="Area3D" parent="Zones/Shops"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 0, -45)
 script = ExtResource("17")
@@ -810,135 +1210,85 @@ shop_id = "rare_goods"
 ; === SOCIAL NPCs ===
 [node name="SocialNPCs" type="Node3D" parent="Zones"]
 
-; --- Remapped Original 5 ---
-
-; Hubert Crumb (Baker) — Town Square, Hubert's Bakery
 [node name="HubertCrumb" type="Area3D" parent="Zones/SocialNPCs"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 1, 8)
 script = ExtResource("18")
 npc_id = "npc_hubert"
 
-; Old Sage Murphy (Herbalist) — Harbor Heights, Murphy's Garden
 [node name="OldSageMurphy" type="Area3D" parent="Zones/SocialNPCs"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 7, 35)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 4, 35)
 script = ExtResource("18")
 npc_id = "npc_murphy"
 
-; Captain Sal Haddock (Fisherman) — Wharf Walk, Fishing Dock
 [node name="CaptainSalHaddock" type="Area3D" parent="Zones/SocialNPCs"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, -3)
 script = ExtResource("18")
 npc_id = "npc_captain_sal"
 
-; Pepper Santos (Spice Artisan) — Town Square, Spice Emporium
 [node name="PepperSantos" type="Area3D" parent="Zones/SocialNPCs"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 1, 6)
 script = ExtResource("18")
 npc_id = "npc_pepper"
 
-; Professor Quill (Scholar) — Market Row, Book Nook
 [node name="ProfessorQuill" type="Area3D" parent="Zones/SocialNPCs"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 2, 8)
 script = ExtResource("18")
 npc_id = "npc_quill"
 
-; --- 10 New NPCs ---
-
-; Mayor Rosemary Hartwell — Town Square, Town Hall
 [node name="MayorRosemary" type="Area3D" parent="Zones/SocialNPCs"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 1, 10)
 script = ExtResource("18")
 npc_id = "npc_mayor"
 
-; Innkeeper Mabel — Wharf Walk, Tide's End Inn
 [node name="InnkeeperMabel" type="Area3D" parent="Zones/SocialNPCs"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0, -5)
 script = ExtResource("18")
 npc_id = "npc_innkeeper"
 
-; Clay Brennan (Potter) — Town Square, Cracked Pot
 [node name="ClayBrennan" type="Area3D" parent="Zones/SocialNPCs"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 1, 8)
 script = ExtResource("18")
 npc_id = "npc_potter"
 
-; Scarlet Winters (Tailor) — Market Row, Threads & Needles
 [node name="ScarletWinters" type="Area3D" parent="Zones/SocialNPCs"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 2, 5)
 script = ExtResource("18")
 npc_id = "npc_tailor"
 
-; Iris Greenthumb (Gardener) — Market Row, Bloom & Grow
 [node name="IrisGreenthumb" type="Area3D" parent="Zones/SocialNPCs"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 2, 10)
 script = ExtResource("18")
 npc_id = "npc_gardener"
 
-; Dr. Honey Sweetwater — Market Row, Clinic
 [node name="DrHoney" type="Area3D" parent="Zones/SocialNPCs"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22, 2, 3)
 script = ExtResource("18")
 npc_id = "npc_doctor"
 
-; Hazel Mapleton (General Store) — Town Square
 [node name="HazelMapleton" type="Area3D" parent="Zones/SocialNPCs"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 1, 5)
 script = ExtResource("18")
 npc_id = "npc_general_store"
 
-; Clementine Smith (Apprentice Chef) — wanders Town Square
 [node name="ClementineSmith" type="Area3D" parent="Zones/SocialNPCs"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 1, 4)
 script = ExtResource("18")
 npc_id = "npc_clementine"
 
-; River Song (Fisher/Artist) — Wharf Walk, beach
 [node name="RiverSong" type="Area3D" parent="Zones/SocialNPCs"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0, -8)
 script = ExtResource("18")
 npc_id = "npc_river"
 
-; Alex Hartwell (Mayor's Kid) — Town Square
 [node name="AlexHartwell" type="Area3D" parent="Zones/SocialNPCs"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 6)
 script = ExtResource("18")
 npc_id = "npc_alex"
 
-; === RESTAURANT ROW (south of spawn, z=12) ===
+; === RESTAURANT ROW (south of spawn, z=5) ===
 [node name="RestaurantRow" type="Node3D" parent="Zones"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 12)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
 
-; --- Large archway backdrop (visible from spawn) ---
-[node name="Archway" type="MeshInstance3D" parent="Zones/RestaurantRow"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 1)
-mesh = SubResource("archway_box_mesh")
-material_override = SubResource("archway_material")
-
-; --- Archway left pillar ---
-[node name="PillarLeft" type="MeshInstance3D" parent="Zones/RestaurantRow"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 2.5, 0.5)
-mesh = SubResource("pillar_mesh")
-material_override = SubResource("pillar_material")
-
-; --- Archway right pillar ---
-[node name="PillarRight" type="MeshInstance3D" parent="Zones/RestaurantRow"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 2.5, 0.5)
-mesh = SubResource("pillar_mesh")
-material_override = SubResource("pillar_material")
-
-; --- Red carpet leading to doors ---
-[node name="Carpet" type="MeshInstance3D" parent="Zones/RestaurantRow"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, -2)
-mesh = SubResource("carpet_mesh")
-material_override = SubResource("carpet_material")
-
-; --- Gold trim strip along front ---
-[node name="GoldTrim" type="MeshInstance3D" parent="Zones/RestaurantRow"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, -0.5)
-mesh = SubResource("gold_trim_mesh")
-material_override = SubResource("gold_trim_material")
-
-; --- Enhanced sign (much larger, emissive) ---
 [node name="SignLabel" type="Label3D" parent="Zones/RestaurantRow"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.5, 0.5)
 text = "RESTAURANT ROW"
@@ -947,7 +1297,6 @@ outline_size = 16
 modulate = Color(1, 0.9, 0.3, 1)
 billboard = 1
 
-; --- Sub-sign with arrow ---
 [node name="SubSign" type="Label3D" parent="Zones/RestaurantRow"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.6, 0.5)
 text = "▼ ENTER BELOW ▼"
@@ -956,76 +1305,41 @@ outline_size = 10
 modulate = Color(1, 0.6, 0.2, 1)
 billboard = 1
 
-; === Restaurant Manager ===
+; ==================== MANAGERS ====================
 [node name="RestaurantManager" type="Node" parent="."]
 script = ExtResource("16")
 
-; === Social Manager ===
 [node name="SocialManager" type="Node" parent="."]
 script = ExtResource("19")
 
-; === Location Manager ===
 [node name="LocationManager" type="Node" parent="."]
 script = ExtResource("20")
 
-; === Quest Manager ===
 [node name="QuestManager" type="Node" parent="."]
 script = ExtResource("21")
 
-; === Friend Manager ===
 [node name="FriendManager" type="Node" parent="."]
 script = ExtResource("22")
 
-; === World Item Manager + Container ===
 [node name="WorldItemManager" type="Node" parent="."]
 script = ExtResource("15")
 
 [node name="WorldItems" type="Node3D" parent="."]
 
-; === Excursion Manager ===
 [node name="ExcursionManager" type="Node" parent="."]
 script = ExtResource("23")
 
-; === Day/Night Controller (client-side sky + lighting) ===
 [node name="DayNightController" type="Node" parent="."]
 script = ExtResource("24")
 
-; === Connection Paths (visual roads between districts) ===
-[node name="Paths" type="Node3D" parent="Environment"]
-
-[node name="PathSpawnSouth" type="MeshInstance3D" parent="Environment/Paths"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.04, -6)
-mesh = SubResource("path_spawn_south_mesh")
-material_override = SubResource("conn_path_mat")
-
-[node name="PathToWharf" type="MeshInstance3D" parent="Environment/Paths"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7, 0.04, -1)
-mesh = SubResource("path_to_wharf_mesh")
-material_override = SubResource("conn_path_mat")
-
-[node name="PathToHarbor" type="MeshInstance3D" parent="Environment/Paths"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0.04, 17)
-mesh = SubResource("path_to_harbor_mesh")
-material_override = SubResource("conn_path_mat")
-
-[node name="PathToMarket" type="MeshInstance3D" parent="Environment/Paths"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0.04, 5)
-mesh = SubResource("path_to_market_mesh")
-material_override = SubResource("conn_path_mat")
-
-[node name="PathToFarm" type="MeshInstance3D" parent="Environment/Paths"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22, 0.04, 3)
-mesh = SubResource("path_to_farm_mesh")
-material_override = SubResource("conn_path_mat")
-
-; === District Blockout Visuals ===
+; ==================== DISTRICTS (gutted, empty Node3D) ====================
 [node name="Districts" type="Node3D" parent="."]
 
 [node name="TownSquare" parent="Districts" instance=ExtResource("25")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 6)
 
 [node name="WharfWalk" parent="Districts" instance=ExtResource("26")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0, -4)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -28, 0, -4)
 
 [node name="MarketRow" parent="Districts" instance=ExtResource("27")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 0, 6)
@@ -1039,7 +1353,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25, 0, 0)
 [node name="Wilderness" parent="Districts" instance=ExtResource("30")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -12)
 
-; === UI Overlays ===
+; ==================== UI ====================
 [node name="UI" type="Node" parent="."]
 
 [node name="PvPChallengeUI" parent="UI" instance=ExtResource("10")]
