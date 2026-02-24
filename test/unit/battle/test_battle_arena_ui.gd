@@ -10,6 +10,7 @@ const BattleArenaScript = preload("res://scripts/battle/battle_arena.gd")
 class BattleManagerStub:
 	extends Node
 	var client_battle_mode: int = 0
+	var client_active_creature_idx: int = 0
 
 var ui: Node
 
@@ -523,6 +524,47 @@ func test_set_menu_buttons_enabled_enables_item_when_items_exist() -> void:
 	ui.battle_mgr = stub
 	ui._set_menu_buttons_enabled(true)
 	assert_false(ui.item_button.disabled)
+
+# === _has_valid_switch_target / switch availability ===
+
+func test_has_valid_switch_target_false_with_single_creature() -> void:
+	PlayerData.party = [{"hp": 10}]
+	var stub = BattleManagerStub.new()
+	stub.client_active_creature_idx = 0
+	ui.battle_mgr = stub
+	assert_false(ui._has_valid_switch_target())
+
+func test_has_valid_switch_target_false_when_only_fainted_backups() -> void:
+	PlayerData.party = [{"hp": 10}, {"hp": 0}, {"hp": 0}]
+	var stub = BattleManagerStub.new()
+	stub.client_active_creature_idx = 0
+	ui.battle_mgr = stub
+	assert_false(ui._has_valid_switch_target())
+
+func test_has_valid_switch_target_true_with_alive_backup() -> void:
+	PlayerData.party = [{"hp": 10}, {"hp": 5}]
+	var stub = BattleManagerStub.new()
+	stub.client_active_creature_idx = 0
+	ui.battle_mgr = stub
+	assert_true(ui._has_valid_switch_target())
+
+func test_set_menu_buttons_enabled_disables_switch_when_no_valid_target() -> void:
+	PlayerData.party = [{"hp": 10}]
+	var stub = BattleManagerStub.new()
+	stub.client_battle_mode = 0
+	stub.client_active_creature_idx = 0
+	ui.battle_mgr = stub
+	ui._set_menu_buttons_enabled(true)
+	assert_true(ui.switch_button.disabled)
+
+func test_set_menu_buttons_enabled_enables_switch_when_valid_target_exists() -> void:
+	PlayerData.party = [{"hp": 10}, {"hp": 5}]
+	var stub = BattleManagerStub.new()
+	stub.client_battle_mode = 0
+	stub.client_active_creature_idx = 0
+	ui.battle_mgr = stub
+	ui._set_menu_buttons_enabled(true)
+	assert_false(ui.switch_button.disabled)
 
 # === BattleEffects preload ===
 

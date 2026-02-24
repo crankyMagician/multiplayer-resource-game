@@ -1643,6 +1643,22 @@ func _has_usable_battle_items() -> bool:
 			return true
 	return false
 
+func _has_valid_switch_target() -> bool:
+	if PlayerData.party.is_empty():
+		return false
+	var active_idx := 0
+	if is_instance_valid(battle_mgr):
+		active_idx = int(battle_mgr.client_active_creature_idx)
+	if active_idx < 0 or active_idx >= PlayerData.party.size():
+		return false
+	for i in range(PlayerData.party.size()):
+		if i == active_idx:
+			continue
+		var creature = PlayerData.party[i]
+		if int(creature.get("hp", 0)) > 0:
+			return true
+	return false
+
 func _on_move_pressed(idx: int) -> void:
 	if not is_instance_valid(battle_mgr) or not battle_mgr.awaiting_action:
 		return
@@ -1687,6 +1703,8 @@ func _on_switch_pressed() -> void:
 	if not is_instance_valid(battle_mgr) or not battle_mgr.awaiting_action:
 		return
 	if _phase != BattlePhase.PROMPT:
+		return
+	if not _has_valid_switch_target():
 		return
 	AudioManager.play_ui_sfx("ui_click")
 	_juice_button(switch_button)
@@ -3039,10 +3057,11 @@ func _narrate_entry(entry: Dictionary) -> void:
 func _set_menu_buttons_enabled(enabled: bool) -> void:
 	var mode = battle_mgr.client_battle_mode if battle_mgr else 0
 	var can_use_items = _has_usable_battle_items() if enabled and mode != 2 else false
+	var can_switch = _has_valid_switch_target() if enabled else false
 	fight_button.disabled = not enabled
 	flee_button.disabled = not enabled
 	flee_button.visible = (mode == 0)
-	switch_button.disabled = not enabled
+	switch_button.disabled = (not enabled) or (not can_switch)
 	item_button.disabled = (not enabled) or (mode != 2 and not can_use_items)
 	item_button.visible = (mode != 2)
 
