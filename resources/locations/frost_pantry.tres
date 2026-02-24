@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "frost_pantry"
 display_name = "Frost Pantry"
-world_position = Vector3(-18, 0, -35)
+world_position = Vector3(-35, 5, -30)
 discovery_radius = 10.0
 icon_type = "wild_zone"
 category = "wild_zone"

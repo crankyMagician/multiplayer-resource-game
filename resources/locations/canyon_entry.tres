@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "canyon_entry"
 display_name = "Canyon Entry"
-world_position = Vector3(0, 0, -19)
+world_position = Vector3(50, 6, 25)
 discovery_radius = 8.0
 icon_type = "landmark"
 category = "landmark"

@@ -418,9 +418,10 @@ func _build_world_sections() -> void:
 	var tp_presets := HBoxContainer.new()
 	tp_presets.add_theme_constant_override("separation", 4)
 	player_content.add_child(tp_presets)
-	_add_button(tp_presets, "Spawn", _on_teleport_preset.bind(Vector3(0, 1, 3)))
-	_add_button(tp_presets, "Farm", _on_teleport_preset.bind(Vector3(25, 0, 0)))
-	_add_button(tp_presets, "Wild", _on_teleport_preset.bind(Vector3(0, 0, -30)))
+	_add_button(tp_presets, "Spawn", _on_teleport_preset.bind(Vector3(-32.5, 5, 13.75)))
+	_add_button(tp_presets, "Farm", _on_teleport_preset.bind(Vector3(-12.5, 3, 16.25)))
+	_add_button(tp_presets, "Wharf", _on_teleport_preset.bind(Vector3(-55, 2, -28)))
+	_add_button(tp_presets, "Harbor", _on_teleport_preset.bind(Vector3(32, 7, 50)))
 
 	# --- Creatures ---
 	var creature_content := _add_collapsible_section(world_sections, "Creatures")

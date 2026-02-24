@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "npc_innkeeper"
 display_name = "Innkeeper Mabel"
-world_position = Vector3(-10, 0, -5)
+world_position = Vector3(-71, 2, -20)
 discovery_radius = 8.0
 icon_type = "social_npc"
 category = "social_npc"

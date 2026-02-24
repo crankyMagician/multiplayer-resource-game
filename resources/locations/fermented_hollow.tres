@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "fermented_hollow"
 display_name = "Fermented Hollow"
-world_position = Vector3(-25, 0, -20)
+world_position = Vector3(-70, 2, -15)
 discovery_radius = 10.0
 icon_type = "wild_zone"
 category = "wild_zone"

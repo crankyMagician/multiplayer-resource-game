@@ -14,7 +14,7 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 
 [application]
 
-config/name="Creature Crafting Demo"
+config/name="Munchie Quest"
 run/main_scene="res://scenes/main/main.tscn"
 config/features=PackedStringArray("4.7")
 

@@ -610,8 +610,19 @@ func _on_flee_pressed() -> void:
 
 # === ITEM USE PANEL ===
 
+func _has_usable_battle_items() -> bool:
+	DataRegistry.ensure_loaded()
+	for item_id in PlayerData.inventory:
+		var qty = int(PlayerData.inventory.get(item_id, 0))
+		if qty > 0 and DataRegistry.get_battle_item(item_id) != null:
+			return true
+	return false
+
 func _on_item_pressed() -> void:
 	if battle_mgr == null or not battle_mgr.awaiting_action:
+		return
+	if not _has_usable_battle_items():
+		battle_log.append_text("[color=#8F7A66]No battle items available.[/color]\n")
 		return
 	_show_item_panel()
 
@@ -1355,9 +1366,11 @@ func _format_log_entry(entry: Dictionary) -> String:
 
 func _set_buttons_enabled(enabled: bool) -> void:
 	var mode = battle_mgr.client_battle_mode if battle_mgr else 0
+	var can_use_items = _has_usable_battle_items() if enabled and mode != 2 else false
 	flee_button.disabled = not enabled
 	flee_button.visible = (mode == 0) # Only show flee for wild
 	switch_button.disabled = not enabled
+	item_button.disabled = (not enabled) or (mode != 2 and not can_use_items)
 	if not enabled:
 		for btn in move_buttons:
 			btn.disabled = true

@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "kitchen"
 display_name = "Kitchen"
-world_position = Vector3(3, 0.5, 1)
+world_position = Vector3(38, 7, 57)
 discovery_radius = 5.0
 icon_type = "crafting"
 category = "crafting"

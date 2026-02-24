@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "trainer_roux"
 display_name = "Head Chef Roux Gate"
-world_position = Vector3(0, 0, -40)
+world_position = Vector3(-40.5, 4, 3.75)
 discovery_radius = 5.0
 icon_type = "trainer"
 category = "trainer"

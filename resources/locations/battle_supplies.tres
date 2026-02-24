@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "battle_supplies"
 display_name = "Battle Supplies"
-world_position = Vector3(-8, 0, -15)
+world_position = Vector3(-60, 2, -25)
 discovery_radius = 5.0
 icon_type = "shop"
 category = "shop"

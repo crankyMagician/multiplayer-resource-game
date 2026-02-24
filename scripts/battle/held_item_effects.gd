@@ -18,7 +18,7 @@ static func on_damage_calc(item_id: String, move, damage: int) -> Dictionary:
 	elif item.effect_type == "choice_lock":
 		var boosted_stat = item.effect_params.get("stat", "")
 		if (boosted_stat == "attack" and move.category == "physical") or \
-		   (boosted_stat == "sp_attack" and move.category == "special"):
+			(boosted_stat == "sp_attack" and move.category == "special"):
 			return {"damage": int(damage * item.effect_params.get("multiplier", 1.5)), "message": "%s boosted the attack!" % item.display_name}
 	elif item.effect_type == "life_orb":
 		var mult = item.effect_params.get("damage_multiplier", 1.3)

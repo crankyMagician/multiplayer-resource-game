@@ -1,7 +1,6 @@
 extends Node
 
 const RESTAURANT_SCENE = preload("res://scenes/world/restaurant_interior.tscn")
-const DOOR_SPACING = 4.0
 
 # Server state
 var restaurant_instances: Dictionary = {} # owner_name -> RestaurantInterior node
@@ -9,29 +8,48 @@ var player_location: Dictionary = {} # peer_id -> {"zone": String, "owner": Stri
 var overworld_positions: Dictionary = {} # peer_id -> Vector3 (saved before teleport)
 var next_restaurant_index: int = 0
 var restaurant_index_map: Dictionary = {} # player_name -> int
-var door_nodes: Dictionary = {} # player_name -> Area3D (overworld door)
 var _exit_cooldown: Dictionary = {} # peer_id -> timestamp (prevent immediate re-entry)
 
-@onready var restaurant_row: Node3D = get_node_or_null("../Zones/RestaurantRow")
-
 var _indicator_time: float = 0.0
+var _door_node: Node3D = null
 
 func _ready() -> void:
-	if not multiplayer.is_server():
-		return
+	# Set up the static MyRestaurantDoor node (group + meta + server collision)
+	_door_node = get_node_or_null("../Zones/MyRestaurantDoor")
+	if _door_node:
+		_door_node.add_to_group("restaurant_door")
+		_door_node.set_meta("owner_name", "") # empty = use local player's name
+		if multiplayer.is_server():
+			_door_node.body_entered.connect(_on_static_door_entered)
 
 func _process(delta: float) -> void:
-	# Animate floating indicators on all door nodes (both server and client)
+	# Animate floating indicator on the static door
+	if _door_node == null:
+		return
+	var door := _door_node
 	_indicator_time += delta
 	var bounce_y: float = sin(_indicator_time * 3.0) * 0.3
 	var spin: float = _indicator_time * 90.0
-	var doors_dict: Dictionary = door_nodes if multiplayer.is_server() else _client_door_nodes
-	for player_name in doors_dict:
-		var door_node: Node3D = doors_dict[player_name]
-		var indicator = door_node.get_node_or_null("FloatingIndicator")
-		if indicator:
-			indicator.position.y = 4.2 + bounce_y
-			indicator.rotation_degrees.y = spin
+	var indicator = door.get_node_or_null("FloatingIndicator")
+	if indicator:
+		indicator.position.y = 4.2 + bounce_y
+		indicator.rotation_degrees.y = spin
+
+func _on_static_door_entered(body: Node3D) -> void:
+	if not multiplayer.is_server():
+		return
+	if not body is CharacterBody3D:
+		return
+	var peer_id = body.name.to_int()
+	if peer_id <= 0:
+		return
+	# Static door enters the player's OWN restaurant
+	var player_name := ""
+	if peer_id in NetworkManager.player_data_store:
+		player_name = NetworkManager.player_data_store[peer_id].get("player_name", "")
+	if player_name == "":
+		return
+	_enter_restaurant_server(peer_id, player_name)
 
 func allocate_restaurant_index(player_name: String) -> int:
 	if player_name in restaurant_index_map:
@@ -105,34 +123,26 @@ func _exit_restaurant(peer_id: int) -> void:
 	var loc = player_location.get(peer_id, {})
 	if loc.get("zone", "overworld") != "restaurant":
 		return
-	var owner_name = loc.get("owner", "")
 	var player_node = NetworkManager._get_player_node(peer_id)
 	if player_node == null:
 		return
-	# Restore overworld position (offset +3 Z to avoid landing inside door collision)
+	# Restore overworld position
 	if peer_id in overworld_positions:
 		var saved_pos = overworld_positions[peer_id]
-		# Push away from restaurant row (z=5) to avoid re-triggering door
-		if saved_pos.z > 2 and saved_pos.z < 8:
-			saved_pos.z = 1
 		player_node.position = saved_pos
 		overworld_positions.erase(peer_id)
 	else:
-		player_node.position = Vector3(0, 1, -10) # Default: safely away from doors
+		player_node.position = Vector3(-32.5, 5, 10) # Default: safely away from door
 	player_node.velocity = Vector3.ZERO
 	# Set cooldown to prevent immediate re-entry
 	_exit_cooldown[peer_id] = Time.get_ticks_msec()
 	# Update location
 	player_location[peer_id] = {"zone": "overworld", "owner": ""}
-	# Toggle monitoring on overworld door to reset body_entered tracking after teleport
-	if owner_name in door_nodes:
-		var door_area: Area3D = door_nodes[owner_name]
-		door_area.monitoring = false
-		door_area.set_deferred("monitoring", true)
 	# Notify client
 	_notify_location_change.rpc_id(peer_id, "overworld", "", -1)
-	print("[Restaurant] Player ", peer_id, " exited ", owner_name, "'s restaurant")
+	print("[Restaurant] Player ", peer_id, " exited restaurant")
 	# Check if restaurant can be unloaded
+	var owner_name = loc.get("owner", "")
 	_try_unload_restaurant(owner_name)
 
 func _try_unload_restaurant(owner_name: String) -> void:
@@ -181,119 +191,6 @@ func _sync_restaurant_to_client(peer_id: int, instance: Node3D) -> void:
 			"owner_id": plot.owner_peer_id,
 		})
 	_receive_restaurant_farm_data.rpc_id(peer_id, plot_data)
-
-# === Overworld Door Management ===
-
-func spawn_overworld_door(player_name: String) -> void:
-	if restaurant_row == null:
-		return
-	if player_name in door_nodes:
-		return # Already has a door
-	var rest_index = restaurant_index_map.get(player_name, -1)
-	if rest_index == -1:
-		return
-	var door = Area3D.new()
-	door.name = "Door_" + player_name.replace(" ", "_")
-	door.collision_layer = 0
-	door.collision_mask = 3
-	door.add_to_group("restaurant_door")
-	door.set_meta("owner_name", player_name)
-	# Position doors along the row, spaced apart
-	door.position = Vector3(rest_index * DOOR_SPACING, 0, 0)
-	# Add collision shape (enlarged to match bigger door)
-	var shape = CollisionShape3D.new()
-	var box = BoxShape3D.new()
-	box.size = Vector3(2.5, 3.5, 2.5)
-	shape.shape = box
-	door.add_child(shape)
-	# Add door visuals (server needs mesh for collision reference)
-	_add_door_visuals(door, player_name)
-	restaurant_row.add_child(door)
-	door_nodes[player_name] = door
-	# Connect body_entered for server-side teleport
-	door.body_entered.connect(_on_overworld_door_entered.bind(player_name))
-	# Replicate visual door to all clients
-	_spawn_door_client.rpc(player_name, rest_index)
-
-func _add_door_visuals(parent: Node3D, player_name: String) -> void:
-	# Door frame (slightly larger, contrasting color)
-	var frame_mesh = MeshInstance3D.new()
-	var frame_box = BoxMesh.new()
-	frame_box.size = Vector3(2.4, 3.4, 0.15)
-	frame_mesh.mesh = frame_box
-	var frame_mat = StandardMaterial3D.new()
-	frame_mat.albedo_color = Color(0.9, 0.75, 0.2)
-	frame_mat.emission_enabled = true
-	frame_mat.emission = Color(1.0, 0.85, 0.3)
-	frame_mat.emission_energy_multiplier = 0.5
-	frame_mesh.material_override = frame_mat
-	frame_mesh.position = Vector3(0, 1.5, 0)
-	parent.add_child(frame_mesh)
-	# Main door mesh (larger, richer color with glow)
-	var mesh_inst = MeshInstance3D.new()
-	var box_mesh = BoxMesh.new()
-	box_mesh.size = Vector3(2.0, 3.0, 0.4)
-	mesh_inst.mesh = box_mesh
-	var mat = StandardMaterial3D.new()
-	mat.albedo_color = Color(0.65, 0.12, 0.08)
-	mat.emission_enabled = true
-	mat.emission = Color(0.7, 0.15, 0.1)
-	mat.emission_energy_multiplier = 0.3
-	mesh_inst.material_override = mat
-	mesh_inst.position = Vector3(0, 1.5, 0.05)
-	parent.add_child(mesh_inst)
-	# Ground highlight mat in front of door
-	var ground_mesh = MeshInstance3D.new()
-	var ground_box = BoxMesh.new()
-	ground_box.size = Vector3(2.5, 0.06, 2.0)
-	ground_mesh.mesh = ground_box
-	var ground_mat = StandardMaterial3D.new()
-	ground_mat.albedo_color = Color(1.0, 0.85, 0.2)
-	ground_mat.emission_enabled = true
-	ground_mat.emission = Color(1.0, 0.8, 0.1)
-	ground_mat.emission_energy_multiplier = 0.6
-	ground_mesh.material_override = ground_mat
-	ground_mesh.position = Vector3(0, 0.03, -1.2)
-	parent.add_child(ground_mesh)
-	# Floating diamond indicator above door
-	var indicator = MeshInstance3D.new()
-	indicator.name = "FloatingIndicator"
-	var diamond_mesh = BoxMesh.new()
-	diamond_mesh.size = Vector3(0.4, 0.4, 0.4)
-	indicator.mesh = diamond_mesh
-	var ind_mat = StandardMaterial3D.new()
-	ind_mat.albedo_color = Color(1.0, 0.9, 0.1)
-	ind_mat.emission_enabled = true
-	ind_mat.emission = Color(1.0, 0.95, 0.3)
-	ind_mat.emission_energy_multiplier = 2.0
-	indicator.material_override = ind_mat
-	indicator.position = Vector3(0, 4.2, 0)
-	indicator.rotation_degrees = Vector3(0, 0, 45)
-	parent.add_child(indicator)
-	# Label (larger, brighter)
-	var label = Label3D.new()
-	UITheme.style_label3d(label, player_name + "'s\nRestaurant", "landmark")
-	label.font_size = 64
-	label.outline_size = 14
-	label.position = Vector3(0, 3.6, -0.3)
-	parent.add_child(label)
-
-func remove_overworld_door(player_name: String) -> void:
-	if player_name in door_nodes:
-		door_nodes[player_name].queue_free()
-		door_nodes.erase(player_name)
-		# Remove visual door from all clients
-		_remove_door_client.rpc(player_name)
-
-func _on_overworld_door_entered(body: Node3D, owner_name: String) -> void:
-	if not multiplayer.is_server():
-		return
-	if not body is CharacterBody3D:
-		return
-	var peer_id = body.name.to_int()
-	if peer_id <= 0:
-		return
-	_enter_restaurant_server(peer_id, owner_name)
 
 func _enter_restaurant_server(peer_id: int, owner_name: String) -> void:
 	# Don't allow entering if already in a restaurant
@@ -358,13 +255,9 @@ func handle_player_disconnect(peer_id: int) -> void:
 	var loc = player_location.get(peer_id, {})
 	player_location.erase(peer_id)
 	overworld_positions.erase(peer_id)
-	# Find player name for door cleanup
 	var player_name = ""
 	if peer_id in NetworkManager.player_data_store:
 		player_name = NetworkManager.player_data_store[peer_id].get("player_name", "")
-	# Remove their overworld door
-	if player_name != "":
-		remove_overworld_door(player_name)
 	# Check if any restaurant they were in should be unloaded
 	if loc.get("zone", "") == "restaurant":
 		var owner_name = loc.get("owner", "")
@@ -394,8 +287,6 @@ func handle_player_connected(peer_id: int) -> void:
 			next_restaurant_index = rest["restaurant_index"] + 1
 	# Default location is overworld
 	player_location[peer_id] = {"zone": "overworld", "owner": ""}
-	# Spawn overworld door
-	spawn_overworld_door(player_name)
 
 # === Client RPCs ===
 
@@ -456,42 +347,6 @@ func _client_exit_restaurant() -> void:
 	var player = get_node_or_null("/root/Main/GameWorld/Players/%d" % local_peer)
 	if player and player.has_method("reactivate_camera"):
 		player.reactivate_camera()
-
-func sync_doors_to_client(peer_id: int) -> void:
-	for player_name in door_nodes:
-		var rest_index = restaurant_index_map.get(player_name, 0)
-		_spawn_door_client.rpc_id(peer_id, player_name, rest_index)
-
-# Client-side door tracking
-var _client_door_nodes: Dictionary = {} # player_name -> Node3D
-
-@rpc("authority", "reliable")
-func _spawn_door_client(player_name: String, rest_index: int) -> void:
-	if multiplayer.is_server():
-		return
-	if player_name in _client_door_nodes:
-		return # Already exists
-	var row = get_node_or_null("../Zones/RestaurantRow")
-	if row == null:
-		return
-	# Visual-only door (no collision — server handles walk-over teleport)
-	var door = Node3D.new()
-	door.name = "ClientDoor_" + player_name.replace(" ", "_")
-	door.position = Vector3(rest_index * DOOR_SPACING, 0, 0)
-	door.add_to_group("restaurant_door")
-	door.set_meta("owner_name", player_name)
-	# Add shared door visuals
-	_add_door_visuals(door, player_name)
-	row.add_child(door)
-	_client_door_nodes[player_name] = door
-
-@rpc("authority", "reliable")
-func _remove_door_client(player_name: String) -> void:
-	if multiplayer.is_server():
-		return
-	if player_name in _client_door_nodes:
-		_client_door_nodes[player_name].queue_free()
-		_client_door_nodes.erase(player_name)
 
 @rpc("authority", "reliable")
 func _receive_restaurant_farm_data(plot_data: Array) -> void:

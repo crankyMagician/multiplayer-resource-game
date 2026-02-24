@@ -4,7 +4,7 @@ const PLAYER_SCENE = preload("res://scenes/player/player.tscn")
 const FARM_MANAGER_PATH: NodePath = "Zones/FarmZone/FarmManager"
 
 # Current layout version — increment whenever terrain changes significantly
-const LAYOUT_VERSION: int = 4  # v1 = original flat, v2 = terrain massing, v3 = graybox strip, v4 = non-overlapping zones + baked geometry
+const LAYOUT_VERSION: int = 5  # v1 = original flat, v2 = terrain massing, v3 = graybox strip, v4 = non-overlapping zones + baked geometry, v5 = Cast Iron Cove production map
 
 @onready var players_node: Node3D = $Players
 @onready var spawner: MultiplayerSpawner = $Players/MultiplayerSpawner
@@ -29,9 +29,8 @@ func _ready() -> void:
 	DataRegistry.ensure_loaded()
 	_apply_world_label_theme()
 
-	# Static geometry (harvestables, dig spots, fishing spots, portals, calendar board)
-	# is pre-placed in game_world.tscn. Only dynamic/interaction nodes spawned here.
-	_spawn_bank_npc()
+	# Static geometry (harvestables, dig spots, fishing spots, portals, calendar board, bank NPC)
+	# is pre-placed in game_world.tscn. Only dynamic VFX spawned here.
 	_spawn_excursion_entrance()
 
 	# Spawn FishingManager on ALL peers (needed for RPC routing; non-server is inert)
@@ -68,8 +67,6 @@ func _apply_world_label_theme() -> void:
 		"Zones/RestaurantZone/Pantry/StationLabel": "station",
 		"Zones/RestaurantZone/Workbench/StationLabel": "station",
 		"Zones/WildZone/Cauldron/StationLabel": "station",
-		"Zones/RestaurantRow/SignLabel": "landmark",
-		"Zones/RestaurantRow/SubSign": "station",
 	}
 	for label_path in label_roles:
 		var label_node := get_node_or_null(label_path)
@@ -173,7 +170,7 @@ func _ensure_fallback_camera() -> void:
 		return
 	var rig: Node3D = Node3D.new()
 	rig.name = "FallbackCameraRig"
-	rig.position = Vector3(0, 14, 18)
+	rig.position = Vector3(-32.5, 18, 28)
 	rig.rotation = Vector3(deg_to_rad(-30), 0, 0)
 	add_child(rig)
 
@@ -268,20 +265,12 @@ func _on_appearance_confirmed(appearance: Dictionary) -> void:
 		player_node.update_appearance(appearance)
 
 
-func _spawn_bank_npc() -> void:
-	var bank_script = load("res://scripts/world/bank_npc.gd")
-	var bank = Area3D.new()
-	bank.set_script(bank_script)
-	bank.name = "BankNPC"
-	bank.position = Vector3(10, 1, 8)  # Town Square, near General Store
-	add_child(bank)
-
 const EXCURSION_PORTALS: Array = [
-	{"zone_type": "default", "position": Vector3(-8, 0, -25), "label": "The Wilds", "color": Color(0.6, 0.2, 0.8)},
-	{"zone_type": "coastal_wreckage", "position": Vector3(-33, 0, -12), "label": "Coastal Wreckage", "color": Color(0.2, 0.6, 0.8)},
-	{"zone_type": "fungal_hollow", "position": Vector3(8, 0, -68), "label": "Fungal Hollow", "color": Color(0.4, 0.2, 0.6)},
-	{"zone_type": "volcanic_crest", "position": Vector3(45, 0, -12), "label": "Volcanic Crest", "color": Color(0.9, 0.3, 0.1)},
-	{"zone_type": "frozen_pantry", "position": Vector3(15, 0, 38), "label": "Frozen Pantry", "color": Color(0.5, 0.8, 0.95)},
+	{"zone_type": "default", "position": Vector3(-11.25, 2, -30.5), "label": "The Wilds", "color": Color(0.6, 0.2, 0.8)},
+	{"zone_type": "coastal_wreckage", "position": Vector3(-106.25, 1, -37.5), "label": "Coastal Wreckage", "color": Color(0.2, 0.6, 0.8)},
+	{"zone_type": "fungal_hollow", "position": Vector3(-15, 4, -16.25), "label": "Fungal Hollow", "color": Color(0.4, 0.2, 0.6)},
+	{"zone_type": "volcanic_crest", "position": Vector3(52.5, 8, 28.75), "label": "Volcanic Crest", "color": Color(0.9, 0.3, 0.1)},
+	{"zone_type": "frozen_pantry", "position": Vector3(-36.25, 5, 100), "label": "Frozen Pantry", "color": Color(0.5, 0.8, 0.95)},
 ]
 
 func _spawn_excursion_entrance() -> void:
@@ -291,8 +280,8 @@ func _spawn_excursion_entrance() -> void:
 func _spawn_single_portal(portal_data: Dictionary) -> void:
 	var zone_type: String = portal_data["zone_type"]
 
-	# Portal visuals are pre-placed in game_world.tscn under Zones/WildZone/Portals.
-	# Here we only create the server-side interaction Area3D and client VFX.
+	# Portal visuals + interaction Area3D are pre-placed in game_world.tscn.
+	# Here we create the runtime entrance node (for excursion system) and client VFX.
 	var entrance = Node3D.new()
 	entrance.name = "ExcursionEntrance_" + zone_type
 	entrance.position = portal_data["position"]
@@ -406,7 +395,7 @@ func _get_spread_spawn_position() -> Vector3:
 	var idx = players_node.get_child_count() # 0-based count of existing children
 	var angle = idx * 2.399 # golden angle in radians
 	var radius = 2.0
-	return Vector3(cos(angle) * radius, 1.0, sin(angle) * radius + 6.0)  # Town Square center
+	return Vector3(cos(angle) * radius + -32.5, 5.0, sin(angle) * radius + 13.75)  # Town Square spawn
 
 func _sync_world_to_client(peer_id: int) -> void:
 	if not multiplayer.is_server():
@@ -424,10 +413,6 @@ func _sync_world_to_client(peer_id: int) -> void:
 	var item_mgr = get_node_or_null("WorldItemManager")
 	if item_mgr:
 		item_mgr.sync_all_to_client(peer_id)
-	# Sync restaurant doors to late joiner
-	var rest_mgr = get_node_or_null("RestaurantManager")
-	if rest_mgr:
-		rest_mgr.sync_doors_to_client(peer_id)
 	# Sync gatekeeper states (open gates for defeated trainers)
 	for npc in get_tree().get_nodes_in_group("trainer_npc"):
 		if npc.is_gatekeeper:

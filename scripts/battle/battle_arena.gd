@@ -74,20 +74,55 @@ var _enemy_bob_tween: Tween
 var _player_status_aura: Node3D
 var _enemy_status_aura: Node3D
 
+func _log_missing_scene_dependencies(scene_path: String, missing_paths: Array) -> void:
+	for dep in missing_paths:
+		push_warning("[BattleArena] Missing scene dependency for %s: %s" % [scene_path, dep])
+
+func _validate_scene_dependencies(scene_path: String) -> bool:
+	var file := FileAccess.open(scene_path, FileAccess.READ)
+	if file == null:
+		push_warning("[BattleArena] Failed to open scene for dependency check: %s" % scene_path)
+		return false
+	var missing_paths: Array = []
+	while not file.eof_reached():
+		var line := file.get_line()
+		if not line.begins_with("[ext_resource"):
+			continue
+		var path_key := "path=\""
+		var start := line.find(path_key)
+		if start == -1:
+			continue
+		start += path_key.length()
+		var end := line.find("\"", start)
+		if end == -1:
+			continue
+		var dep_path := line.substr(start, end - start)
+		if dep_path == "" or ResourceLoader.exists(dep_path):
+			continue
+		if dep_path not in missing_paths:
+			missing_paths.append(dep_path)
+	if missing_paths.size() > 0:
+		_log_missing_scene_dependencies(scene_path, missing_paths)
+		return false
+	return true
+
 func build_arena(battle_mode: int, enemy_data: Dictionary, opponent_name: String, arena_theme: String = "docks") -> void:
 	position = BATTLE_ARENA_OFFSET
 	_arena_theme = arena_theme
 
 	# Load themed arena scene
+	var loaded_environment := false
 	var scene_path = ARENA_SCENES.get(arena_theme, ARENA_SCENES["docks"])
-	if ResourceLoader.exists(scene_path):
+	if ResourceLoader.exists(scene_path) and _validate_scene_dependencies(scene_path):
 		var arena_scene = load(scene_path) as PackedScene
 		if arena_scene:
 			var env_node = arena_scene.instantiate()
-			env_node.name = "Environment"
-			add_child(env_node)
-	else:
-		# Fallback: simple ground plane if scene not found
+			if env_node:
+				env_node.name = "Environment"
+				add_child(env_node)
+				loaded_environment = true
+	if not loaded_environment:
+		push_warning("[BattleArena] Falling back to procedural ground for theme '%s'" % arena_theme)
 		_build_fallback_ground()
 
 	# Camera

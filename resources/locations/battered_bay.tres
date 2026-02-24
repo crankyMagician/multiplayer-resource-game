@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "battered_bay"
 display_name = "Battered Bay"
-world_position = Vector3(-20, 0, -30)
+world_position = Vector3(-90, 1, -30)
 discovery_radius = 10.0
 icon_type = "wild_zone"
 category = "wild_zone"

@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "summit_gate"
 display_name = "Summit Gate"
-world_position = Vector3(4, 2, 28)
+world_position = Vector3(30, 8, 75)
 discovery_radius = 6.0
 icon_type = "landmark"
 category = "landmark"

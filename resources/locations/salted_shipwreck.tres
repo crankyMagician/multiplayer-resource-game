@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "salted_shipwreck"
 display_name = "Salted Shipwreck"
-world_position = Vector3(20, 0, -30)
+world_position = Vector3(-80, 1, -40)
 discovery_radius = 10.0
 icon_type = "wild_zone"
 category = "wild_zone"

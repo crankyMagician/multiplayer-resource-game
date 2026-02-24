@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "pine_tunnel"
 display_name = "Pine Tunnel"
-world_position = Vector3(0, 0, -32)
+world_position = Vector3(30, 8, 80)
 discovery_radius = 6.0
 icon_type = "landmark"
 category = "landmark"

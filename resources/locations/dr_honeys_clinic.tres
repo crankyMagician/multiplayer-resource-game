@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "dr_honeys_clinic"
 display_name = "Dr. Honey's Clinic"
-world_position = Vector3(22, 0.3, 3)
+world_position = Vector3(-60, 4, 3)
 discovery_radius = 5.0
 icon_type = "shop"
 category = "shop"

@@ -102,6 +102,12 @@ func _build_friends_tab() -> void:
 		UITheme.style_small(lbl)
 		hbox.add_child(lbl)
 		var friend_id = str(friend.get("player_id", ""))
+		if online:
+			var visit_btn := Button.new()
+			visit_btn.text = "Visit"
+			UITheme.style_button(visit_btn, "primary")
+			visit_btn.pressed.connect(_on_visit_restaurant.bind(name_str))
+			hbox.add_child(visit_btn)
 		if online and PlayerData.group_party_id >= 0 and PlayerData.group_party_leader_id == _get_my_player_id():
 			var invite_btn := Button.new()
 			invite_btn.text = "Invite"
@@ -297,6 +303,15 @@ func _on_unblock(player_id: String) -> void:
 	var fm = get_node_or_null("/root/Main/GameWorld/FriendManager")
 	if fm:
 		fm.request_unblock_player.rpc_id(1, player_id)
+
+func _on_visit_restaurant(friend_name: String) -> void:
+	var rm = get_node_or_null("/root/Main/GameWorld/RestaurantManager")
+	if rm:
+		rm.request_enter_restaurant.rpc_id(1, friend_name)
+	# Close the pause menu so the player sees the restaurant
+	var pause_menu = get_node_or_null("/root/Main/GameWorld/UI/PauseMenu")
+	if pause_menu and pause_menu.has_method("close"):
+		pause_menu.close()
 
 func _on_invite_friend(friend_id: String) -> void:
 	var fm = get_node_or_null("/root/Main/GameWorld/FriendManager")

@@ -1,170 +1,127 @@
-[gd_scene format=3]
+[gd_scene load_steps=7 format=3]
 
-; --- Materials ---
-[sub_resource type="StandardMaterial3D" id="fountain_mat"]
-albedo_color = Color(0.6, 0.6, 0.65, 1)
+[ext_resource type="PackedScene" path="res://assets/synty/simple_fantasy/models/SF_Bld_House_Large_01.glb" id="1"]
+[ext_resource type="PackedScene" path="res://assets/synty/simple_fantasy/models/SF_Bld_House_01.glb" id="2"]
+[ext_resource type="PackedScene" path="res://assets/synty/simple_fantasy/models/SF_Bld_House_Red_01.glb" id="3"]
+[ext_resource type="PackedScene" path="res://assets/synty/simple_fantasy/models/SF_Bld_House_Blue_01.glb" id="4"]
+[ext_resource type="PackedScene" path="res://assets/synty/simple_fantasy/models/SF_Bld_House_Tavern_01.glb" id="5"]
+[ext_resource type="PackedScene" path="res://assets/synty/simple_fantasy/models/SF_Prop_Well_01.glb" id="6"]
 
-[sub_resource type="StandardMaterial3D" id="water_mat"]
-albedo_color = Color(0.3, 0.5, 0.8, 0.8)
-transparency = 1
-
-[sub_resource type="StandardMaterial3D" id="town_hall_mat"]
-albedo_color = Color(0.7, 0.65, 0.55, 1)
-
-[sub_resource type="StandardMaterial3D" id="bakery_mat"]
-albedo_color = Color(0.85, 0.75, 0.55, 1)
-
-[sub_resource type="StandardMaterial3D" id="store_mat"]
-albedo_color = Color(0.55, 0.65, 0.5, 1)
-
-[sub_resource type="StandardMaterial3D" id="emporium_mat"]
-albedo_color = Color(0.7, 0.5, 0.35, 1)
-
-[sub_resource type="StandardMaterial3D" id="tavern_mat"]
-albedo_color = Color(0.5, 0.35, 0.25, 1)
-
-; --- Meshes ---
-[sub_resource type="CylinderMesh" id="fountain_base_mesh"]
-top_radius = 2.0
-bottom_radius = 2.0
-height = 1.2
-
-[sub_resource type="CylinderMesh" id="fountain_water_mesh"]
-top_radius = 1.7
-bottom_radius = 1.7
-height = 0.8
-
-[sub_resource type="BoxMesh" id="town_hall_mesh"]
-size = Vector3(10, 5, 8)
-
+; --- Collision shapes for Synty buildings ---
 [sub_resource type="BoxShape3D" id="town_hall_shape"]
-size = Vector3(10, 5, 8)
-
-[sub_resource type="BoxMesh" id="shop_mesh"]
-size = Vector3(6, 4, 6)
+size = Vector3(10, 8.75, 8)
 
 [sub_resource type="BoxShape3D" id="shop_shape"]
-size = Vector3(6, 4, 6)
-
-[sub_resource type="BoxMesh" id="small_shop_mesh"]
-size = Vector3(5, 3.5, 5)
+size = Vector3(7, 5.5, 5.5)
 
 [sub_resource type="BoxShape3D" id="small_shop_shape"]
-size = Vector3(5, 3.5, 5)
+size = Vector3(6.25, 5, 5)
 
-; === Town Square root (offset by parent: 0, 0, 6) ===
+[sub_resource type="BoxShape3D" id="tavern_shape"]
+size = Vector3(6, 5, 5)
+
+; === Town Square root (parent offset: -30, 4, 5) ===
 [node name="TownSquare" type="Node3D"]
 
-; --- Fountain (center) ---
-[node name="Fountain" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+; --- Fountain/Well (center) ---
+[node name="Fountain" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 
-[node name="BaseMesh" type="MeshInstance3D" parent="Fountain"]
-mesh = SubResource("fountain_base_mesh")
-material_override = SubResource("fountain_mat")
-
-[node name="WaterMesh" type="MeshInstance3D" parent="Fountain"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, 0)
-mesh = SubResource("fountain_water_mesh")
-material_override = SubResource("water_mat")
+[node name="Model" parent="Fountain" instance=ExtResource("6")]
+transform = Transform3D(2.5, 0, 0, 0, 2.5, 0, 0, 0, 2.5, 0, 0, 0)
 
 [node name="FountainLabel" type="Label3D" parent="Fountain"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.5, 0)
 text = "Town Fountain"
 font_size = 32
 outline_size = 6
 modulate = Color(0.8, 0.8, 0.9, 1)
 billboard = 1
 
-; --- Town Hall (near MayorRosemary at world 5,1,10 → local 5,*,4) ---
+; --- Town Hall (door faces South) ---
 [node name="TownHall" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 2.5, 10)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -8)
 
-[node name="Mesh" type="MeshInstance3D" parent="TownHall"]
-mesh = SubResource("town_hall_mesh")
-material_override = SubResource("town_hall_mat")
+[node name="Model" parent="TownHall" instance=ExtResource("1")]
 
 [node name="Collision" type="CollisionShape3D" parent="TownHall"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.375, 0)
 shape = SubResource("town_hall_shape")
 
 [node name="Label" type="Label3D" parent="TownHall"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 10, 0)
 text = "Town Hall"
 font_size = 40
 outline_size = 8
 modulate = Color(1, 0.9, 0.6, 1)
 billboard = 1
 
-; --- Hubert's Bakery (near HubertCrumb NPC at world -3,1,8 → local -3,*,2) ---
+; --- Hubert's Bakery (door faces West) ---
 [node name="Bakery" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 2, 2)
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 10, 0, 3)
 
-[node name="Mesh" type="MeshInstance3D" parent="Bakery"]
-mesh = SubResource("shop_mesh")
-material_override = SubResource("bakery_mat")
+[node name="Model" parent="Bakery" instance=ExtResource("2")]
 
 [node name="Collision" type="CollisionShape3D" parent="Bakery"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.75, 0)
 shape = SubResource("shop_shape")
 
 [node name="Label" type="Label3D" parent="Bakery"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 0, 6, 0)
 text = "Hubert's Bakery"
 font_size = 32
 outline_size = 6
 modulate = Color(1, 0.85, 0.5, 1)
 billboard = 1
 
-; --- General Store (near GeneralStore shop at world 8,0,5 → local 8,*,-1) ---
-[node name="GeneralStore" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 2, -1)
-
-[node name="Mesh" type="MeshInstance3D" parent="GeneralStore"]
-mesh = SubResource("shop_mesh")
-material_override = SubResource("store_mat")
-
-[node name="Collision" type="CollisionShape3D" parent="GeneralStore"]
-shape = SubResource("shop_shape")
-
-[node name="Label" type="Label3D" parent="GeneralStore"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
-text = "General Store"
-font_size = 32
-outline_size = 6
-modulate = Color(0.7, 0.9, 0.6, 1)
-billboard = 1
-
-; --- Pepper's Emporium (near PepperSantos NPC at world 7,1,6 → local 7,*,0) ---
+; --- Pepper's Spice Emporium (door faces East) ---
 [node name="PeppersEmporium" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 2, 0)
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -10, 0, 3)
 
-[node name="Mesh" type="MeshInstance3D" parent="PeppersEmporium"]
-mesh = SubResource("shop_mesh")
-material_override = SubResource("emporium_mat")
+[node name="Model" parent="PeppersEmporium" instance=ExtResource("3")]
 
 [node name="Collision" type="CollisionShape3D" parent="PeppersEmporium"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.75, 0)
 shape = SubResource("shop_shape")
 
 [node name="Label" type="Label3D" parent="PeppersEmporium"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0, 6, 0)
 text = "Pepper's Emporium"
 font_size = 32
 outline_size = 6
 modulate = Color(0.9, 0.6, 0.4, 1)
 billboard = 1
 
-; --- The Cracked Pot (near ClayBrennan NPC at world -5,1,8 → local -5,*,2) ---
-[node name="CrackedPot" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 1.75, 2)
+; --- General Store (door faces South) ---
+[node name="GeneralStore" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0, -12)
 
-[node name="Mesh" type="MeshInstance3D" parent="CrackedPot"]
-mesh = SubResource("small_shop_mesh")
-material_override = SubResource("tavern_mat")
+[node name="Model" parent="GeneralStore" instance=ExtResource("4")]
 
-[node name="Collision" type="CollisionShape3D" parent="CrackedPot"]
+[node name="Collision" type="CollisionShape3D" parent="GeneralStore"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
 shape = SubResource("small_shop_shape")
 
-[node name="Label" type="Label3D" parent="CrackedPot"]
+[node name="Label" type="Label3D" parent="GeneralStore"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6, 0)
+text = "General Store"
+font_size = 32
+outline_size = 6
+modulate = Color(0.7, 0.9, 0.6, 1)
+billboard = 1
+
+; --- The Cracked Pot (door faces South) ---
+[node name="CrackedPot" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0, -10)
+
+[node name="Model" parent="CrackedPot" instance=ExtResource("5")]
+
+[node name="Collision" type="CollisionShape3D" parent="CrackedPot"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+shape = SubResource("tavern_shape")
+
+[node name="Label" type="Label3D" parent="CrackedPot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6, 0)
 text = "The Cracked Pot"
 font_size = 32
 outline_size = 6

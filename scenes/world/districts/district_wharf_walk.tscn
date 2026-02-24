@@ -1,152 +1,99 @@
-[gd_scene format=3]
+[gd_scene load_steps=5 format=3]
 
-; --- Materials ---
-[sub_resource type="StandardMaterial3D" id="ocean_mat"]
-albedo_color = Color(0.15, 0.3, 0.55, 0.7)
-transparency = 1
+[ext_resource type="PackedScene" path="res://assets/synty/simple_fantasy/models/SF_Bld_House_Tavern_01.glb" id="1"]
+[ext_resource type="PackedScene" path="res://assets/synty/simple_fantasy/models/SF_Bld_Docks_01.glb" id="2"]
+[ext_resource type="PackedScene" path="res://assets/synty/simple_fantasy/models/SF_Bld_House_Blank_01.glb" id="3"]
+[ext_resource type="PackedScene" path="res://assets/synty/simple_fantasy/models/SF_Prop_Walkway_01.glb" id="4"]
 
-[sub_resource type="StandardMaterial3D" id="boardwalk_mat"]
-albedo_color = Color(0.5, 0.38, 0.22, 1)
-
-[sub_resource type="StandardMaterial3D" id="inn_mat"]
-albedo_color = Color(0.45, 0.38, 0.3, 1)
-
-[sub_resource type="StandardMaterial3D" id="lighthouse_mat"]
-albedo_color = Color(0.85, 0.85, 0.8, 1)
-
-[sub_resource type="StandardMaterial3D" id="lighthouse_top_mat"]
-albedo_color = Color(0.9, 0.2, 0.15, 1)
-
-[sub_resource type="StandardMaterial3D" id="dock_mat"]
-albedo_color = Color(0.4, 0.32, 0.2, 1)
-
-[sub_resource type="StandardMaterial3D" id="cliff_mat"]
-albedo_color = Color(0.4, 0.38, 0.35, 1)
-
-; --- Meshes ---
-[sub_resource type="BoxMesh" id="ocean_mesh"]
-size = Vector3(30, 0.1, 20)
-
-[sub_resource type="BoxMesh" id="boardwalk_mesh"]
-size = Vector3(20, 0.2, 8)
-
-[sub_resource type="BoxMesh" id="inn_mesh"]
-size = Vector3(10, 5, 8)
-
+; --- Collision shapes ---
 [sub_resource type="BoxShape3D" id="inn_shape"]
-size = Vector3(10, 5, 8)
+size = Vector3(8, 6.5, 6.5)
 
-[sub_resource type="CylinderMesh" id="lighthouse_mesh"]
-top_radius = 1.5
-bottom_radius = 2.0
-height = 10.0
-
-[sub_resource type="CylinderMesh" id="lighthouse_top_mesh"]
-top_radius = 2.0
-bottom_radius = 2.0
-height = 1.5
-
-[sub_resource type="BoxMesh" id="dock_mesh"]
-size = Vector3(8, 0.3, 14)
+[sub_resource type="BoxShape3D" id="warehouse_shape"]
+size = Vector3(8, 5.5, 5.5)
 
 [sub_resource type="BoxShape3D" id="dock_shape"]
-size = Vector3(8, 0.3, 14)
+size = Vector3(4, 2, 2)
 
-[sub_resource type="BoxMesh" id="cliff_mesh"]
-size = Vector3(4, 4, 22)
-
-[sub_resource type="BoxShape3D" id="cliff_shape"]
-size = Vector3(4, 4, 22)
-
-; === Wharf Walk root (offset by parent: -28, 0, -4) ===
+; === Wharf Walk root (parent offset: -55, 2, -28) ===
 [node name="WharfWalk" type="Node3D"]
 
-; --- Ocean (west side, below ground level) ---
-[node name="Ocean" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, -0.3, -5)
-mesh = SubResource("ocean_mesh")
-material_override = SubResource("ocean_mat")
-
-; --- Boardwalk (central walkway) ---
-[node name="Boardwalk" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0.1, 0)
-
-[node name="Mesh" type="MeshInstance3D" parent="Boardwalk"]
-mesh = SubResource("boardwalk_mesh")
-material_override = SubResource("boardwalk_mat")
-
-; --- Tide's End Inn (near InnkeeperMabel at world -10,0,-5 → local 18,*,1) ---
+; --- Tide's End Inn ---
 [node name="TidesEndInn" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 2.5, 1)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0, 8)
 
-[node name="Mesh" type="MeshInstance3D" parent="TidesEndInn"]
-mesh = SubResource("inn_mesh")
-material_override = SubResource("inn_mat")
+[node name="Model" parent="TidesEndInn" instance=ExtResource("1")]
+transform = Transform3D(1.2, 0, 0, 0, 1.2, 0, 0, 0, 1.2, 0, 0, 0)
 
 [node name="Collision" type="CollisionShape3D" parent="TidesEndInn"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.25, 0)
 shape = SubResource("inn_shape")
 
 [node name="Label" type="Label3D" parent="TidesEndInn"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 8, 0)
 text = "Tide's End Inn"
 font_size = 36
 outline_size = 8
-modulate = Color(0.8, 0.7, 0.5, 1)
+modulate = Color(0.9, 0.75, 0.5, 1)
 billboard = 1
 
-; --- Lighthouse (far west headland, world -36,5,-10 → local -8,5,-6) ---
-[node name="Lighthouse" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 5, -6)
-
-[node name="Tower" type="MeshInstance3D" parent="Lighthouse"]
-mesh = SubResource("lighthouse_mesh")
-material_override = SubResource("lighthouse_mat")
-
-[node name="Top" type="MeshInstance3D" parent="Lighthouse"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.75, 0)
-mesh = SubResource("lighthouse_top_mesh")
-material_override = SubResource("lighthouse_top_mat")
-
-[node name="Beacon" type="OmniLight3D" parent="Lighthouse"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6.5, 0)
-light_color = Color(1, 0.95, 0.7, 1)
-light_energy = 2.0
-omni_range = 15.0
-
-[node name="Label" type="Label3D" parent="Lighthouse"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 7, 0)
-text = "Lighthouse"
-font_size = 36
-outline_size = 8
-modulate = Color(1, 0.95, 0.7, 1)
-billboard = 1
-
-; --- Fishing Dock (near fishing spots at world ~-14,0,-12 → local 14,*,-8) ---
+; --- Fishing Dock ---
 [node name="FishingDock" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 0.15, -8)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -4)
 
-[node name="Mesh" type="MeshInstance3D" parent="FishingDock"]
-mesh = SubResource("dock_mesh")
-material_override = SubResource("dock_mat")
+[node name="Model" parent="FishingDock" instance=ExtResource("2")]
 
 [node name="Collision" type="CollisionShape3D" parent="FishingDock"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 shape = SubResource("dock_shape")
 
 [node name="Label" type="Label3D" parent="FishingDock"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4, 0)
 text = "Fishing Dock"
-font_size = 32
+font_size = 28
 outline_size = 6
 modulate = Color(0.6, 0.75, 0.9, 1)
 billboard = 1
 
-; --- Cliff wall (east edge only, not crossing map center) ---
-[node name="CliffWall" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13, 2, 0)
+; --- Old Warehouse ---
+[node name="OldWarehouse" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 0, -2)
 
-[node name="Mesh" type="MeshInstance3D" parent="CliffWall"]
-mesh = SubResource("cliff_mesh")
-material_override = SubResource("cliff_mat")
+[node name="Model" parent="OldWarehouse" instance=ExtResource("3")]
 
-[node name="Collision" type="CollisionShape3D" parent="CliffWall"]
-shape = SubResource("cliff_shape")
+[node name="Collision" type="CollisionShape3D" parent="OldWarehouse"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.75, 0)
+shape = SubResource("warehouse_shape")
+
+[node name="Label" type="Label3D" parent="OldWarehouse"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 7, 0)
+text = "Old Warehouse"
+font_size = 28
+outline_size = 6
+modulate = Color(0.6, 0.55, 0.5, 1)
+billboard = 1
+
+; --- Boardwalk segments ---
+[node name="Boardwalk" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0.1, 0)
+
+[node name="Segment1" parent="Boardwalk" instance=ExtResource("4")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0, 0)
+
+[node name="Segment2" parent="Boardwalk" instance=ExtResource("4")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+
+[node name="Segment3" parent="Boardwalk" instance=ExtResource("4")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0, 0)
+
+; --- Lighthouse (standalone far from wharf center) ---
+[node name="Lighthouse" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -53.75, 1, -17.5)
+
+[node name="LighthouseLabel" type="Label3D" parent="Lighthouse"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 8, 0)
+text = "Lighthouse"
+font_size = 36
+outline_size = 8
+modulate = Color(1, 0.95, 0.8, 1)
+billboard = 1

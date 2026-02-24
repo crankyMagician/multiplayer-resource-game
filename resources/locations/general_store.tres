@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "general_store"
 display_name = "General Store"
-world_position = Vector3(8, 0, 5)
+world_position = Vector3(-36, 4, -7)
 discovery_radius = 5.0
 icon_type = "shop"
 category = "shop"

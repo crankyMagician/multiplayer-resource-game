@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "harbor_fountain"
 display_name = "Harbor Square Fountain"
-world_position = Vector3(0, 0, 6)
+world_position = Vector3(-30, 4, 5)
 discovery_radius = 5.0
 icon_type = "zone"
 category = "zone"

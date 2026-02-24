@@ -1,4 +1,4 @@
-[gd_scene load_steps=68 format=3]
+[gd_scene load_steps=115 format=3]
 
 [ext_resource type="Script" path="res://scripts/world/game_world.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/world/season_manager.gd" id="2"]
@@ -29,25 +29,180 @@
 [ext_resource type="PackedScene" path="res://scenes/world/districts/district_market_row.tscn" id="27"]
 [ext_resource type="PackedScene" path="res://scenes/world/districts/district_harbor_heights.tscn" id="28"]
 [ext_resource type="PackedScene" path="res://scenes/world/districts/district_farm_zone.tscn" id="29"]
-[ext_resource type="PackedScene" path="res://scenes/world/districts/district_wilderness.tscn" id="30"]
 [ext_resource type="PackedScene" path="res://scenes/world/harvestable_object.tscn" id="31"]
 [ext_resource type="Script" path="res://scripts/world/dig_spot.gd" id="32"]
 [ext_resource type="Script" path="res://scripts/world/calendar_board.gd" id="33"]
+[ext_resource type="Script" path="res://scripts/world/bank_npc.gd" id="34"]
+[ext_resource type="PackedScene" path="res://assets/synty/simple_fantasy/models/SF_Env_Tree_01.glb" id="35"]
+[ext_resource type="PackedScene" path="res://assets/synty/simple_fantasy/models/SF_Env_Tree_Large_01.glb" id="36"]
+[ext_resource type="PackedScene" path="res://assets/synty/simple_fantasy/models/SF_Env_Rock_01.glb" id="37"]
+[ext_resource type="PackedScene" path="res://assets/synty/simple_fantasy/models/SF_Env_Rock_02.glb" id="38"]
+[ext_resource type="PackedScene" path="res://assets/synty/simple_fantasy/models/SF_Env_Tree_02.glb" id="39"]
+[ext_resource type="PackedScene" path="res://assets/synty/simple_fantasy/models/SF_Env_Tree_03.glb" id="40"]
 
-; --- Base ground ---
-[sub_resource type="BoxShape3D" id="ground_shape"]
+; ============================================================
+; TERRAIN TIER MESHES & MATERIALS (Phase 1)
+; ============================================================
+
+; --- Ocean plane (y=-0.5, non-collidable) ---
+[sub_resource type="BoxMesh" id="ocean_mesh"]
 size = Vector3(300, 0.2, 300)
 
-[sub_resource type="BoxMesh" id="ground_mesh"]
-size = Vector3(300, 0.2, 300)
+[sub_resource type="StandardMaterial3D" id="ocean_mat"]
+albedo_color = Color(0.12, 0.35, 0.46, 0.85)
+transparency = 1
 
-[sub_resource type="StandardMaterial3D" id="ground_mat"]
-albedo_color = Color(0.3, 0.55, 0.25, 1)
+; --- Beach/Sand spit (y=1) ---
+[sub_resource type="BoxMesh" id="beach_mesh"]
+size = Vector3(60, 0.4, 25)
+
+[sub_resource type="StandardMaterial3D" id="beach_mat"]
+albedo_color = Color(0.78, 0.72, 0.56, 1)
+
+[sub_resource type="BoxShape3D" id="beach_col"]
+size = Vector3(60, 0.4, 25)
+
+; --- Wharf/Dock platform (y=2) ---
+[sub_resource type="BoxMesh" id="wharf_mesh"]
+size = Vector3(70, 0.5, 35)
+
+[sub_resource type="StandardMaterial3D" id="wharf_mat"]
+albedo_color = Color(0.42, 0.6, 0.42, 1)
+
+[sub_resource type="BoxShape3D" id="wharf_col"]
+size = Vector3(70, 0.5, 35)
+
+; --- Farm zone (y=3) ---
+[sub_resource type="BoxMesh" id="farm_tier_mesh"]
+size = Vector3(50, 0.5, 40)
+
+[sub_resource type="StandardMaterial3D" id="farm_tier_mat"]
+albedo_color = Color(0.54, 0.72, 0.35, 1)
+
+[sub_resource type="BoxShape3D" id="farm_tier_col"]
+size = Vector3(50, 0.5, 40)
+
+; --- Town Square + Market Row (y=4, largest walkable area) ---
+[sub_resource type="BoxMesh" id="town_mesh"]
+size = Vector3(90, 0.5, 55)
+
+[sub_resource type="StandardMaterial3D" id="town_mat"]
+albedo_color = Color(0.35, 0.6, 0.35, 1)
+
+[sub_resource type="BoxShape3D" id="town_col"]
+size = Vector3(90, 0.5, 55)
+
+; --- Southern hills (y=5) ---
+[sub_resource type="BoxMesh" id="south_hills_mesh"]
+size = Vector3(70, 0.5, 40)
+
+[sub_resource type="StandardMaterial3D" id="south_hills_mat"]
+albedo_color = Color(0.24, 0.49, 0.24, 1)
+
+[sub_resource type="BoxShape3D" id="south_hills_col"]
+size = Vector3(70, 0.5, 40)
+
+; --- Rocky outcrop east (y=6) ---
+[sub_resource type="BoxMesh" id="rocky_mesh"]
+size = Vector3(30, 8, 60)
+
+[sub_resource type="StandardMaterial3D" id="rocky_mat"]
+albedo_color = Color(0.42, 0.41, 0.35, 1)
+
+[sub_resource type="BoxShape3D" id="rocky_col"]
+size = Vector3(30, 8, 60)
+
+; --- Harbor Heights (y=7) ---
+[sub_resource type="BoxMesh" id="harbor_heights_mesh"]
+size = Vector3(50, 0.5, 45)
+
+[sub_resource type="StandardMaterial3D" id="harbor_heights_mat"]
+albedo_color = Color(0.23, 0.48, 0.23, 1)
+
+[sub_resource type="BoxShape3D" id="harbor_heights_col"]
+size = Vector3(50, 0.5, 45)
+
+; --- Redwood forest (y=8) ---
+[sub_resource type="BoxMesh" id="redwood_mesh"]
+size = Vector3(60, 0.5, 35)
+
+[sub_resource type="StandardMaterial3D" id="redwood_mat"]
+albedo_color = Color(0.16, 0.35, 0.19, 1)
+
+[sub_resource type="BoxShape3D" id="redwood_col"]
+size = Vector3(60, 0.5, 35)
+
+; --- Ramp meshes ---
+[sub_resource type="BoxMesh" id="ramp_beach_wharf_mesh"]
+size = Vector3(8, 0.3, 22)
+
+[sub_resource type="BoxShape3D" id="ramp_beach_wharf_col"]
+size = Vector3(8, 0.3, 22)
+
+[sub_resource type="BoxMesh" id="ramp_wharf_town_mesh"]
+size = Vector3(8, 0.3, 30)
+
+[sub_resource type="BoxShape3D" id="ramp_wharf_town_col"]
+size = Vector3(8, 0.3, 30)
+
+[sub_resource type="BoxMesh" id="ramp_town_harbor_mesh"]
+size = Vector3(6, 0.3, 45)
+
+[sub_resource type="BoxShape3D" id="ramp_town_harbor_col"]
+size = Vector3(6, 0.3, 45)
+
+[sub_resource type="BoxMesh" id="ramp_town_farm_mesh"]
+size = Vector3(8, 0.3, 28)
+
+[sub_resource type="BoxShape3D" id="ramp_town_farm_col"]
+size = Vector3(8, 0.3, 28)
+
+[sub_resource type="BoxMesh" id="ramp_harbor_redwood_mesh"]
+size = Vector3(6, 0.3, 30)
+
+[sub_resource type="BoxShape3D" id="ramp_harbor_redwood_col"]
+size = Vector3(6, 0.3, 30)
+
+[sub_resource type="BoxMesh" id="ramp_harbor_south_mesh"]
+size = Vector3(6, 0.3, 32)
+
+[sub_resource type="BoxShape3D" id="ramp_harbor_south_col"]
+size = Vector3(6, 0.3, 32)
+
+[sub_resource type="StandardMaterial3D" id="ramp_mat"]
+albedo_color = Color(0.5, 0.55, 0.4, 1)
+
+; --- Bay water (lighter) ---
+[sub_resource type="BoxMesh" id="bay_mesh"]
+size = Vector3(120, 0.15, 80)
+
+[sub_resource type="StandardMaterial3D" id="bay_mat"]
+albedo_color = Color(0.18, 0.45, 0.55, 0.7)
+transparency = 1
+
+; --- Natural boundary materials ---
+[sub_resource type="StandardMaterial3D" id="cliff_mat"]
+albedo_color = Color(0.45, 0.35, 0.25, 1)
+
+[sub_resource type="BoxMesh" id="cliff_west_mesh"]
+size = Vector3(8, 12, 200)
+
+[sub_resource type="BoxShape3D" id="cliff_west_col"]
+size = Vector3(8, 12, 200)
+
+[sub_resource type="BoxMesh" id="cliff_north_mesh"]
+size = Vector3(200, 12, 8)
+
+[sub_resource type="BoxShape3D" id="cliff_north_col"]
+size = Vector3(200, 12, 8)
+
+[sub_resource type="BoxMesh" id="cliff_south_mesh"]
+size = Vector3(200, 12, 8)
+
+[sub_resource type="BoxShape3D" id="cliff_south_col"]
+size = Vector3(200, 12, 8)
 
 ; --- Functional collision shapes ---
-[sub_resource type="BoxShape3D" id="building_shape"]
-size = Vector3(6, 4, 6)
-
 [sub_resource type="BoxShape3D" id="table_interact_shape"]
 size = Vector3(3, 2, 2)
 
@@ -57,84 +212,11 @@ size = Vector3(3, 2, 2.5)
 [sub_resource type="BoxShape3D" id="station_interact_shape"]
 size = Vector3(3.5, 2, 2.5)
 
-[sub_resource type="BoxShape3D" id="water_interact_shape"]
-size = Vector3(3, 2, 3)
-
 [sub_resource type="BoxShape3D" id="grass_area_shape"]
 size = Vector3(8, 2, 8)
 
 [sub_resource type="SphereShape3D" id="pickup_shape"]
 radius = 2.0
-
-; --- Ground overlay meshes & materials ---
-[sub_resource type="BoxMesh" id="zone_town_mesh"]
-size = Vector3(28, 0.12, 22)
-
-[sub_resource type="StandardMaterial3D" id="zone_town_mat"]
-albedo_color = Color(0.78, 0.72, 0.62, 1)
-
-[sub_resource type="BoxMesh" id="zone_wharf_mesh"]
-size = Vector3(26, 0.12, 22)
-
-[sub_resource type="StandardMaterial3D" id="zone_wharf_mat"]
-albedo_color = Color(0.45, 0.42, 0.38, 1)
-
-[sub_resource type="BoxMesh" id="zone_market_mesh"]
-size = Vector3(16, 0.12, 20)
-
-[sub_resource type="StandardMaterial3D" id="zone_market_mat"]
-albedo_color = Color(0.65, 0.45, 0.35, 1)
-
-[sub_resource type="BoxMesh" id="zone_harbor_mesh"]
-size = Vector3(30, 0.12, 28)
-
-[sub_resource type="StandardMaterial3D" id="zone_harbor_mat"]
-albedo_color = Color(0.35, 0.6, 0.3, 1)
-
-[sub_resource type="BoxShape3D" id="zone_harbor_col_shape"]
-size = Vector3(30, 0.3, 28)
-
-[sub_resource type="BoxMesh" id="zone_farm_mesh"]
-size = Vector3(18, 0.12, 18)
-
-[sub_resource type="StandardMaterial3D" id="zone_farm_mat"]
-albedo_color = Color(0.5, 0.4, 0.25, 1)
-
-[sub_resource type="BoxMesh" id="zone_wild_mesh"]
-size = Vector3(50, 0.12, 60)
-
-[sub_resource type="StandardMaterial3D" id="zone_wild_mat"]
-albedo_color = Color(0.22, 0.4, 0.18, 1)
-
-; --- Path meshes ---
-[sub_resource type="BoxMesh" id="path_spawn_south_mesh"]
-size = Vector3(4, 0.06, 18)
-
-[sub_resource type="BoxMesh" id="path_to_wharf_mesh"]
-size = Vector3(14, 0.06, 4)
-
-[sub_resource type="BoxMesh" id="path_to_market_mesh"]
-size = Vector3(14, 0.06, 4)
-
-[sub_resource type="BoxMesh" id="path_to_farm_mesh"]
-size = Vector3(12, 0.06, 4)
-
-[sub_resource type="BoxMesh" id="path_to_harbor_mesh"]
-size = Vector3(4, 0.06, 12)
-
-; --- Path material ---
-[sub_resource type="StandardMaterial3D" id="path_mat"]
-albedo_color = Color(0.6, 0.5, 0.35, 1)
-
-; --- Ramp mesh + collision ---
-[sub_resource type="BoxMesh" id="ramp_mesh"]
-size = Vector3(6, 0.3, 28.3)
-
-[sub_resource type="StandardMaterial3D" id="ramp_mat"]
-albedo_color = Color(0.5, 0.55, 0.4, 1)
-
-[sub_resource type="BoxShape3D" id="ramp_col_shape"]
-size = Vector3(6, 0.3, 28.3)
 
 ; --- Portal archway meshes ---
 [sub_resource type="BoxMesh" id="portal_pillar_mesh"]
@@ -148,7 +230,7 @@ top_radius = 2.5
 bottom_radius = 2.5
 height = 0.1
 
-; --- Portal materials (one per portal color) ---
+; --- Portal materials ---
 [sub_resource type="StandardMaterial3D" id="portal_mat_default"]
 albedo_color = Color(0.42, 0.14, 0.56, 1)
 emission_enabled = true
@@ -239,12 +321,55 @@ height = 0.1
 albedo_color = Color(0.2, 0.4, 0.7, 0.5)
 transparency = 1
 
-; --- Containment wall collision ---
-[sub_resource type="BoxShape3D" id="wall_ns_shape"]
-size = Vector3(120, 10, 2)
+; --- Portal interaction shapes (Phase 5: pre-placed) ---
+[sub_resource type="CylinderShape3D" id="portal_interact_shape"]
+radius = 3.0
+height = 4.0
 
-[sub_resource type="BoxShape3D" id="wall_ew_shape"]
-size = Vector3(2, 10, 180)
+; --- Bank NPC shape (Phase 5: pre-placed) ---
+[sub_resource type="CylinderShape3D" id="bank_interact_shape"]
+radius = 3.0
+height = 3.0
+
+; --- My Restaurant Door resources ---
+[sub_resource type="BoxShape3D" id="restaurant_door_box"]
+size = Vector3(2.5, 3.5, 2.5)
+
+[sub_resource type="BoxMesh" id="restaurant_door_frame_mesh"]
+size = Vector3(2.4, 3.4, 0.15)
+
+[sub_resource type="StandardMaterial3D" id="restaurant_door_frame_mat"]
+albedo_color = Color(0.9, 0.75, 0.2, 1)
+emission_enabled = true
+emission = Color(1, 0.85, 0.3, 1)
+emission_energy_multiplier = 0.5
+
+[sub_resource type="BoxMesh" id="restaurant_door_main_mesh"]
+size = Vector3(2, 3, 0.4)
+
+[sub_resource type="StandardMaterial3D" id="restaurant_door_main_mat"]
+albedo_color = Color(0.65, 0.12, 0.08, 1)
+emission_enabled = true
+emission = Color(0.7, 0.15, 0.1, 1)
+emission_energy_multiplier = 0.3
+
+[sub_resource type="BoxMesh" id="restaurant_door_ground_mesh"]
+size = Vector3(2.5, 0.06, 2)
+
+[sub_resource type="StandardMaterial3D" id="restaurant_door_ground_mat"]
+albedo_color = Color(1, 0.85, 0.2, 1)
+emission_enabled = true
+emission = Color(1, 0.8, 0.1, 1)
+emission_energy_multiplier = 0.6
+
+[sub_resource type="BoxMesh" id="restaurant_door_indicator_mesh"]
+size = Vector3(0.4, 0.4, 0.4)
+
+[sub_resource type="StandardMaterial3D" id="restaurant_door_indicator_mat"]
+albedo_color = Color(1, 0.9, 0.1, 1)
+emission_enabled = true
+emission = Color(1, 0.95, 0.3, 1)
+emission_energy_multiplier = 2.0
 
 ; ============================================================
 ; SCENE TREE
@@ -272,131 +397,215 @@ script = ExtResource("5")
 transform = Transform3D(0.866, -0.354, 0.354, 0, 0.707, 0.707, -0.5, -0.612, 0.612, 0, 15, 10)
 shadow_enabled = true
 
-; --- Base ground (300x300 flat plane) ---
-[node name="Ground" type="StaticBody3D" parent="Environment"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
+; ==================== TERRAIN TIERS ====================
+[node name="Terrain" type="Node3D" parent="Environment"]
 
-[node name="GroundMesh" type="MeshInstance3D" parent="Environment/Ground"]
-mesh = SubResource("ground_mesh")
-material_override = SubResource("ground_mat")
+; --- Ocean plane (y=-0.5, non-collidable visual only) ---
+[node name="OceanPlane" type="MeshInstance3D" parent="Environment/Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -60, -0.5, -30)
+mesh = SubResource("ocean_mesh")
+material_override = SubResource("ocean_mat")
 
-[node name="GroundCollision" type="CollisionShape3D" parent="Environment/Ground"]
-shape = SubResource("ground_shape")
+; --- Bay water (lighter, overlapping ocean in bay area) ---
+[node name="BayWater" type="MeshInstance3D" parent="Environment/Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -70, -0.3, -35)
+mesh = SubResource("bay_mesh")
+material_override = SubResource("bay_mat")
 
-; --- District ground overlays (colored zones at y=0.02) ---
-[node name="GroundOverlays" type="Node3D" parent="Environment"]
+; --- Beach/Sand spit (y=1) ---
+[node name="Beach" type="StaticBody3D" parent="Environment/Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -80, 0.8, -35)
 
-[node name="TownSquareGround" type="MeshInstance3D" parent="Environment/GroundOverlays"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 8)
-mesh = SubResource("zone_town_mesh")
-material_override = SubResource("zone_town_mat")
+[node name="Mesh" type="MeshInstance3D" parent="Environment/Terrain/Beach"]
+mesh = SubResource("beach_mesh")
+material_override = SubResource("beach_mat")
 
-[node name="WharfWalkGround" type="MeshInstance3D" parent="Environment/GroundOverlays"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -28, 0.02, -4)
-mesh = SubResource("zone_wharf_mesh")
-material_override = SubResource("zone_wharf_mat")
+[node name="Col" type="CollisionShape3D" parent="Environment/Terrain/Beach"]
+shape = SubResource("beach_col")
 
-[node name="MarketRowGround" type="MeshInstance3D" parent="Environment/GroundOverlays"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22, 0.02, 8)
-mesh = SubResource("zone_market_mesh")
-material_override = SubResource("zone_market_mat")
+; --- Wharf/Dock platform (y=2) ---
+[node name="Wharf" type="StaticBody3D" parent="Environment/Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -60, 1.75, -25)
 
-[node name="HarborHeightsGround" type="MeshInstance3D" parent="Environment/GroundOverlays"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 4.02, 42)
-mesh = SubResource("zone_harbor_mesh")
-material_override = SubResource("zone_harbor_mat")
+[node name="Mesh" type="MeshInstance3D" parent="Environment/Terrain/Wharf"]
+mesh = SubResource("wharf_mesh")
+material_override = SubResource("wharf_mat")
 
-[node name="FarmZoneGround" type="MeshInstance3D" parent="Environment/GroundOverlays"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 37, 0.02, 0)
-mesh = SubResource("zone_farm_mesh")
-material_override = SubResource("zone_farm_mat")
+[node name="Col" type="CollisionShape3D" parent="Environment/Terrain/Wharf"]
+shape = SubResource("wharf_col")
 
-[node name="WildernessGround" type="MeshInstance3D" parent="Environment/GroundOverlays"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, -48)
-mesh = SubResource("zone_wild_mesh")
-material_override = SubResource("zone_wild_mat")
+; --- Farm zone (y=3) ---
+[node name="FarmTier" type="StaticBody3D" parent="Environment/Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 2.75, 20)
 
-; --- Path strips (y=0.05, width 4) ---
-[node name="Paths" type="Node3D" parent="Environment"]
+[node name="Mesh" type="MeshInstance3D" parent="Environment/Terrain/FarmTier"]
+mesh = SubResource("farm_tier_mesh")
+material_override = SubResource("farm_tier_mat")
 
-; Spawn south to Wilderness entry: (0, 0.05, -3) down to (0, 0.05, -18)
-[node name="PathSpawnSouth" type="MeshInstance3D" parent="Environment/Paths"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, -6)
-mesh = SubResource("path_spawn_south_mesh")
-material_override = SubResource("path_mat")
+[node name="Col" type="CollisionShape3D" parent="Environment/Terrain/FarmTier"]
+shape = SubResource("farm_tier_col")
 
-; Town Square to Wharf Walk: along z=-1, x=-14 to x=-15 (bridge gap)
-[node name="PathToWharf" type="MeshInstance3D" parent="Environment/Paths"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -21, 0.05, -1)
-mesh = SubResource("path_to_wharf_mesh")
-material_override = SubResource("path_mat")
+; --- Town Square + Market Row (y=4, largest tier) ---
+[node name="TownPlatform" type="StaticBody3D" parent="Environment/Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -35, 3.75, 0)
 
-; Town Square to Market Row: along z=8, x=14 to x=14 (bridge gap)
-[node name="PathToMarket" type="MeshInstance3D" parent="Environment/Paths"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 21, 0.05, 8)
-mesh = SubResource("path_to_market_mesh")
-material_override = SubResource("path_mat")
+[node name="Mesh" type="MeshInstance3D" parent="Environment/Terrain/TownPlatform"]
+mesh = SubResource("town_mesh")
+material_override = SubResource("town_mat")
 
-; Market Row to Farm Zone: from (30, 0.05, 2) to (28, 0.05, 0)
-[node name="PathToFarm" type="MeshInstance3D" parent="Environment/Paths"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 34, 0.05, 2)
-mesh = SubResource("path_to_farm_mesh")
-material_override = SubResource("path_mat")
+[node name="Col" type="CollisionShape3D" parent="Environment/Terrain/TownPlatform"]
+shape = SubResource("town_col")
 
-; Town Square north to Harbor Heights ramp base
-[node name="PathToHarbor" type="MeshInstance3D" parent="Environment/Paths"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0.05, 22)
-mesh = SubResource("path_to_harbor_mesh")
-material_override = SubResource("path_mat")
+; --- Southern hills (y=5) ---
+[node name="SouthernHills" type="StaticBody3D" parent="Environment/Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 4.75, -25)
 
-; --- Path meshes (inline sub-resources via mesh overrides) ---
+[node name="Mesh" type="MeshInstance3D" parent="Environment/Terrain/SouthernHills"]
+mesh = SubResource("south_hills_mesh")
+material_override = SubResource("south_hills_mat")
 
-; --- Harbor Heights elevated platform (StaticBody3D at y=4) ---
-[node name="HarborPlatform" type="StaticBody3D" parent="Environment"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 3.85, 42)
+[node name="Col" type="CollisionShape3D" parent="Environment/Terrain/SouthernHills"]
+shape = SubResource("south_hills_col")
 
-[node name="PlatformCollision" type="CollisionShape3D" parent="Environment/HarborPlatform"]
-shape = SubResource("zone_harbor_col_shape")
+; --- Rocky outcrop east (y=6, impassable wall) ---
+[node name="RockyOutcrop" type="StaticBody3D" parent="Environment/Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 65, 2, 0)
 
-; --- Harbor Heights walkable ramp (y=0 to y=4, z=20 to z=23) ---
-; Ramp center at (4, 2, 28), rotated around X to slope from y=0 at z=14 to y=4 at z=42
-; angle = atan(4/28) ≈ 8.13 deg, cos=0.99, sin=0.142
-[node name="HarborRamp" type="StaticBody3D" parent="Environment"]
-transform = Transform3D(1, 0, 0, 0, 0.99, 0.142, 0, -0.142, 0.99, 4, 2, 28)
+[node name="Mesh" type="MeshInstance3D" parent="Environment/Terrain/RockyOutcrop"]
+mesh = SubResource("rocky_mesh")
+material_override = SubResource("rocky_mat")
 
-[node name="RampMesh" type="MeshInstance3D" parent="Environment/HarborRamp"]
-mesh = SubResource("ramp_mesh")
+[node name="Col" type="CollisionShape3D" parent="Environment/Terrain/RockyOutcrop"]
+shape = SubResource("rocky_col")
+
+; --- Harbor Heights (y=7) ---
+[node name="HarborHeightsTier" type="StaticBody3D" parent="Environment/Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30, 6.75, 50)
+
+[node name="Mesh" type="MeshInstance3D" parent="Environment/Terrain/HarborHeightsTier"]
+mesh = SubResource("harbor_heights_mesh")
+material_override = SubResource("harbor_heights_mat")
+
+[node name="Col" type="CollisionShape3D" parent="Environment/Terrain/HarborHeightsTier"]
+shape = SubResource("harbor_heights_col")
+
+; --- Redwood forest (y=8) ---
+[node name="RedwoodForest" type="StaticBody3D" parent="Environment/Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30, 7.75, 90)
+
+[node name="Mesh" type="MeshInstance3D" parent="Environment/Terrain/RedwoodForest"]
+mesh = SubResource("redwood_mesh")
+material_override = SubResource("redwood_mat")
+
+[node name="Col" type="CollisionShape3D" parent="Environment/Terrain/RedwoodForest"]
+shape = SubResource("redwood_col")
+
+; ==================== RAMPS ====================
+[node name="Ramps" type="Node3D" parent="Environment"]
+
+; Beach→Wharf (1→2m, L=22m) — angle ≈ atan(1/22) ≈ 2.6deg
+[node name="RampBeachWharf" type="StaticBody3D" parent="Environment/Ramps"]
+transform = Transform3D(1, 0, 0, 0, 0.998, 0.045, 0, -0.045, 0.998, -70, 1.3, -30)
+
+[node name="Mesh" type="MeshInstance3D" parent="Environment/Ramps/RampBeachWharf"]
+mesh = SubResource("ramp_beach_wharf_mesh")
 material_override = SubResource("ramp_mat")
 
-[node name="RampCollision" type="CollisionShape3D" parent="Environment/HarborRamp"]
-shape = SubResource("ramp_col_shape")
+[node name="Col" type="CollisionShape3D" parent="Environment/Ramps/RampBeachWharf"]
+shape = SubResource("ramp_beach_wharf_col")
 
-; --- Containment walls (invisible) ---
-[node name="Containment" type="Node3D" parent="Environment"]
+; Wharf→Town (2→4m, L=30m) — angle ≈ atan(2/30) ≈ 3.8deg
+[node name="RampWharfTown" type="StaticBody3D" parent="Environment/Ramps"]
+transform = Transform3D(1, 0, 0, 0, 0.998, 0.067, 0, -0.067, 0.998, -45, 2.9, -10)
 
-[node name="WallNorth" type="StaticBody3D" parent="Environment/Containment"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, 65)
+[node name="Mesh" type="MeshInstance3D" parent="Environment/Ramps/RampWharfTown"]
+mesh = SubResource("ramp_wharf_town_mesh")
+material_override = SubResource("ramp_mat")
 
-[node name="WallNorthCol" type="CollisionShape3D" parent="Environment/Containment/WallNorth"]
-shape = SubResource("wall_ns_shape")
+[node name="Col" type="CollisionShape3D" parent="Environment/Ramps/RampWharfTown"]
+shape = SubResource("ramp_wharf_town_col")
 
-[node name="WallSouth" type="StaticBody3D" parent="Environment/Containment"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, -90)
+; Town→Harbor Heights (4→7m, L=45m, winding switchback) — angle ≈ atan(3/45) ≈ 3.8deg
+[node name="RampTownHarbor" type="StaticBody3D" parent="Environment/Ramps"]
+transform = Transform3D(1, 0, 0, 0, 0.998, -0.067, 0, 0.067, 0.998, 5, 5.5, 30)
 
-[node name="WallSouthCol" type="CollisionShape3D" parent="Environment/Containment/WallSouth"]
-shape = SubResource("wall_ns_shape")
+[node name="Mesh" type="MeshInstance3D" parent="Environment/Ramps/RampTownHarbor"]
+mesh = SubResource("ramp_town_harbor_mesh")
+material_override = SubResource("ramp_mat")
 
-[node name="WallWest" type="StaticBody3D" parent="Environment/Containment"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -50, 5, 0)
+[node name="Col" type="CollisionShape3D" parent="Environment/Ramps/RampTownHarbor"]
+shape = SubResource("ramp_town_harbor_col")
 
-[node name="WallWestCol" type="CollisionShape3D" parent="Environment/Containment/WallWest"]
-shape = SubResource("wall_ew_shape")
+; Town→Farm (4→3m, L=28m) — angle ≈ atan(1/28) ≈ 2deg, downhill
+[node name="RampTownFarm" type="StaticBody3D" parent="Environment/Ramps"]
+transform = Transform3D(1, 0, 0, 0, 0.999, -0.036, 0, 0.036, 0.999, -20, 3.5, 12)
 
-[node name="WallEast" type="StaticBody3D" parent="Environment/Containment"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 60, 5, 0)
+[node name="Mesh" type="MeshInstance3D" parent="Environment/Ramps/RampTownFarm"]
+mesh = SubResource("ramp_town_farm_mesh")
+material_override = SubResource("ramp_mat")
 
-[node name="WallEastCol" type="CollisionShape3D" parent="Environment/Containment/WallEast"]
-shape = SubResource("wall_ew_shape")
+[node name="Col" type="CollisionShape3D" parent="Environment/Ramps/RampTownFarm"]
+shape = SubResource("ramp_town_farm_col")
+
+; Harbor Heights→Redwoods (7→8m, L=30m) — angle ≈ atan(1/30) ≈ 1.9deg
+[node name="RampHarborRedwood" type="StaticBody3D" parent="Environment/Ramps"]
+transform = Transform3D(1, 0, 0, 0, 0.999, -0.033, 0, 0.033, 0.999, 30, 7.5, 75)
+
+[node name="Mesh" type="MeshInstance3D" parent="Environment/Ramps/RampHarborRedwood"]
+mesh = SubResource("ramp_harbor_redwood_mesh")
+material_override = SubResource("ramp_mat")
+
+[node name="Col" type="CollisionShape3D" parent="Environment/Ramps/RampHarborRedwood"]
+shape = SubResource("ramp_harbor_redwood_col")
+
+; Harbor Heights→Southern Hills (7→5m, L=32m) — angle ≈ atan(2/32) ≈ 3.6deg, downhill
+[node name="RampHarborSouth" type="StaticBody3D" parent="Environment/Ramps"]
+transform = Transform3D(1, 0, 0, 0, 0.998, 0.063, 0, -0.063, 0.998, 10, 6.0, 20)
+
+[node name="Mesh" type="MeshInstance3D" parent="Environment/Ramps/RampHarborSouth"]
+mesh = SubResource("ramp_harbor_south_mesh")
+material_override = SubResource("ramp_mat")
+
+[node name="Col" type="CollisionShape3D" parent="Environment/Ramps/RampHarborSouth"]
+shape = SubResource("ramp_harbor_south_col")
+
+; ==================== NATURAL BOUNDARIES (Phase 2) ====================
+[node name="Boundaries" type="Node3D" parent="Environment"]
+
+; West cliff wall (ocean side)
+[node name="CliffWest" type="StaticBody3D" parent="Environment/Boundaries"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -125, 2, 0)
+
+[node name="Mesh" type="MeshInstance3D" parent="Environment/Boundaries/CliffWest"]
+mesh = SubResource("cliff_west_mesh")
+material_override = SubResource("cliff_mat")
+
+[node name="Col" type="CollisionShape3D" parent="Environment/Boundaries/CliffWest"]
+shape = SubResource("cliff_west_col")
+
+; North shoreline wall (bay)
+[node name="CliffNorth" type="StaticBody3D" parent="Environment/Boundaries"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 115)
+
+[node name="Mesh" type="MeshInstance3D" parent="Environment/Boundaries/CliffNorth"]
+mesh = SubResource("cliff_north_mesh")
+material_override = SubResource("cliff_mat")
+
+[node name="Col" type="CollisionShape3D" parent="Environment/Boundaries/CliffNorth"]
+shape = SubResource("cliff_north_col")
+
+; South dense forest wall
+[node name="ForestSouth" type="StaticBody3D" parent="Environment/Boundaries"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, -60)
+
+[node name="Mesh" type="MeshInstance3D" parent="Environment/Boundaries/ForestSouth"]
+mesh = SubResource("cliff_south_mesh")
+material_override = SubResource("south_hills_mat")
+
+[node name="Col" type="CollisionShape3D" parent="Environment/Boundaries/ForestSouth"]
+shape = SubResource("cliff_south_col")
+
+; East boundary is Rocky Outcrop (already placed in Terrain)
 
 ; ==================== PLAYERS ====================
 [node name="Players" type="Node3D" parent="."]
@@ -408,17 +617,12 @@ spawn_path = NodePath("..")
 ; ==================== ZONES ====================
 [node name="Zones" type="Node3D" parent="."]
 
-; === RESTAURANT ZONE (hub area around spawn) ===
+; === RESTAURANT ZONE (near spawn in Town Square area) ===
 [node name="RestaurantZone" type="Node3D" parent="Zones"]
 
-[node name="Building" type="StaticBody3D" parent="Zones/RestaurantZone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, -2)
-
-[node name="BuildingCollision" type="CollisionShape3D" parent="Zones/RestaurantZone/Building"]
-shape = SubResource("building_shape")
-
+; Kitchen (near Salty Ladle, Harbor Heights)
 [node name="CraftingTable" type="StaticBody3D" parent="Zones/RestaurantZone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0.5, 1)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 38, 7, 57)
 
 [node name="InteractArea" type="Area3D" parent="Zones/RestaurantZone/CraftingTable"]
 script = ExtResource("12")
@@ -434,9 +638,9 @@ font_size = 48
 outline_size = 8
 modulate = Color(1, 0.8, 0.3, 1)
 
-; === PANTRY (creature storage station) ===
+; Pantry (creature storage, near restaurant)
 [node name="Pantry" type="StaticBody3D" parent="Zones/RestaurantZone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0.9, -1)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 36, 7, 56)
 
 [node name="InteractArea" type="Area3D" parent="Zones/RestaurantZone/Pantry"]
 script = ExtResource("14")
@@ -451,27 +655,13 @@ font_size = 48
 outline_size = 8
 modulate = Color(0.5, 0.7, 0.9, 1)
 
+; Spawn point (Town Square)
 [node name="SpawnPoint" type="Marker3D" parent="Zones/RestaurantZone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -32.5, 4, 13.75)
 
-; === FARM ZONE (25, 0, 0) ===
-[node name="FarmZone" type="Node3D" parent="Zones"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25, 0, 0)
-
-[node name="FarmManager" type="Node3D" parent="Zones/FarmZone"]
-script = ExtResource("6")
-
-[node name="WaterSource" type="StaticBody3D" parent="Zones/FarmZone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0.4, 6)
-
-[node name="WaterArea" type="Area3D" parent="Zones/FarmZone/WaterSource" groups=["water_source"]]
-
-[node name="WaterShape" type="CollisionShape3D" parent="Zones/FarmZone/WaterSource/WaterArea"]
-shape = SubResource("water_interact_shape")
-
-; === WORKBENCH (near spawn) ===
+; Workbench (near spawn)
 [node name="Workbench" type="StaticBody3D" parent="Zones/RestaurantZone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0.6, 5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30, 4, 14)
 
 [node name="InteractArea" type="Area3D" parent="Zones/RestaurantZone/Workbench"]
 script = ExtResource("12")
@@ -487,11 +677,27 @@ font_size = 48
 outline_size = 8
 modulate = Color(0.8, 0.5, 0.2, 1)
 
-; === WILD ZONE ===
+; === FARM ZONE ===
+[node name="FarmZone" type="Node3D" parent="Zones"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12.5, 3, 16.25)
+
+[node name="FarmManager" type="Node3D" parent="Zones/FarmZone"]
+script = ExtResource("6")
+
+[node name="WaterSource" type="StaticBody3D" parent="Zones/FarmZone"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0.4, 6)
+
+[node name="WaterArea" type="Area3D" parent="Zones/FarmZone/WaterSource" groups=["water_source"]]
+
+[node name="WaterShape" type="CollisionShape3D" parent="Zones/FarmZone/WaterSource/WaterArea"]
+shape = SubResource("table_interact_shape")
+
+; === WILD ZONE (encounter zones scattered across map) ===
 [node name="WildZone" type="Node3D" parent="Zones"]
 
+; Encounter zones at new SVG biome positions
 [node name="HerbGarden" type="Area3D" parent="Zones/WildZone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0, -15)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 4, -8)
 script = ExtResource("7")
 encounter_table_id = "herb_garden"
 grass_color = Color(0.2, 0.6, 0.2, 0.7)
@@ -500,7 +706,7 @@ grass_color = Color(0.2, 0.6, 0.2, 0.7)
 shape = SubResource("grass_area_shape")
 
 [node name="FlameKitchen" type="Area3D" parent="Zones/WildZone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0, -15)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -50, 2, -20)
 script = ExtResource("7")
 encounter_table_id = "flame_kitchen"
 grass_color = Color(0.6, 0.3, 0.2, 0.7)
@@ -509,7 +715,7 @@ grass_color = Color(0.6, 0.3, 0.2, 0.7)
 shape = SubResource("grass_area_shape")
 
 [node name="FrostPantry" type="Area3D" parent="Zones/WildZone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18, 0, -35)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -35, 5, -30)
 script = ExtResource("7")
 encounter_table_id = "frost_pantry"
 grass_color = Color(0.3, 0.4, 0.7, 0.7)
@@ -518,7 +724,7 @@ grass_color = Color(0.3, 0.4, 0.7, 0.7)
 shape = SubResource("grass_area_shape")
 
 [node name="HarvestField" type="Area3D" parent="Zones/WildZone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 0, -35)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 3, 25)
 script = ExtResource("7")
 encounter_table_id = "harvest_field"
 grass_color = Color(0.6, 0.55, 0.2, 0.7)
@@ -527,7 +733,7 @@ grass_color = Color(0.6, 0.55, 0.2, 0.7)
 shape = SubResource("grass_area_shape")
 
 [node name="SourSprings" type="Area3D" parent="Zones/WildZone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 0, -48)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 45, 7, 40)
 script = ExtResource("7")
 encounter_table_id = "sour_springs"
 grass_color = Color(0.7, 0.8, 0.2, 0.7)
@@ -536,7 +742,7 @@ grass_color = Color(0.7, 0.8, 0.2, 0.7)
 shape = SubResource("grass_area_shape")
 
 [node name="FusionKitchen" type="Area3D" parent="Zones/WildZone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18, 0, -48)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -25, 5, -35)
 script = ExtResource("7")
 encounter_table_id = "fusion_kitchen"
 grass_color = Color(0.6, 0.3, 0.6, 0.7)
@@ -545,7 +751,7 @@ grass_color = Color(0.6, 0.3, 0.6, 0.7)
 shape = SubResource("grass_area_shape")
 
 [node name="FermentedHollow" type="Area3D" parent="Zones/WildZone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -25, 0, -20)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -70, 2, -15)
 script = ExtResource("7")
 encounter_table_id = "fermented_hollow"
 grass_color = Color(0.4, 0.35, 0.2, 0.7)
@@ -554,7 +760,7 @@ grass_color = Color(0.4, 0.35, 0.2, 0.7)
 shape = SubResource("grass_area_shape")
 
 [node name="BlackenedCrest" type="Area3D" parent="Zones/WildZone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25, 3, -20)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 50, 8, 30)
 script = ExtResource("7")
 encounter_table_id = "blackened_crest"
 grass_color = Color(0.5, 0.2, 0.15, 0.7)
@@ -563,7 +769,7 @@ grass_color = Color(0.5, 0.2, 0.15, 0.7)
 shape = SubResource("grass_area_shape")
 
 [node name="BatteredBay" type="Area3D" parent="Zones/WildZone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 0, -30)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -90, 1, -30)
 script = ExtResource("7")
 encounter_table_id = "battered_bay"
 grass_color = Color(0.3, 0.5, 0.7, 0.7)
@@ -572,7 +778,7 @@ grass_color = Color(0.3, 0.5, 0.7, 0.7)
 shape = SubResource("grass_area_shape")
 
 [node name="SaltedShipwreck" type="Area3D" parent="Zones/WildZone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 0, -30)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -80, 1, -40)
 script = ExtResource("7")
 encounter_table_id = "salted_shipwreck"
 grass_color = Color(0.5, 0.55, 0.45, 0.7)
@@ -580,9 +786,9 @@ grass_color = Color(0.5, 0.55, 0.45, 0.7)
 [node name="GrassShape" type="CollisionShape3D" parent="Zones/WildZone/SaltedShipwreck"]
 shape = SubResource("grass_area_shape")
 
-; === CAULDRON (0, 0, -55) ===
+; === CAULDRON (wilderness area) ===
 [node name="Cauldron" type="StaticBody3D" parent="Zones/WildZone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, -55)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 5, -20)
 
 [node name="InteractArea" type="Area3D" parent="Zones/WildZone/Cauldron"]
 script = ExtResource("12")
@@ -598,11 +804,11 @@ font_size = 48
 outline_size = 8
 modulate = Color(0.6, 0.3, 0.8, 1)
 
-; === RECIPE PICKUPS ===
+; === RECIPE PICKUPS (near associated encounter zones) ===
 [node name="RecipePickups" type="Node3D" parent="Zones/WildZone"]
 
 [node name="PickupHerbGarden" type="Area3D" parent="Zones/WildZone/RecipePickups"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0, -15)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18, 4, -10)
 script = ExtResource("13")
 scroll_id = "scroll_basil_sprite"
 pickup_id = "pickup_herb_garden_1"
@@ -611,7 +817,7 @@ pickup_id = "pickup_herb_garden_1"
 shape = SubResource("pickup_shape")
 
 [node name="PickupFrostPantry" type="Area3D" parent="Zones/WildZone/RecipePickups"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 0, -35)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -38, 5, -32)
 script = ExtResource("13")
 scroll_id = "scroll_frost_berry"
 pickup_id = "pickup_frost_pantry_1"
@@ -620,7 +826,7 @@ pickup_id = "pickup_frost_pantry_1"
 shape = SubResource("pickup_shape")
 
 [node name="PickupSourSprings" type="Area3D" parent="Zones/WildZone/RecipePickups"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22, 0, -48)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 48, 7, 42)
 script = ExtResource("13")
 scroll_id = "scroll_lemon_imp"
 pickup_id = "pickup_sour_springs_1"
@@ -629,7 +835,7 @@ pickup_id = "pickup_sour_springs_1"
 shape = SubResource("pickup_shape")
 
 [node name="PickupFusionKitchen" type="Area3D" parent="Zones/WildZone/RecipePickups"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 0, -48)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -28, 5, -37)
 script = ExtResource("13")
 scroll_id = "scroll_pickle_toad"
 pickup_id = "pickup_fusion_kitchen_1"
@@ -637,189 +843,192 @@ pickup_id = "pickup_fusion_kitchen_1"
 [node name="PickupShape" type="CollisionShape3D" parent="Zones/WildZone/RecipePickups/PickupFusionKitchen"]
 shape = SubResource("pickup_shape")
 
-; === HARVESTABLES (pre-placed, visuals built by _build_visuals()) ===
+; === HARVESTABLES (redistributed across new terrain) ===
 [node name="Harvestables" type="Node3D" parent="Zones/WildZone"]
 
-[node name="Tree_n8_n12" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, -12)
+; Trees near forests
+[node name="Tree_1" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 5, -15)
 harvestable_type = "tree"
 required_tool = "axe"
 max_health = 3
 respawn_time = 120.0
 drops = [{"item_id": "wood", "min": 1, "max": 3, "weight": 1.0}, {"item_id": "herb_basil", "min": 1, "max": 1, "weight": 0.2}]
 
-[node name="Tree_8_n12" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, -12)
+[node name="Tree_2" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30, 5, -25)
 harvestable_type = "tree"
 required_tool = "axe"
 max_health = 3
 respawn_time = 120.0
 drops = [{"item_id": "wood", "min": 1, "max": 3, "weight": 1.0}, {"item_id": "herb_basil", "min": 1, "max": 1, "weight": 0.2}]
 
-[node name="Tree_n14_n32" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 0, -32)
+[node name="Tree_3" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 40, 7, 60)
 harvestable_type = "tree"
 required_tool = "axe"
 max_health = 3
 respawn_time = 120.0
 drops = [{"item_id": "wood", "min": 1, "max": 3, "weight": 1.0}, {"item_id": "herb_basil", "min": 1, "max": 1, "weight": 0.2}]
 
-[node name="Tree_14_n32" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 0, -32)
+[node name="Tree_4" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25, 8, 80)
 harvestable_type = "tree"
 required_tool = "axe"
 max_health = 3
 respawn_time = 120.0
 drops = [{"item_id": "wood", "min": 1, "max": 3, "weight": 1.0}, {"item_id": "herb_basil", "min": 1, "max": 1, "weight": 0.2}]
 
-[node name="Tree_n14_n45" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 0, -45)
+[node name="Tree_5" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 4, -5)
 harvestable_type = "tree"
 required_tool = "axe"
 max_health = 3
 respawn_time = 120.0
 drops = [{"item_id": "wood", "min": 1, "max": 3, "weight": 1.0}, {"item_id": "herb_basil", "min": 1, "max": 1, "weight": 0.2}]
 
-[node name="Tree_14_n45" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 0, -45)
+[node name="Tree_6" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 35, 8, 85)
 harvestable_type = "tree"
 required_tool = "axe"
 max_health = 3
 respawn_time = 120.0
 drops = [{"item_id": "wood", "min": 1, "max": 3, "weight": 1.0}, {"item_id": "herb_basil", "min": 1, "max": 1, "weight": 0.2}]
 
-[node name="Rock_n16_n18" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0, -18)
+; Rocks near cliffs/volcanic
+[node name="Rock_1" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 50, 8, 25)
 harvestable_type = "rock"
 required_tool = "axe"
 max_health = 4
 respawn_time = 150.0
 drops = [{"item_id": "stone", "min": 1, "max": 2, "weight": 1.0}, {"item_id": "chili_powder", "min": 1, "max": 1, "weight": 0.1}]
 
-[node name="Rock_16_n18" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0, -18)
+[node name="Rock_2" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 55, 7, 35)
 harvestable_type = "rock"
 required_tool = "axe"
 max_health = 4
 respawn_time = 150.0
 drops = [{"item_id": "stone", "min": 1, "max": 2, "weight": 1.0}, {"item_id": "chili_powder", "min": 1, "max": 1, "weight": 0.1}]
 
-[node name="Rock_n12_n50" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0, -50)
+[node name="Rock_3" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -25, 5, -28)
 harvestable_type = "rock"
 required_tool = "axe"
 max_health = 4
 respawn_time = 150.0
 drops = [{"item_id": "stone", "min": 1, "max": 2, "weight": 1.0}, {"item_id": "chili_powder", "min": 1, "max": 1, "weight": 0.1}]
 
-[node name="Rock_12_n50" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0, -50)
+[node name="Rock_4" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 45, 7, 55)
 harvestable_type = "rock"
 required_tool = "axe"
 max_health = 4
 respawn_time = 150.0
 drops = [{"item_id": "stone", "min": 1, "max": 2, "weight": 1.0}, {"item_id": "chili_powder", "min": 1, "max": 1, "weight": 0.1}]
 
-[node name="Bush_n10_n14" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0, -14)
+; Bushes near meadows
+[node name="Bush_1" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 3, 20)
 harvestable_type = "bush"
 required_tool = ""
 max_health = 1
 respawn_time = 90.0
 drops = [{"item_id": "berry", "min": 1, "max": 2, "weight": 1.0}]
 
-[node name="Bush_10_n14" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0, -14)
+[node name="Bush_2" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18, 4, -3)
 harvestable_type = "bush"
 required_tool = ""
 max_health = 1
 respawn_time = 90.0
 drops = [{"item_id": "berry", "min": 1, "max": 2, "weight": 1.0}]
 
-[node name="Bush_n16_n38" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0, -38)
+[node name="Bush_3" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30, 7, 45)
 harvestable_type = "bush"
 required_tool = ""
 max_health = 1
 respawn_time = 90.0
 drops = [{"item_id": "berry", "min": 1, "max": 2, "weight": 1.0}]
 
-[node name="Bush_16_n38" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0, -38)
+[node name="Bush_4" parent="Zones/WildZone/Harvestables" instance=ExtResource("31")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -60, 2, -18)
 harvestable_type = "bush"
 required_tool = ""
 max_health = 1
 respawn_time = 90.0
 drops = [{"item_id": "berry", "min": 1, "max": 2, "weight": 1.0}]
 
-; === DIG SPOTS ===
+; === DIG SPOTS (redistributed) ===
 [node name="DigSpots" type="Node3D" parent="Zones/WildZone"]
 
 [node name="DigSpot_herb_1" type="Area3D" parent="Zones/WildZone/DigSpots"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 0, -13)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -17, 4, -7)
 script = ExtResource("32")
 spot_id = "herb_1"
 loot_table = [{"item_id": "broth", "weight": 0.6, "min": 1, "max": 1}, {"item_id": "herb_basil", "weight": 0.4, "min": 1, "max": 2}]
 
 [node name="DigSpot_herb_2" type="Area3D" parent="Zones/WildZone/DigSpots"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0, -17)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 4, -10)
 script = ExtResource("32")
 spot_id = "herb_2"
 loot_table = [{"item_id": "broth", "weight": 0.5, "min": 1, "max": 1}, {"item_id": "herb_basil", "weight": 0.5, "min": 1, "max": 2}]
 
 [node name="DigSpot_flame_1" type="Area3D" parent="Zones/WildZone/DigSpots"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 0, -13)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -52, 2, -18)
 script = ExtResource("32")
 spot_id = "flame_1"
 loot_table = [{"item_id": "chili_powder", "weight": 0.5, "min": 1, "max": 1}, {"item_id": "chili_pepper", "weight": 0.5, "min": 1, "max": 2}]
 
 [node name="DigSpot_flame_2" type="Area3D" parent="Zones/WildZone/DigSpots"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0, -17)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -48, 2, -22)
 script = ExtResource("32")
 spot_id = "flame_2"
 loot_table = [{"item_id": "chili_powder", "weight": 0.6, "min": 1, "max": 1}, {"item_id": "chili_pepper", "weight": 0.4, "min": 1, "max": 1}]
 
 [node name="DigSpot_frost_1" type="Area3D" parent="Zones/WildZone/DigSpots"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 0, -33)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -37, 5, -28)
 script = ExtResource("32")
 spot_id = "frost_1"
 loot_table = [{"item_id": "mint", "weight": 0.6, "min": 1, "max": 2}]
 
 [node name="DigSpot_frost_2" type="Area3D" parent="Zones/WildZone/DigSpots"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0, -37)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -33, 5, -32)
 script = ExtResource("32")
 spot_id = "frost_2"
 loot_table = [{"item_id": "mint", "weight": 0.5, "min": 1, "max": 1}]
 
 [node name="DigSpot_harvest_1" type="Area3D" parent="Zones/WildZone/DigSpots"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 0, -33)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 3, 27)
 script = ExtResource("32")
 spot_id = "harvest_1"
 loot_table = [{"item_id": "wheat", "weight": 0.6, "min": 1, "max": 2}, {"item_id": "flour", "weight": 0.3, "min": 1, "max": 1}]
 
 [node name="DigSpot_harvest_2" type="Area3D" parent="Zones/WildZone/DigSpots"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0, -37)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7, 3, 23)
 script = ExtResource("32")
 spot_id = "harvest_2"
 loot_table = [{"item_id": "wheat", "weight": 0.5, "min": 1, "max": 2}, {"item_id": "flour", "weight": 0.4, "min": 1, "max": 1}]
 
 [node name="DigSpot_sour_1" type="Area3D" parent="Zones/WildZone/DigSpots"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 0, -46)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 47, 7, 38)
 script = ExtResource("32")
 spot_id = "sour_1"
 loot_table = [{"item_id": "mushroom", "weight": 0.5, "min": 1, "max": 2}]
 
 [node name="DigSpot_fusion_1" type="Area3D" parent="Zones/WildZone/DigSpots"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 0, -46)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -27, 5, -33)
 script = ExtResource("32")
 spot_id = "fusion_1"
 loot_table = [{"item_id": "sugar", "weight": 0.4, "min": 1, "max": 1}, {"item_id": "soy_sauce", "weight": 0.3, "min": 1, "max": 1}]
 
-; === FISHING SPOTS ===
+; === FISHING SPOTS (expanded 3 → 8) ===
 [node name="FishingSpots" type="Node3D" parent="Zones"]
 
 [node name="FishingSpot_pond" type="Node3D" parent="Zones/FishingSpots" groups=["fishing_spot"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 0, -6)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 3, 30)
 metadata/fishing_table_id = "pond"
 
 [node name="WaterDisc" type="MeshInstance3D" parent="Zones/FishingSpots/FishingSpot_pond"]
@@ -829,7 +1038,7 @@ material_override = SubResource("fishing_water_mat")
 
 [node name="SpotLabel" type="Label3D" parent="Zones/FishingSpots/FishingSpot_pond"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
-text = "Cove Pond - Fishing Spot"
+text = "Farm Pond - Fishing Spot"
 font_size = 28
 outline_size = 6
 modulate = Color(0.6, 0.75, 0.9, 1)
@@ -844,7 +1053,7 @@ modulate = Color(0.8, 0.8, 0.8, 0.8)
 billboard = 1
 
 [node name="FishingSpot_river" type="Node3D" parent="Zones/FishingSpots" groups=["fishing_spot"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -24, 0, -10)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -55, 2, -32)
 metadata/fishing_table_id = "river"
 
 [node name="WaterDisc" type="MeshInstance3D" parent="Zones/FishingSpots/FishingSpot_river"]
@@ -869,7 +1078,7 @@ modulate = Color(0.8, 0.8, 0.8, 0.8)
 billboard = 1
 
 [node name="FishingSpot_ocean" type="Node3D" parent="Zones/FishingSpots" groups=["fishing_spot"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -32, 0, -2)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -95, 1, -35)
 metadata/fishing_table_id = "ocean"
 
 [node name="WaterDisc" type="MeshInstance3D" parent="Zones/FishingSpots/FishingSpot_ocean"]
@@ -893,12 +1102,138 @@ outline_size = 4
 modulate = Color(0.8, 0.8, 0.8, 0.8)
 billboard = 1
 
-; === PORTAL VISUALS (static archways — interaction Area3D still spawned at runtime) ===
+; New fishing spots (F4-F8)
+[node name="FishingSpot_bay" type="Node3D" parent="Zones/FishingSpots" groups=["fishing_spot"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -75, 1, -28)
+metadata/fishing_table_id = "bay"
+
+[node name="WaterDisc" type="MeshInstance3D" parent="Zones/FishingSpots/FishingSpot_bay"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
+mesh = SubResource("fishing_disc_mesh")
+material_override = SubResource("fishing_water_mat")
+
+[node name="SpotLabel" type="Label3D" parent="Zones/FishingSpots/FishingSpot_bay"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+text = "Sheltered Bay - Fishing Spot"
+font_size = 28
+outline_size = 6
+modulate = Color(0.6, 0.75, 0.9, 1)
+billboard = 1
+
+[node name="HintLabel" type="Label3D" parent="Zones/FishingSpots/FishingSpot_bay"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.0, 0)
+text = "Equip Rod + Press E"
+font_size = 20
+outline_size = 4
+modulate = Color(0.8, 0.8, 0.8, 0.8)
+billboard = 1
+
+[node name="FishingSpot_tidepools" type="Node3D" parent="Zones/FishingSpots" groups=["fishing_spot"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -100, 1, -42)
+metadata/fishing_table_id = "tidepools"
+
+[node name="WaterDisc" type="MeshInstance3D" parent="Zones/FishingSpots/FishingSpot_tidepools"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
+mesh = SubResource("fishing_disc_mesh")
+material_override = SubResource("fishing_water_mat")
+
+[node name="SpotLabel" type="Label3D" parent="Zones/FishingSpots/FishingSpot_tidepools"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+text = "Tide Pools - Fishing Spot"
+font_size = 28
+outline_size = 6
+modulate = Color(0.6, 0.75, 0.9, 1)
+billboard = 1
+
+[node name="HintLabel" type="Label3D" parent="Zones/FishingSpots/FishingSpot_tidepools"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.0, 0)
+text = "Equip Rod + Press E"
+font_size = 20
+outline_size = 4
+modulate = Color(0.8, 0.8, 0.8, 0.8)
+billboard = 1
+
+[node name="FishingSpot_lighthouse" type="Node3D" parent="Zones/FishingSpots" groups=["fishing_spot"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -108, 1, -48)
+metadata/fishing_table_id = "lighthouse"
+
+[node name="WaterDisc" type="MeshInstance3D" parent="Zones/FishingSpots/FishingSpot_lighthouse"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
+mesh = SubResource("fishing_disc_mesh")
+material_override = SubResource("fishing_water_mat")
+
+[node name="SpotLabel" type="Label3D" parent="Zones/FishingSpots/FishingSpot_lighthouse"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+text = "Lighthouse Point - Fishing Spot"
+font_size = 28
+outline_size = 6
+modulate = Color(0.6, 0.75, 0.9, 1)
+billboard = 1
+
+[node name="HintLabel" type="Label3D" parent="Zones/FishingSpots/FishingSpot_lighthouse"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.0, 0)
+text = "Equip Rod + Press E"
+font_size = 20
+outline_size = 4
+modulate = Color(0.8, 0.8, 0.8, 0.8)
+billboard = 1
+
+[node name="FishingSpot_harbor" type="Node3D" parent="Zones/FishingSpots" groups=["fishing_spot"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 7, 65)
+metadata/fishing_table_id = "harbor"
+
+[node name="WaterDisc" type="MeshInstance3D" parent="Zones/FishingSpots/FishingSpot_harbor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
+mesh = SubResource("fishing_disc_mesh")
+material_override = SubResource("fishing_water_mat")
+
+[node name="SpotLabel" type="Label3D" parent="Zones/FishingSpots/FishingSpot_harbor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+text = "Harbor Pool - Fishing Spot"
+font_size = 28
+outline_size = 6
+modulate = Color(0.6, 0.75, 0.9, 1)
+billboard = 1
+
+[node name="HintLabel" type="Label3D" parent="Zones/FishingSpots/FishingSpot_harbor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.0, 0)
+text = "Equip Rod + Press E"
+font_size = 20
+outline_size = 4
+modulate = Color(0.8, 0.8, 0.8, 0.8)
+billboard = 1
+
+[node name="FishingSpot_beach" type="Node3D" parent="Zones/FishingSpots" groups=["fishing_spot"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -85, 1, -38)
+metadata/fishing_table_id = "beach"
+
+[node name="WaterDisc" type="MeshInstance3D" parent="Zones/FishingSpots/FishingSpot_beach"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
+mesh = SubResource("fishing_disc_mesh")
+material_override = SubResource("fishing_water_mat")
+
+[node name="SpotLabel" type="Label3D" parent="Zones/FishingSpots/FishingSpot_beach"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+text = "Sandy Beach - Fishing Spot"
+font_size = 28
+outline_size = 6
+modulate = Color(0.6, 0.75, 0.9, 1)
+billboard = 1
+
+[node name="HintLabel" type="Label3D" parent="Zones/FishingSpots/FishingSpot_beach"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.0, 0)
+text = "Equip Rod + Press E"
+font_size = 20
+outline_size = 4
+modulate = Color(0.8, 0.8, 0.8, 0.8)
+billboard = 1
+
+; === PORTAL VISUALS (at new positions, with pre-placed interaction Area3Ds) ===
 [node name="Portals" type="Node3D" parent="Zones/WildZone"]
 
 ; --- The Wilds portal ---
 [node name="Portal_default" type="Node3D" parent="Zones/WildZone/Portals"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, -25)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.25, 2, -30.5)
 
 [node name="PillarL" type="MeshInstance3D" parent="Zones/WildZone/Portals/Portal_default"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 2.5, 0)
@@ -944,7 +1279,7 @@ billboard = 1
 
 ; --- Coastal Wreckage portal ---
 [node name="Portal_coastal" type="Node3D" parent="Zones/WildZone/Portals"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -33, 0, -12)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -106.25, 1, -37.5)
 
 [node name="PillarL" type="MeshInstance3D" parent="Zones/WildZone/Portals/Portal_coastal"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 2.5, 0)
@@ -990,7 +1325,7 @@ billboard = 1
 
 ; --- Fungal Hollow portal ---
 [node name="Portal_fungal" type="Node3D" parent="Zones/WildZone/Portals"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, -68)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 4, -16.25)
 
 [node name="PillarL" type="MeshInstance3D" parent="Zones/WildZone/Portals/Portal_fungal"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 2.5, 0)
@@ -1036,7 +1371,7 @@ billboard = 1
 
 ; --- Volcanic Crest portal ---
 [node name="Portal_volcanic" type="Node3D" parent="Zones/WildZone/Portals"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 45, 0, -12)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 52.5, 8, 28.75)
 
 [node name="PillarL" type="MeshInstance3D" parent="Zones/WildZone/Portals/Portal_volcanic"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 2.5, 0)
@@ -1082,7 +1417,7 @@ billboard = 1
 
 ; --- Frozen Pantry portal ---
 [node name="Portal_frozen" type="Node3D" parent="Zones/WildZone/Portals"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 0, 38)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -36.25, 5, 100)
 
 [node name="PillarL" type="MeshInstance3D" parent="Zones/WildZone/Portals/Portal_frozen"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 2.5, 0)
@@ -1126,9 +1461,9 @@ outline_size = 6
 modulate = Color(0.8, 0.8, 0.8, 0.8)
 billboard = 1
 
-; === CALENDAR BOARD (pre-placed visuals, script creates interaction Area3D) ===
+; === CALENDAR BOARD (near Town Hall) ===
 [node name="CalendarBoard" type="Area3D" parent="Zones/RestaurantZone"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 1, 10)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30, 4, 2)
 script = ExtResource("33")
 
 [node name="BoardMesh" type="MeshInstance3D" parent="Zones/RestaurantZone/CalendarBoard"]
@@ -1149,161 +1484,188 @@ outline_size = 6
 modulate = Color(0.8, 0.6, 0.3, 1)
 billboard = 1
 
-; === TRAINER NPCs ===
+; === TRAINER NPCs (repositioned per plan) ===
 [node name="Trainers" type="Node3D" parent="Zones"]
 
 [node name="SousChefPepper" type="Area3D" parent="Zones/Trainers"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0, -10)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 4, 3.75)
 script = ExtResource("9")
 trainer_id = "sous_chef_pepper"
 
 [node name="FarmerGreen" type="Area3D" parent="Zones/Trainers"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0, -10)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 3, 22.5)
 script = ExtResource("9")
 trainer_id = "farmer_green"
 
 [node name="ChefUmami" type="Area3D" parent="Zones/Trainers"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -20)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 7, 40)
 script = ExtResource("9")
 trainer_id = "chef_umami"
 is_gatekeeper = true
 
 [node name="PastryChefDulce" type="Area3D" parent="Zones/Trainers"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18, 0, -28)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -23.25, 4, -5.5)
 script = ExtResource("9")
 trainer_id = "pastry_chef_dulce"
 
 [node name="BrinemasterVlad" type="Area3D" parent="Zones/Trainers"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 0, -28)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -55, 2, -26)
 script = ExtResource("9")
 trainer_id = "brinemaster_vlad"
 
 [node name="HeadChefRoux" type="Area3D" parent="Zones/Trainers"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -40)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -40.5, 4, 3.75)
 script = ExtResource("9")
 trainer_id = "head_chef_roux"
 is_gatekeeper = true
 
 [node name="GrandChefMichelin" type="Area3D" parent="Zones/Trainers"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -25, 0, -55)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -32.5, 4, -3)
 script = ExtResource("9")
 trainer_id = "grand_chef_michelin"
 
-; === SHOP NPCs ===
+; === SHOP NPCs (repositioned) ===
 [node name="Shops" type="Node3D" parent="Zones"]
 
 [node name="GeneralStore" type="Area3D" parent="Zones/Shops"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, 5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -35.5, 4, -6.25)
 script = ExtResource("17")
 shop_id = "general_store"
 
 [node name="BattleSupplies" type="Area3D" parent="Zones/Shops"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, -15)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -60, 2, -25)
 script = ExtResource("17")
 shop_id = "battle_supplies"
 
 [node name="RareGoods" type="Area3D" parent="Zones/Shops"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 0, -45)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 5, -20)
 script = ExtResource("17")
 shop_id = "rare_goods"
 
-; === SOCIAL NPCs ===
+; === SOCIAL NPCs (repositioned near associated buildings) ===
 [node name="SocialNPCs" type="Node3D" parent="Zones"]
 
 [node name="HubertCrumb" type="Area3D" parent="Zones/SocialNPCs"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 1, 8)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20.25, 4, 6)
 script = ExtResource("18")
 npc_id = "npc_hubert"
 
 [node name="OldSageMurphy" type="Area3D" parent="Zones/SocialNPCs"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 4, 35)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 17, 7, 44)
 script = ExtResource("18")
 npc_id = "npc_murphy"
 
 [node name="CaptainSalHaddock" type="Area3D" parent="Zones/SocialNPCs"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, -3)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -46.75, 2, -30)
 script = ExtResource("18")
 npc_id = "npc_captain_sal"
 
 [node name="PepperSantos" type="Area3D" parent="Zones/SocialNPCs"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 1, 6)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -40.25, 4, 6)
 script = ExtResource("18")
 npc_id = "npc_pepper"
 
 [node name="ProfessorQuill" type="Area3D" parent="Zones/SocialNPCs"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 2, 8)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -55, 4, 1)
 script = ExtResource("18")
 npc_id = "npc_quill"
 
 [node name="MayorRosemary" type="Area3D" parent="Zones/SocialNPCs"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 1, 10)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -32.5, 4, 2)
 script = ExtResource("18")
 npc_id = "npc_mayor"
 
 [node name="InnkeeperMabel" type="Area3D" parent="Zones/SocialNPCs"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0, -5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -71, 2, -20)
 script = ExtResource("18")
 npc_id = "npc_innkeeper"
 
 [node name="ClayBrennan" type="Area3D" parent="Zones/SocialNPCs"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 1, 8)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -23.25, 4, -3)
 script = ExtResource("18")
 npc_id = "npc_potter"
 
 [node name="ScarletWinters" type="Area3D" parent="Zones/SocialNPCs"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 2, 5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -55, 4, -1)
 script = ExtResource("18")
 npc_id = "npc_tailor"
 
 [node name="IrisGreenthumb" type="Area3D" parent="Zones/SocialNPCs"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 2, 10)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -51, 4, 4.5)
 script = ExtResource("18")
 npc_id = "npc_gardener"
 
 [node name="DrHoney" type="Area3D" parent="Zones/SocialNPCs"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22, 2, 3)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -60, 4, 2.5)
 script = ExtResource("18")
 npc_id = "npc_doctor"
 
 [node name="HazelMapleton" type="Area3D" parent="Zones/SocialNPCs"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 1, 5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -35.5, 4, -4)
 script = ExtResource("18")
 npc_id = "npc_general_store"
 
 [node name="ClementineSmith" type="Area3D" parent="Zones/SocialNPCs"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 1, 4)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30, 4, 8)
 script = ExtResource("18")
 npc_id = "npc_clementine"
 
 [node name="RiverSong" type="Area3D" parent="Zones/SocialNPCs"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0, -8)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -60, 2, -28)
 script = ExtResource("18")
 npc_id = "npc_river"
 
 [node name="AlexHartwell" type="Area3D" parent="Zones/SocialNPCs"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 6)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -32.5, 4, 5)
 script = ExtResource("18")
 npc_id = "npc_alex"
 
-; === RESTAURANT ROW (south of spawn, z=5) ===
-[node name="RestaurantRow" type="Node3D" parent="Zones"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
+; === MY RESTAURANT DOOR (static, near Salty Ladle in Harbor Heights) ===
+[node name="MyRestaurantDoor" type="Area3D" parent="Zones"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 34, 7, 57)
+collision_layer = 0
+collision_mask = 3
 
-[node name="SignLabel" type="Label3D" parent="Zones/RestaurantRow"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.5, 0.5)
-text = "RESTAURANT ROW"
-font_size = 96
-outline_size = 16
-modulate = Color(1, 0.9, 0.3, 1)
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Zones/MyRestaurantDoor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.75, 0)
+shape = SubResource("restaurant_door_box")
+
+[node name="DoorFrame" type="MeshInstance3D" parent="Zones/MyRestaurantDoor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+mesh = SubResource("restaurant_door_frame_mesh")
+material_override = SubResource("restaurant_door_frame_mat")
+
+[node name="DoorMesh" type="MeshInstance3D" parent="Zones/MyRestaurantDoor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0.05)
+mesh = SubResource("restaurant_door_main_mesh")
+material_override = SubResource("restaurant_door_main_mat")
+
+[node name="GroundHighlight" type="MeshInstance3D" parent="Zones/MyRestaurantDoor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, -1.2)
+mesh = SubResource("restaurant_door_ground_mesh")
+material_override = SubResource("restaurant_door_ground_mat")
+
+[node name="FloatingIndicator" type="MeshInstance3D" parent="Zones/MyRestaurantDoor"]
+transform = Transform3D(0.707, 0, 0.707, 0, 1, 0, -0.707, 0, 0.707, 0, 4.2, 0)
+mesh = SubResource("restaurant_door_indicator_mesh")
+material_override = SubResource("restaurant_door_indicator_mat")
+
+[node name="Label3D" type="Label3D" parent="Zones/MyRestaurantDoor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.6, -0.3)
+text = "My Restaurant"
+font_size = 64
+outline_size = 14
+modulate = Color(1, 0.95, 0.8, 1)
 billboard = 1
 
-[node name="SubSign" type="Label3D" parent="Zones/RestaurantRow"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.6, 0.5)
-text = "▼ ENTER BELOW ▼"
-font_size = 48
-outline_size = 10
-modulate = Color(1, 0.6, 0.2, 1)
-billboard = 1
+; === BANK NPC (Phase 5: pre-placed, near General Store) ===
+[node name="BankNPC" type="Area3D" parent="Zones"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -34, 4, -5)
+script = ExtResource("34")
+
+[node name="BankShape" type="CollisionShape3D" parent="Zones/BankNPC"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+shape = SubResource("bank_interact_shape")
 
 ; ==================== MANAGERS ====================
 [node name="RestaurantManager" type="Node" parent="."]
@@ -1332,26 +1694,134 @@ script = ExtResource("23")
 [node name="DayNightController" type="Node" parent="."]
 script = ExtResource("24")
 
-; ==================== DISTRICTS (gutted, empty Node3D) ====================
+; ==================== DISTRICTS ====================
 [node name="Districts" type="Node3D" parent="."]
 
 [node name="TownSquare" parent="Districts" instance=ExtResource("25")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 6)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30, 4, 5)
 
 [node name="WharfWalk" parent="Districts" instance=ExtResource("26")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -28, 0, -4)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -55, 2, -28)
 
 [node name="MarketRow" parent="Districts" instance=ExtResource("27")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 0, 6)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -55, 4, 2)
 
 [node name="HarborHeights" parent="Districts" instance=ExtResource("28")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0, 28)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 32, 7, 50)
 
 [node name="FarmDecor" parent="Districts" instance=ExtResource("29")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12.5, 3, 16.25)
 
-[node name="Wilderness" parent="Districts" instance=ExtResource("30")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -12)
+; ==================== PATHS & ENVIRONMENTAL DRESSING (Phase 8) ====================
+[node name="Dressing" type="Node3D" parent="."]
+
+; --- Path surfaces (tan colored strips) ---
+[node name="Paths" type="Node3D" parent="Dressing"]
+
+; Main street through Town Square
+[node name="MainStreet" type="MeshInstance3D" parent="Dressing/Paths"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -35, 4.02, 5)
+mesh = SubResource("town_mesh")
+
+; --- Trees along forest edges ---
+[node name="Trees" type="Node3D" parent="Dressing"]
+
+; Southern forest boundary trees
+[node name="SouthTree1" parent="Dressing/Trees" instance=ExtResource("36")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30, 5, -45)
+
+[node name="SouthTree2" parent="Dressing/Trees" instance=ExtResource("35")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 5, -48)
+
+[node name="SouthTree3" parent="Dressing/Trees" instance=ExtResource("39")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 5, -46)
+
+[node name="SouthTree4" parent="Dressing/Trees" instance=ExtResource("40")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, -50)
+
+[node name="SouthTree5" parent="Dressing/Trees" instance=ExtResource("36")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 5, -47)
+
+[node name="SouthTree6" parent="Dressing/Trees" instance=ExtResource("35")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 5, -49)
+
+; Redwood forest trees
+[node name="RedwoodTree1" parent="Dressing/Trees" instance=ExtResource("36")]
+transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 20, 8, 85)
+
+[node name="RedwoodTree2" parent="Dressing/Trees" instance=ExtResource("36")]
+transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 30, 8, 90)
+
+[node name="RedwoodTree3" parent="Dressing/Trees" instance=ExtResource("36")]
+transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 40, 8, 88)
+
+[node name="RedwoodTree4" parent="Dressing/Trees" instance=ExtResource("36")]
+transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 35, 8, 95)
+
+; Town Square park trees
+[node name="TownTree1" parent="Dressing/Trees" instance=ExtResource("35")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -25, 4, 10)
+
+[node name="TownTree2" parent="Dressing/Trees" instance=ExtResource("39")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -40, 4, 10)
+
+[node name="TownTree3" parent="Dressing/Trees" instance=ExtResource("40")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -35, 4, -10)
+
+; Farm area trees
+[node name="FarmTree1" parent="Dressing/Trees" instance=ExtResource("35")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 3, 28)
+
+[node name="FarmTree2" parent="Dressing/Trees" instance=ExtResource("39")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 30)
+
+; Harbor Heights trees
+[node name="HarborTree1" parent="Dressing/Trees" instance=ExtResource("35")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25, 7, 55)
+
+[node name="HarborTree2" parent="Dressing/Trees" instance=ExtResource("40")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 40, 7, 45)
+
+; Wharf area trees
+[node name="WharfTree1" parent="Dressing/Trees" instance=ExtResource("35")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -65, 2, -15)
+
+[node name="WharfTree2" parent="Dressing/Trees" instance=ExtResource("39")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -45, 2, -35)
+
+; --- Rocks near cliffs and volcanic areas ---
+[node name="Rocks" type="Node3D" parent="Dressing"]
+
+; Rocky outcrop east decorative rocks
+[node name="EastRock1" parent="Dressing/Rocks" instance=ExtResource("37")]
+transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 55, 4, -10)
+
+[node name="EastRock2" parent="Dressing/Rocks" instance=ExtResource("38")]
+transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 58, 3, 10)
+
+[node name="EastRock3" parent="Dressing/Rocks" instance=ExtResource("37")]
+transform = Transform3D(1.8, 0, 0, 0, 1.8, 0, 0, 0, 1.8, 52, 5, 20)
+
+; Cliff edge rocks
+[node name="CliffRock1" parent="Dressing/Rocks" instance=ExtResource("38")]
+transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, -100, 1, -45)
+
+[node name="CliffRock2" parent="Dressing/Rocks" instance=ExtResource("37")]
+transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, -85, 1, -42)
+
+; Wilderness rocks
+[node name="WildRock1" parent="Dressing/Rocks" instance=ExtResource("38")]
+transform = Transform3D(1.3, 0, 0, 0, 1.3, 0, 0, 0, 1.3, -20, 5, -22)
+
+[node name="WildRock2" parent="Dressing/Rocks" instance=ExtResource("37")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -40, 5, -35)
+
+; Volcanic area rocks
+[node name="VolcanicRock1" parent="Dressing/Rocks" instance=ExtResource("37")]
+transform = Transform3D(2.5, 0, 0, 0, 2.5, 0, 0, 0, 2.5, 48, 8, 25)
+
+[node name="VolcanicRock2" parent="Dressing/Rocks" instance=ExtResource("38")]
+transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 55, 7, 32)
 
 ; ==================== UI ====================
 [node name="UI" type="Node" parent="."]

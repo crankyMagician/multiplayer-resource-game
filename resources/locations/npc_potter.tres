@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "npc_potter"
 display_name = "Clay Brennan"
-world_position = Vector3(-5, 0, 8)
+world_position = Vector3(-23.25, 4, -3)
 discovery_radius = 8.0
 icon_type = "social_npc"
 category = "social_npc"

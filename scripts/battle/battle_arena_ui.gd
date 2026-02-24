@@ -100,7 +100,6 @@ var _is_animating_log: bool = false
 var _initial_setup: bool = false
 var _battle_starting: bool = false  # Guards against battle_ended during _on_battle_started awaits
 
-
 const TYPE_COLORS = UITokens.TYPE_COLORS
 
 const WEATHER_NAMES = {
@@ -708,6 +707,8 @@ func setup(battle_manager: Node) -> void:
 	battle_mgr.trainer_rewards_received.connect(_on_trainer_rewards)
 	battle_mgr.pvp_loss_received.connect(_on_pvp_loss)
 	battle_mgr.defeat_penalty_received.connect(_on_defeat_penalty)
+	if not PlayerData.inventory_changed.is_connected(_on_player_inventory_changed):
+		PlayerData.inventory_changed.connect(_on_player_inventory_changed)
 
 # === CAMERA HELPERS ===
 
@@ -978,15 +979,23 @@ func _dismiss_summary() -> void:
 
 func _cleanup_panels() -> void:
 	if summary_panel:
+		if summary_panel.get_parent():
+			summary_panel.get_parent().remove_child(summary_panel)
 		summary_panel.queue_free()
 		summary_panel = null
 	if is_instance_valid(switch_panel):
+		if switch_panel.get_parent():
+			switch_panel.get_parent().remove_child(switch_panel)
 		switch_panel.queue_free()
 		switch_panel = null
 	if is_instance_valid(item_panel):
+		if item_panel.get_parent():
+			item_panel.get_parent().remove_child(item_panel)
 		item_panel.queue_free()
 		item_panel = null
 	if move_replace_panel:
+		if move_replace_panel.get_parent():
+			move_replace_panel.get_parent().remove_child(move_replace_panel)
 		move_replace_panel.queue_free()
 		move_replace_panel = null
 
@@ -1135,7 +1144,7 @@ func _update_player_card() -> void:
 	DataRegistry.ensure_loaded()
 
 	var active_idx = battle_mgr.client_active_creature_idx
-	if active_idx >= PlayerData.party.size():
+	if active_idx < 0 or active_idx >= PlayerData.party.size():
 		return
 	var creature = PlayerData.party[active_idx]
 
@@ -1366,7 +1375,7 @@ func _animate_card_hp_from_battle_mgr() -> void:
 	var enemy = battle_mgr.client_enemy
 	_animate_card_hp("enemy", enemy.get("hp", 0), enemy.get("max_hp", 1))
 	var aidx = battle_mgr.client_active_creature_idx
-	if aidx < PlayerData.party.size():
+	if aidx >= 0 and aidx < PlayerData.party.size():
 		var pc = PlayerData.party[aidx]
 		_animate_card_hp("player", pc.get("hp", 0), pc.get("max_hp", 1))
 
@@ -1400,7 +1409,7 @@ func _refresh_ui() -> void:
 		var enemy = battle_mgr.client_enemy
 		arena.update_enemy_creature(enemy)
 		var arena_active_idx = battle_mgr.client_active_creature_idx
-		if arena_active_idx < PlayerData.party.size():
+		if arena_active_idx >= 0 and arena_active_idx < PlayerData.party.size():
 			arena.update_player_creature(PlayerData.party[arena_active_idx])
 
 	# Move buttons (only visible in ACTION_SELECT phase)
@@ -1408,6 +1417,8 @@ func _refresh_ui() -> void:
 
 	_update_weather_display()
 	_refresh_cards()
+	if _phase == BattlePhase.PROMPT:
+		_set_menu_buttons_enabled(true)
 
 func _refresh_move_buttons() -> void:
 	_refresh_move_cards()
@@ -1416,7 +1427,7 @@ func _refresh_move_cards() -> void:
 	if battle_mgr == null:
 		return
 	var active_idx = battle_mgr.client_active_creature_idx
-	if active_idx >= PlayerData.party.size():
+	if active_idx < 0 or active_idx >= PlayerData.party.size():
 		return
 	var creature = PlayerData.party[active_idx]
 	var moves = creature.get("moves", [])
@@ -1610,7 +1621,7 @@ func _build_effect_tags(container: HFlowContainer, move: Resource) -> void:
 # === POKEMON-STYLE ACTION MENU HANDLERS ===
 
 func _on_fight_pressed() -> void:
-	if battle_mgr == null or not battle_mgr.awaiting_action:
+	if not is_instance_valid(battle_mgr) or not battle_mgr.awaiting_action:
 		return
 	if _phase != BattlePhase.PROMPT:
 		return
@@ -1624,15 +1635,23 @@ func _on_move_back_pressed() -> void:
 
 # === MOVE / FLEE / ITEM / SWITCH ACTIONS ===
 
+func _has_usable_battle_items() -> bool:
+	DataRegistry.ensure_loaded()
+	for item_id in PlayerData.inventory:
+		var qty = int(PlayerData.inventory.get(item_id, 0))
+		if qty > 0 and DataRegistry.get_battle_item(item_id) != null:
+			return true
+	return false
+
 func _on_move_pressed(idx: int) -> void:
-	if battle_mgr == null or not battle_mgr.awaiting_action:
+	if not is_instance_valid(battle_mgr) or not battle_mgr.awaiting_action:
 		return
 	if _phase != BattlePhase.ACTION_SELECT:
 		return
 	if idx < _move_card_panels.size():
 		_juice_card(_move_card_panels[idx])
 	var active_idx = battle_mgr.client_active_creature_idx
-	if active_idx >= PlayerData.party.size():
+	if active_idx < 0 or active_idx >= PlayerData.party.size():
 		return
 	var moves = PlayerData.party[active_idx].get("moves", [])
 	if idx < moves.size():
@@ -1643,23 +1662,29 @@ func _on_move_pressed(idx: int) -> void:
 			_set_phase(BattlePhase.ANIMATING)
 
 func _on_flee_pressed() -> void:
-	if battle_mgr:
-		AudioManager.play_sfx("flee")
-		_juice_button(flee_button)
-		battle_mgr.send_flee()
-		_set_phase(BattlePhase.ANIMATING)
-
-func _on_item_pressed() -> void:
-	if battle_mgr == null or not battle_mgr.awaiting_action:
+	if not is_instance_valid(battle_mgr) or not battle_mgr.awaiting_action:
 		return
 	if _phase != BattlePhase.PROMPT:
+		return
+	AudioManager.play_sfx("flee")
+	_juice_button(flee_button)
+	battle_mgr.send_flee()
+	_set_phase(BattlePhase.ANIMATING)
+
+func _on_item_pressed() -> void:
+	if not is_instance_valid(battle_mgr) or not battle_mgr.awaiting_action:
+		return
+	if _phase != BattlePhase.PROMPT:
+		return
+	if not _has_usable_battle_items():
+		_show_narration_toast("No battle items available.", Color(0.61, 0.55, 0.48), 1.5)
 		return
 	AudioManager.play_ui_sfx("ui_click")
 	_juice_button(item_button)
 	_show_item_panel()
 
 func _on_switch_pressed() -> void:
-	if battle_mgr == null or not battle_mgr.awaiting_action:
+	if not is_instance_valid(battle_mgr) or not battle_mgr.awaiting_action:
 		return
 	if _phase != BattlePhase.PROMPT:
 		return
@@ -1706,10 +1731,56 @@ func _make_dark_card_hover_style(accent_color: Color = Color(0.5, 0.42, 0.3)) ->
 	s.set_content_margin_all(10)
 	return s
 
-func _show_item_panel() -> void:
-	if battle_mgr == null or action_layer == null:
+func _show_no_items_panel() -> void:
+	if action_layer == null:
 		return
 	if is_instance_valid(item_panel):
+		if item_panel.get_parent():
+			item_panel.get_parent().remove_child(item_panel)
+		item_panel.queue_free()
+	item_panel = PanelContainer.new()
+	item_panel.anchors_preset = Control.PRESET_CENTER
+	item_panel.custom_minimum_size = Vector2(300, 0)
+	UITheme.apply_panel(item_panel)
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 8)
+	item_panel.add_child(vbox)
+
+	var title = Label.new()
+	title.text = "No Battle Items"
+	UITheme.style_subheading(title)
+	title.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_H3))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(title)
+
+	var msg = Label.new()
+	msg.text = "You don't have any battle items."
+	UITheme.style_small(msg)
+	msg.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(msg)
+
+	var close_btn = Button.new()
+	close_btn.text = "Close"
+	UITheme.style_button(close_btn)
+	close_btn.pressed.connect(func():
+		if is_instance_valid(item_panel):
+			if item_panel.get_parent():
+				item_panel.get_parent().remove_child(item_panel)
+			item_panel.queue_free()
+			item_panel = null
+	)
+	vbox.add_child(close_btn)
+
+	action_layer.add_child(item_panel)
+
+func _show_item_panel() -> void:
+	if not is_instance_valid(battle_mgr) or action_layer == null:
+		return
+	if not _has_usable_battle_items():
+		return
+	if is_instance_valid(item_panel):
+		if item_panel.get_parent():
+			item_panel.get_parent().remove_child(item_panel)
 		item_panel.queue_free()
 	item_panel = PanelContainer.new()
 	item_panel.anchors_preset = Control.PRESET_CENTER
@@ -1729,57 +1800,21 @@ func _show_item_panel() -> void:
 	DataRegistry.ensure_loaded()
 	var has_items = false
 	for item_id in PlayerData.inventory:
-		if PlayerData.inventory[item_id] <= 0:
+		var qty = PlayerData.inventory[item_id]
+		if qty <= 0:
 			continue
 		var bi = DataRegistry.get_battle_item(item_id)
 		if bi == null:
 			continue
 		has_items = true
 
-		var card = PanelContainer.new()
-		card.add_theme_stylebox_override("panel", _make_dark_card_style())
-		card.custom_minimum_size.y = 52
-
-		var hbox = HBoxContainer.new()
-		hbox.add_theme_constant_override("separation", 10)
-		card.add_child(hbox)
-
-		# Icon
-		var info = {"icon_texture": bi.icon_texture, "icon_color": bi.icon_color}
-		var icon = UITheme.create_item_icon(info, 28)
-		hbox.add_child(icon)
-
-		var text_vbox = VBoxContainer.new()
-		text_vbox.add_theme_constant_override("separation", 2)
-		text_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		hbox.add_child(text_vbox)
-
-		var name_label = Label.new()
-		name_label.text = "%s  x%d" % [bi.display_name, PlayerData.inventory[item_id]]
-		name_label.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_BODY))
-		name_label.add_theme_color_override("font_color", UITokens.PAPER_CREAM)
-		text_vbox.add_child(name_label)
-
-		var desc_label = Label.new()
-		desc_label.text = bi.description
-		desc_label.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_SMALL))
-		desc_label.add_theme_color_override("font_color", Color(0.65, 0.58, 0.48))
-		desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD
-		text_vbox.add_child(desc_label)
-
-		# Invisible click button overlay
-		var click_btn = _make_invisible_overlay_btn()
-		card.add_child(click_btn)
-
-		var iid = item_id
-		var effect = bi.effect_type
-		var card_ref = card
-		var normal_style = _make_dark_card_style()
-		var hover_style = _make_dark_card_hover_style()
-		click_btn.mouse_entered.connect(func(): card_ref.add_theme_stylebox_override("panel", hover_style))
-		click_btn.mouse_exited.connect(func(): card_ref.add_theme_stylebox_override("panel", normal_style))
-		click_btn.pressed.connect(func(): _on_item_selected(iid, effect))
-		vbox.add_child(card)
+		var item_btn = Button.new()
+		item_btn.custom_minimum_size.y = 60
+		item_btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		item_btn.text = "%s  x%d\n%s" % [bi.display_name, qty, bi.description]
+		UITheme.style_button(item_btn, "secondary")
+		item_btn.pressed.connect(_on_item_selected.bind(item_id, bi.effect_type))
+		vbox.add_child(item_btn)
 
 	if not has_items:
 		var empty_label = Label.new()
@@ -1793,6 +1828,8 @@ func _show_item_panel() -> void:
 	UITheme.style_button(cancel, "secondary")
 	cancel.pressed.connect(func():
 		if is_instance_valid(item_panel):
+			if item_panel.get_parent():
+				item_panel.get_parent().remove_child(item_panel)
 			item_panel.queue_free()
 		item_panel = null
 	)
@@ -1801,14 +1838,31 @@ func _show_item_panel() -> void:
 
 func _on_item_selected(item_id: String, effect_type: String) -> void:
 	if is_instance_valid(item_panel):
+		if item_panel.get_parent():
+			item_panel.get_parent().remove_child(item_panel)
 		item_panel.queue_free()
 	item_panel = null
 	_show_item_target_panel(item_id, effect_type)
+
+func _on_item_target_selected(item_id: String, creature_idx: int) -> void:
+	if is_instance_valid(battle_mgr):
+		battle_mgr.send_item_use(item_id, creature_idx)
+		if battle_mgr.client_battle_mode == 2:
+			_set_phase(BattlePhase.WAITING)
+		else:
+			_set_phase(BattlePhase.ANIMATING)
+	if is_instance_valid(item_panel):
+		if item_panel.get_parent():
+			item_panel.get_parent().remove_child(item_panel)
+		item_panel.queue_free()
+	item_panel = null
 
 func _show_item_target_panel(item_id: String, effect_type: String) -> void:
 	if action_layer == null:
 		return
 	if is_instance_valid(item_panel):
+		if item_panel.get_parent():
+			item_panel.get_parent().remove_child(item_panel)
 		item_panel.queue_free()
 	item_panel = PanelContainer.new()
 	item_panel.anchors_preset = Control.PRESET_CENTER
@@ -1838,93 +1892,26 @@ func _show_item_target_panel(item_id: String, effect_type: String) -> void:
 		if effect_type != "revive" and is_fainted:
 			continue
 
-		var card = PanelContainer.new()
-		card.add_theme_stylebox_override("panel", _make_dark_card_style())
-		card.custom_minimum_size.y = 56
-
-		var hbox = HBoxContainer.new()
-		hbox.add_theme_constant_override("separation", 10)
-		card.add_child(hbox)
-
-		# Creature color swatch
-		var species = DataRegistry.get_species(creature.get("species_id", ""))
-		var swatch = ColorRect.new()
-		swatch.custom_minimum_size = Vector2(20, 20)
-		swatch.color = species.mesh_color if species else Color.WHITE
-		hbox.add_child(swatch)
-
-		var text_vbox = VBoxContainer.new()
-		text_vbox.add_theme_constant_override("separation", 2)
-		text_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		hbox.add_child(text_vbox)
-
-		var name_label = Label.new()
-		name_label.text = creature.get("nickname", "???")
-		name_label.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_BODY))
-		name_label.add_theme_color_override("font_color", UITokens.PAPER_CREAM)
-		text_vbox.add_child(name_label)
-
-		# HP row
-		var hp_row = HBoxContainer.new()
-		hp_row.add_theme_constant_override("separation", 6)
-		text_vbox.add_child(hp_row)
-
-		var hp_bar = ProgressBar.new()
-		hp_bar.custom_minimum_size = Vector2(100, 10)
-		hp_bar.max_value = max_hp
-		hp_bar.value = hp
-		hp_bar.show_percentage = false
-		var hp_ratio = float(hp) / max(1, max_hp)
-		var bar_style = StyleBoxFlat.new()
-		if hp_ratio > 0.5:
-			bar_style.bg_color = Color(0.36, 0.55, 0.35)
-		elif hp_ratio > 0.25:
-			bar_style.bg_color = Color(0.83, 0.66, 0.26)
-		else:
-			bar_style.bg_color = Color(0.76, 0.33, 0.31)
-		bar_style.set_corner_radius_all(3)
-		hp_bar.add_theme_stylebox_override("fill", bar_style)
-		var bar_bg = StyleBoxFlat.new()
-		bar_bg.bg_color = Color(0.15, 0.12, 0.1)
-		bar_bg.set_corner_radius_all(3)
-		hp_bar.add_theme_stylebox_override("background", bar_bg)
-		hp_row.add_child(hp_bar)
-
-		var hp_text = Label.new()
-		hp_text.text = "%d/%d" % [hp, max_hp]
-		hp_text.add_theme_font_size_override("font_size", UITheme.scaled(UITokens.FONT_SMALL))
-		hp_text.add_theme_color_override("font_color", Color(0.65, 0.58, 0.48))
-		hp_row.add_child(hp_text)
-
-		# Invisible click button overlay
-		var click_btn = _make_invisible_overlay_btn()
-		card.add_child(click_btn)
-
-		var cidx = i
-		var iid = item_id
-		var card_ref = card
-		var normal_style = _make_dark_card_style()
-		var hover_style = _make_dark_card_hover_style()
-		click_btn.mouse_entered.connect(func(): card_ref.add_theme_stylebox_override("panel", hover_style))
-		click_btn.mouse_exited.connect(func(): card_ref.add_theme_stylebox_override("panel", normal_style))
-		click_btn.pressed.connect(func():
-			if battle_mgr:
-				battle_mgr.send_item_use(iid, cidx)
-				if battle_mgr.client_battle_mode == 2:
-					_set_phase(BattlePhase.WAITING)
-				else:
-					_set_phase(BattlePhase.ANIMATING)
-			if is_instance_valid(item_panel):
-				item_panel.queue_free()
-			item_panel = null
-		)
-		vbox.add_child(card)
+		var target_btn = Button.new()
+		target_btn.custom_minimum_size.y = 60
+		target_btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		target_btn.text = "%s  Lv.%d\nHP %d/%d" % [
+			creature.get("nickname", "???"),
+			int(creature.get("level", 1)),
+			hp,
+			max_hp
+		]
+		UITheme.style_button(target_btn, "secondary")
+		target_btn.pressed.connect(_on_item_target_selected.bind(item_id, i))
+		vbox.add_child(target_btn)
 
 	var cancel = Button.new()
 	cancel.text = "Cancel"
 	UITheme.style_button(cancel, "secondary")
 	cancel.pressed.connect(func():
 		if is_instance_valid(item_panel):
+			if item_panel.get_parent():
+				item_panel.get_parent().remove_child(item_panel)
 			item_panel.queue_free()
 		item_panel = null
 	)
@@ -1934,9 +1921,11 @@ func _show_item_target_panel(item_id: String, effect_type: String) -> void:
 # === SWITCH PANEL ===
 
 func _show_switch_panel() -> void:
-	if battle_mgr == null or action_layer == null:
+	if not is_instance_valid(battle_mgr) or action_layer == null:
 		return
 	if is_instance_valid(switch_panel):
+		if switch_panel.get_parent():
+			switch_panel.get_parent().remove_child(switch_panel)
 		switch_panel.queue_free()
 	switch_panel = PanelContainer.new()
 	switch_panel.anchors_preset = Control.PRESET_CENTER
@@ -2060,24 +2049,26 @@ func _show_switch_panel() -> void:
 		# Click handler — only for available (not active, not fainted)
 		if not is_active and not is_fainted:
 			found_any = true
-			var click_btn = _make_invisible_overlay_btn()
-			card.add_child(click_btn)
-
 			var idx = i
 			var card_ref = card
 			var normal_style = _make_dark_card_style(accent)
 			var hover_style = _make_dark_card_hover_style(accent)
-			click_btn.mouse_entered.connect(func(): card_ref.add_theme_stylebox_override("panel", hover_style))
-			click_btn.mouse_exited.connect(func(): card_ref.add_theme_stylebox_override("panel", normal_style))
-			click_btn.pressed.connect(func():
-				battle_mgr.send_switch(idx)
-				if battle_mgr.client_battle_mode == 2:
-					_set_phase(BattlePhase.WAITING)
-				else:
-					_set_phase(BattlePhase.ANIMATING)
-				if is_instance_valid(switch_panel):
-					switch_panel.queue_free()
-				switch_panel = null
+			card.mouse_filter = Control.MOUSE_FILTER_STOP
+			card.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+			card.mouse_entered.connect(func(): card_ref.add_theme_stylebox_override("panel", hover_style))
+			card.mouse_exited.connect(func(): card_ref.add_theme_stylebox_override("panel", normal_style))
+			card.gui_input.connect(func(event: InputEvent):
+				if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+					battle_mgr.send_switch(idx)
+					if battle_mgr.client_battle_mode == 2:
+						_set_phase(BattlePhase.WAITING)
+					else:
+						_set_phase(BattlePhase.ANIMATING)
+					if is_instance_valid(switch_panel):
+						if switch_panel.get_parent():
+							switch_panel.get_parent().remove_child(switch_panel)
+						switch_panel.queue_free()
+					switch_panel = null
 			)
 
 		vbox.add_child(card)
@@ -2093,6 +2084,8 @@ func _show_switch_panel() -> void:
 	UITheme.style_button(cancel_btn, "secondary")
 	cancel_btn.pressed.connect(func():
 		if is_instance_valid(switch_panel):
+			if switch_panel.get_parent():
+				switch_panel.get_parent().remove_child(switch_panel)
 			switch_panel.queue_free()
 		switch_panel = null
 	)
@@ -2550,7 +2543,7 @@ func _animate_turn_log(turn_log: Array) -> void:
 				var creature_data: Dictionary = {}
 				if side == "player":
 					var aidx = battle_mgr.client_active_creature_idx
-					if aidx < PlayerData.party.size():
+					if aidx >= 0 and aidx < PlayerData.party.size():
 						creature_data = PlayerData.party[aidx]
 				else:
 					creature_data = battle_mgr.client_enemy
@@ -2620,7 +2613,7 @@ func _on_xp_result(results: Dictionary) -> void:
 	for r2 in results.get("results", []):
 		if r2.get("level_ups", []).size() > 0:
 			any_level_up = true
-	if active_idx < PlayerData.party.size():
+	if active_idx >= 0 and active_idx < PlayerData.party.size():
 		var creature = PlayerData.party[active_idx]
 		_animate_card_xp(creature.get("xp", 0), creature.get("xp_to_next", 100), any_level_up)
 
@@ -3045,12 +3038,17 @@ func _narrate_entry(entry: Dictionary) -> void:
 
 func _set_menu_buttons_enabled(enabled: bool) -> void:
 	var mode = battle_mgr.client_battle_mode if battle_mgr else 0
+	var can_use_items = _has_usable_battle_items() if enabled and mode != 2 else false
 	fight_button.disabled = not enabled
 	flee_button.disabled = not enabled
 	flee_button.visible = (mode == 0)
 	switch_button.disabled = not enabled
-	item_button.disabled = not enabled
+	item_button.disabled = (not enabled) or (mode != 2 and not can_use_items)
 	item_button.visible = (mode != 2)
+
+func _on_player_inventory_changed() -> void:
+	if _phase == BattlePhase.PROMPT:
+		_set_menu_buttons_enabled(true)
 
 func _set_buttons_enabled(enabled: bool) -> void:
 	# For move card click buttons specifically
@@ -3067,7 +3065,7 @@ func _set_buttons_enabled(enabled: bool) -> void:
 				_move_card_panels[i].modulate = Color.WHITE
 		return
 	var active_idx = battle_mgr.client_active_creature_idx
-	if active_idx >= PlayerData.party.size():
+	if active_idx < 0 or active_idx >= PlayerData.party.size():
 		return
 	var creature = PlayerData.party[active_idx]
 	var moves = creature.get("moves", [])

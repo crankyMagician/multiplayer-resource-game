@@ -7,6 +7,10 @@ extends GutTest
 const BattleArenaUIScript = preload("res://scripts/battle/battle_arena_ui.gd")
 const BattleArenaScript = preload("res://scripts/battle/battle_arena.gd")
 
+class BattleManagerStub:
+	extends Node
+	var client_battle_mode: int = 0
+
 var ui: Node
 
 func before_each() -> void:
@@ -484,6 +488,41 @@ func test_has_any_positive_false_empty() -> void:
 
 func test_has_any_positive_false_all_zero() -> void:
 	assert_false(ui._has_any_positive({"attack": 0}))
+
+# === _has_usable_battle_items ===
+
+func test_has_usable_battle_items_false_when_inventory_empty() -> void:
+	PlayerData.inventory.clear()
+	assert_false(ui._has_usable_battle_items())
+
+func test_has_usable_battle_items_false_when_only_non_battle_items() -> void:
+	PlayerData.inventory.clear()
+	PlayerData.inventory["grain_wheat"] = 3
+	assert_false(ui._has_usable_battle_items())
+
+func test_has_usable_battle_items_true_when_battle_item_exists() -> void:
+	PlayerData.inventory.clear()
+	PlayerData.inventory["herb_poultice"] = 1
+	assert_true(ui._has_usable_battle_items())
+
+# === _set_menu_buttons_enabled item availability ===
+
+func test_set_menu_buttons_enabled_disables_item_when_no_items() -> void:
+	PlayerData.inventory.clear()
+	var stub = BattleManagerStub.new()
+	stub.client_battle_mode = 0
+	ui.battle_mgr = stub
+	ui._set_menu_buttons_enabled(true)
+	assert_true(ui.item_button.disabled)
+
+func test_set_menu_buttons_enabled_enables_item_when_items_exist() -> void:
+	PlayerData.inventory.clear()
+	PlayerData.inventory["herb_poultice"] = 1
+	var stub = BattleManagerStub.new()
+	stub.client_battle_mode = 0
+	ui.battle_mgr = stub
+	ui._set_menu_buttons_enabled(true)
+	assert_false(ui.item_button.disabled)
 
 # === BattleEffects preload ===
 

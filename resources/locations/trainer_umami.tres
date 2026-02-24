@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "trainer_umami"
 display_name = "Chef Umami Gate"
-world_position = Vector3(0, 0, -20)
+world_position = Vector3(20, 7, 40)
 discovery_radius = 5.0
 icon_type = "trainer"
 category = "trainer"

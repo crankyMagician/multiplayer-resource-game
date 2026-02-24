@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "harvest_field"
 display_name = "Harvest Field"
-world_position = Vector3(18, 0, -35)
+world_position = Vector3(-5, 3, 25)
 discovery_radius = 10.0
 icon_type = "wild_zone"
 category = "wild_zone"

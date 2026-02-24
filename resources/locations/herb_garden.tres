@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "herb_garden"
 display_name = "Herb Garden"
-world_position = Vector3(-12, 0, -15)
+world_position = Vector3(-15, 4, -8)
 discovery_radius = 10.0
 icon_type = "wild_zone"
 category = "wild_zone"

@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "trainer_michelin"
 display_name = "Grand Chef Michelin"
-world_position = Vector3(-25, 0, -55)
+world_position = Vector3(-32.5, 4, -3)
 discovery_radius = 5.0
 icon_type = "trainer"
 category = "trainer"

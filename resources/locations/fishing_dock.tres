@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "fishing_dock"
 display_name = "Haddock's Fishing Dock"
-world_position = Vector3(-14, 0, -12)
+world_position = Vector3(-55, 2, -32)
 discovery_radius = 5.0
 icon_type = "zone"
 category = "zone"

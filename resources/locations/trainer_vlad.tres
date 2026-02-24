@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "trainer_vlad"
 display_name = "Brinemaster Vlad"
-world_position = Vector3(18, 0, -28)
+world_position = Vector3(-55, 2, -26)
 discovery_radius = 5.0
 icon_type = "trainer"
 category = "trainer"

@@ -1235,16 +1235,16 @@ static func _add_boundary_walls(parent: Node3D, with_visuals: bool = false) -> v
 	var walls := [
 		# North wall
 		{"pos": Vector3(ARENA_SIZE / 2.0, wall_height / 2.0, -wall_thickness / 2.0),
-		 "size": Vector3(ARENA_SIZE + wall_thickness * 2, wall_height, wall_thickness)},
+			"size": Vector3(ARENA_SIZE + wall_thickness * 2, wall_height, wall_thickness)},
 		# South wall
 		{"pos": Vector3(ARENA_SIZE / 2.0, wall_height / 2.0, ARENA_SIZE + wall_thickness / 2.0),
-		 "size": Vector3(ARENA_SIZE + wall_thickness * 2, wall_height, wall_thickness)},
+			"size": Vector3(ARENA_SIZE + wall_thickness * 2, wall_height, wall_thickness)},
 		# West wall
 		{"pos": Vector3(-wall_thickness / 2.0, wall_height / 2.0, ARENA_SIZE / 2.0),
-		 "size": Vector3(wall_thickness, wall_height, ARENA_SIZE)},
+			"size": Vector3(wall_thickness, wall_height, ARENA_SIZE)},
 		# East wall
 		{"pos": Vector3(ARENA_SIZE + wall_thickness / 2.0, wall_height / 2.0, ARENA_SIZE / 2.0),
-		 "size": Vector3(wall_thickness, wall_height, ARENA_SIZE)},
+			"size": Vector3(wall_thickness, wall_height, ARENA_SIZE)},
 	]
 
 	for w in walls:

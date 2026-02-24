@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "workbench"
 display_name = "Workbench"
-world_position = Vector3(-5, 0.6, 5)
+world_position = Vector3(-30, 4, 14)
 discovery_radius = 5.0
 icon_type = "crafting"
 category = "crafting"

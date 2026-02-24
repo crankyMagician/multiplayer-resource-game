@@ -2,7 +2,7 @@
 
 [ext_resource type="PackedScene" path="res://assets/synty/farm/models/SM_Prop_Fence_Fancy_01.glb" id="1"]
 [ext_resource type="PackedScene" path="res://assets/synty/farm/models/SM_Prop_Fence_Fancy_02.glb" id="2"]
-[ext_resource type="PackedScene" path="res://assets/synty/farm/models/SM_Prop_Hay_Bale_01.glb" id="3"]
+[ext_resource type="PackedScene" path="res://assets/synty/farm/models/SM_Prop_Hay_Bale_Square_01.glb" id="3"]
 [ext_resource type="PackedScene" path="res://assets/synty/farm/models/SM_Prop_Barrel_01.glb" id="4"]
 [ext_resource type="PackedScene" path="res://assets/synty/farm/models/SM_Prop_Barrel_02.glb" id="5"]
 [ext_resource type="PackedScene" path="res://assets/synty/farm/models/SM_Prop_Wheelbarrow_01.glb" id="6"]

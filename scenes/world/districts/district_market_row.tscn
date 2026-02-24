@@ -1,166 +1,106 @@
-[gd_scene format=3]
+[gd_scene load_steps=7 format=3]
 
-; --- Materials ---
-[sub_resource type="StandardMaterial3D" id="tailor_mat"]
-albedo_color = Color(0.55, 0.6, 0.75, 1)
+[ext_resource type="PackedScene" path="res://assets/synty/simple_fantasy/models/SF_Bld_House_Blue_02.glb" id="1"]
+[ext_resource type="PackedScene" path="res://assets/synty/simple_fantasy/models/SF_Bld_House_02.glb" id="2"]
+[ext_resource type="PackedScene" path="res://assets/synty/simple_fantasy/models/SF_Bld_House_03.glb" id="3"]
+[ext_resource type="PackedScene" path="res://assets/synty/simple_fantasy/models/SF_Bld_House_Church_01.glb" id="4"]
+[ext_resource type="PackedScene" path="res://assets/synty/simple_fantasy/models/SF_Bld_Stall_01.glb" id="5"]
+[ext_resource type="PackedScene" path="res://assets/synty/simple_fantasy/models/SF_Bld_Stall_02.glb" id="6"]
 
-[sub_resource type="StandardMaterial3D" id="book_mat"]
-albedo_color = Color(0.55, 0.3, 0.3, 1)
-
-[sub_resource type="StandardMaterial3D" id="bloom_mat"]
-albedo_color = Color(0.45, 0.6, 0.4, 1)
-
-[sub_resource type="StandardMaterial3D" id="clinic_mat"]
-albedo_color = Color(0.9, 0.9, 0.88, 1)
-
-[sub_resource type="StandardMaterial3D" id="stall_mat"]
-albedo_color = Color(0.6, 0.5, 0.35, 1)
-
-[sub_resource type="StandardMaterial3D" id="awning_mat"]
-albedo_color = Color(0.7, 0.3, 0.2, 1)
-
-[sub_resource type="StandardMaterial3D" id="terrace_mat"]
-albedo_color = Color(0.6, 0.55, 0.45, 1)
-
-; --- Meshes ---
-[sub_resource type="BoxMesh" id="shop_mesh"]
-size = Vector3(6, 4, 6)
-
+; --- Collision shapes ---
 [sub_resource type="BoxShape3D" id="shop_shape"]
-size = Vector3(6, 4, 6)
+size = Vector3(5, 5, 4)
 
-[sub_resource type="BoxMesh" id="stall_mesh"]
-size = Vector3(4, 3, 3)
+[sub_resource type="BoxShape3D" id="small_shop_shape"]
+size = Vector3(4.5, 4.5, 3.5)
 
-[sub_resource type="BoxShape3D" id="stall_shape"]
-size = Vector3(4, 3, 3)
+[sub_resource type="BoxShape3D" id="clinic_shape"]
+size = Vector3(5, 5.5, 4)
 
-[sub_resource type="BoxMesh" id="awning_mesh"]
-size = Vector3(5, 0.15, 4)
-
-[sub_resource type="BoxMesh" id="terrace_mesh"]
-size = Vector3(14, 0.3, 18)
-
-[sub_resource type="BoxShape3D" id="terrace_shape"]
-size = Vector3(14, 0.3, 18)
-
-; === Market Row root (offset by parent: 15, 0, 6) ===
+; === Market Row root (parent offset: -55, 4, 2) ===
 [node name="MarketRow" type="Node3D"]
 
-; --- Raised terrace ---
-[node name="Terrace" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0.15, 2)
+; --- Threads & Needles ---
+[node name="ThreadsNeedles" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -3)
 
-[node name="Mesh" type="MeshInstance3D" parent="Terrace"]
-mesh = SubResource("terrace_mesh")
-material_override = SubResource("terrace_mat")
+[node name="Model" parent="ThreadsNeedles" instance=ExtResource("1")]
 
-[node name="Collision" type="CollisionShape3D" parent="Terrace"]
-shape = SubResource("terrace_shape")
-
-; --- Threads & Needles (near ScarletWinters at world 15,2,5 → local 0,*,-1) ---
-[node name="ThreadsAndNeedles" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.3, -1)
-
-[node name="Mesh" type="MeshInstance3D" parent="ThreadsAndNeedles"]
-mesh = SubResource("shop_mesh")
-material_override = SubResource("tailor_mat")
-
-[node name="Collision" type="CollisionShape3D" parent="ThreadsAndNeedles"]
+[node name="Collision" type="CollisionShape3D" parent="ThreadsNeedles"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
 shape = SubResource("shop_shape")
 
-[node name="Label" type="Label3D" parent="ThreadsAndNeedles"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+[node name="Label" type="Label3D" parent="ThreadsNeedles"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6, 0)
 text = "Threads & Needles"
 font_size = 28
 outline_size = 6
-modulate = Color(0.7, 0.75, 0.9, 1)
+modulate = Color(0.6, 0.7, 0.9, 1)
 billboard = 1
 
-; --- The Book Nook (near ProfessorQuill at world 18,2,8 → local 3,*,2) ---
+; --- The Book Nook ---
 [node name="BookNook" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 2.3, 2)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
 
-[node name="Mesh" type="MeshInstance3D" parent="BookNook"]
-mesh = SubResource("shop_mesh")
-material_override = SubResource("book_mat")
+[node name="Model" parent="BookNook" instance=ExtResource("2")]
 
 [node name="Collision" type="CollisionShape3D" parent="BookNook"]
-shape = SubResource("shop_shape")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.25, 0)
+shape = SubResource("small_shop_shape")
 
 [node name="Label" type="Label3D" parent="BookNook"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.5, 0)
 text = "The Book Nook"
-font_size = 32
+font_size = 28
 outline_size = 6
-modulate = Color(0.8, 0.5, 0.5, 1)
+modulate = Color(0.8, 0.7, 0.5, 1)
 billboard = 1
 
-; --- Bloom & Grow (near IrisGreenthumb at world 20,2,10 → local 5,*,4) ---
-[node name="BloomAndGrow" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 2.3, 4)
+; --- Bloom & Grow ---
+[node name="BloomGrow" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0, 6)
 
-[node name="Mesh" type="MeshInstance3D" parent="BloomAndGrow"]
-mesh = SubResource("shop_mesh")
-material_override = SubResource("bloom_mat")
+[node name="Model" parent="BloomGrow" instance=ExtResource("3")]
 
-[node name="Collision" type="CollisionShape3D" parent="BloomAndGrow"]
+[node name="Collision" type="CollisionShape3D" parent="BloomGrow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
 shape = SubResource("shop_shape")
 
-[node name="Label" type="Label3D" parent="BloomAndGrow"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+[node name="Label" type="Label3D" parent="BloomGrow"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6, 0)
 text = "Bloom & Grow"
-font_size = 32
+font_size = 28
 outline_size = 6
-modulate = Color(0.5, 0.75, 0.45, 1)
+modulate = Color(0.5, 0.8, 0.5, 1)
 billboard = 1
 
-; --- Dr. Honey's Clinic (near DrHoney at world 22,2,3 → local 7,*,-3) ---
+; --- Dr. Honey's Clinic ---
 [node name="DrHoneysClinic" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 2.3, -3)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0, 1)
 
-[node name="Mesh" type="MeshInstance3D" parent="DrHoneysClinic"]
-mesh = SubResource("shop_mesh")
-material_override = SubResource("clinic_mat")
+[node name="Model" parent="DrHoneysClinic" instance=ExtResource("4")]
 
 [node name="Collision" type="CollisionShape3D" parent="DrHoneysClinic"]
-shape = SubResource("shop_shape")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.75, 0)
+shape = SubResource("clinic_shape")
 
 [node name="Label" type="Label3D" parent="DrHoneysClinic"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 7, 0)
 text = "Dr. Honey's Clinic"
 font_size = 28
 outline_size = 6
-modulate = Color(0.9, 0.3, 0.3, 1)
+modulate = Color(0.9, 0.8, 0.5, 1)
 billboard = 1
 
-; --- Market Stalls (center lane) ---
-[node name="Stall1" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 1.5, -1)
+; --- Market Stalls ---
+[node name="MarketStalls" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0, -1)
 
-[node name="Mesh" type="MeshInstance3D" parent="Stall1"]
-mesh = SubResource("stall_mesh")
-material_override = SubResource("stall_mat")
+[node name="Stall1" parent="MarketStalls" instance=ExtResource("5")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 
-[node name="Collision" type="CollisionShape3D" parent="Stall1"]
-shape = SubResource("stall_shape")
+[node name="Stall2" parent="MarketStalls" instance=ExtResource("6")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0, 0)
 
-[node name="Awning" type="MeshInstance3D" parent="Stall1"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 0)
-mesh = SubResource("awning_mesh")
-material_override = SubResource("awning_mat")
-
-[node name="Stall2" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 1.5, 1)
-
-[node name="Mesh" type="MeshInstance3D" parent="Stall2"]
-mesh = SubResource("stall_mesh")
-material_override = SubResource("stall_mat")
-
-[node name="Collision" type="CollisionShape3D" parent="Stall2"]
-shape = SubResource("stall_shape")
-
-[node name="Awning" type="MeshInstance3D" parent="Stall2"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 0)
-mesh = SubResource("awning_mesh")
-material_override = SubResource("awning_mat")
+[node name="Stall3" parent="MarketStalls" instance=ExtResource("5")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, 0)

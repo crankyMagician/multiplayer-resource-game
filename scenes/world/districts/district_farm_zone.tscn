@@ -1,59 +1,38 @@
-[gd_scene format=3]
+[gd_scene load_steps=3 format=3]
 
-; --- Materials ---
+[ext_resource type="PackedScene" path="res://assets/synty/simple_fantasy/models/SF_Prop_Fence_Wood_01.glb" id="1"]
+[ext_resource type="PackedScene" path="res://assets/synty/simple_fantasy/models/SF_Prop_Fence_WoodGate_01.glb" id="2"]
+
+; --- Collision shapes ---
+[sub_resource type="BoxMesh" id="barn_mesh"]
+size = Vector3(8, 5, 6)
+
 [sub_resource type="StandardMaterial3D" id="barn_mat"]
 albedo_color = Color(0.6, 0.25, 0.15, 1)
 
-[sub_resource type="StandardMaterial3D" id="barn_roof_mat"]
-albedo_color = Color(0.45, 0.2, 0.1, 1)
-
-[sub_resource type="StandardMaterial3D" id="greenhouse_mat"]
-albedo_color = Color(0.5, 0.7, 0.5, 0.6)
-transparency = 1
-
-[sub_resource type="StandardMaterial3D" id="greenhouse_frame_mat"]
-albedo_color = Color(0.3, 0.3, 0.3, 1)
-
-[sub_resource type="StandardMaterial3D" id="fence_mat"]
-albedo_color = Color(0.45, 0.35, 0.2, 1)
-
-; --- Meshes ---
-[sub_resource type="BoxMesh" id="barn_mesh"]
-size = Vector3(8, 4, 10)
-
 [sub_resource type="BoxShape3D" id="barn_shape"]
-size = Vector3(8, 4, 10)
-
-[sub_resource type="BoxMesh" id="barn_roof_mesh"]
-size = Vector3(9, 1.5, 11)
+size = Vector3(8, 5, 6)
 
 [sub_resource type="BoxMesh" id="greenhouse_mesh"]
-size = Vector3(6, 3.5, 8)
+size = Vector3(6, 3.5, 5)
+
+[sub_resource type="StandardMaterial3D" id="greenhouse_mat"]
+albedo_color = Color(0.5, 0.7, 0.5, 0.8)
+transparency = 1
 
 [sub_resource type="BoxShape3D" id="greenhouse_shape"]
-size = Vector3(6, 3.5, 8)
+size = Vector3(6, 3.5, 5)
 
-[sub_resource type="BoxMesh" id="fence_long_mesh"]
-size = Vector3(0.15, 1.2, 15)
-
-[sub_resource type="BoxMesh" id="fence_short_mesh"]
-size = Vector3(15, 1.2, 0.15)
-
-; === Farm Zone root (offset by parent: 25, 0, 0) ===
+; === Farm Zone root (parent offset: -12.5, 3, 16.25) ===
 [node name="FarmDecor" type="Node3D"]
 
-; --- Barn (north) ---
+; --- Barn ---
 [node name="Barn" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 10)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 10)
 
 [node name="Mesh" type="MeshInstance3D" parent="Barn"]
 mesh = SubResource("barn_mesh")
 material_override = SubResource("barn_mat")
-
-[node name="Roof" type="MeshInstance3D" parent="Barn"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.75, 0)
-mesh = SubResource("barn_roof_mesh")
-material_override = SubResource("barn_roof_mat")
 
 [node name="Collision" type="CollisionShape3D" parent="Barn"]
 shape = SubResource("barn_shape")
@@ -61,12 +40,12 @@ shape = SubResource("barn_shape")
 [node name="Label" type="Label3D" parent="Barn"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4, 0)
 text = "Barn"
-font_size = 40
-outline_size = 8
-modulate = Color(0.9, 0.5, 0.3, 1)
+font_size = 32
+outline_size = 6
+modulate = Color(0.8, 0.4, 0.2, 1)
 billboard = 1
 
-; --- Greenhouse (east) ---
+; --- Greenhouse ---
 [node name="Greenhouse" type="StaticBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 1.75, 0)
 
@@ -80,37 +59,41 @@ shape = SubResource("greenhouse_shape")
 [node name="Label" type="Label3D" parent="Greenhouse"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
 text = "Greenhouse"
-font_size = 32
+font_size = 28
 outline_size = 6
 modulate = Color(0.5, 0.8, 0.5, 1)
 billboard = 1
 
-; --- Farm perimeter fence ---
-[node name="FenceWest" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0.6, 0)
-mesh = SubResource("fence_long_mesh")
-material_override = SubResource("fence_mat")
+; --- Farm perimeter fences ---
+[node name="Fences" type="Node3D" parent="."]
 
-[node name="FenceEast" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0.6, 0)
-mesh = SubResource("fence_long_mesh")
-material_override = SubResource("fence_mat")
+[node name="FenceW1" parent="Fences" instance=ExtResource("1")]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -8, 0, -4)
 
-[node name="FenceNorth" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 4)
-mesh = SubResource("fence_short_mesh")
-material_override = SubResource("fence_mat")
+[node name="FenceW2" parent="Fences" instance=ExtResource("1")]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -8, 0, 0)
 
-[node name="FenceSouth" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, -8)
-mesh = SubResource("fence_short_mesh")
-material_override = SubResource("fence_mat")
+[node name="FenceW3" parent="Fences" instance=ExtResource("1")]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -8, 0, 4)
 
-; --- Farm entry label ---
-[node name="EntryLabel" type="Label3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 2, 0)
-text = "Farm Zone"
-font_size = 40
-outline_size = 8
-modulate = Color(0.7, 0.55, 0.3, 1)
-billboard = 1
+[node name="FenceE1" parent="Fences" instance=ExtResource("1")]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 7, 0, -4)
+
+[node name="FenceE2" parent="Fences" instance=ExtResource("1")]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 7, 0, 0)
+
+[node name="FenceE3" parent="Fences" instance=ExtResource("1")]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 7, 0, 4)
+
+[node name="FenceN1" parent="Fences" instance=ExtResource("1")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, -8)
+
+[node name="FenceN2" parent="Fences" instance=ExtResource("1")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -8)
+
+[node name="FenceN3" parent="Fences" instance=ExtResource("1")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0, -8)
+
+; Gate on south side
+[node name="Gate" parent="Fences" instance=ExtResource("2")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4)

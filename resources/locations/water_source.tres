@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "water_source"
 display_name = "Water Source"
-world_position = Vector3(31, 0.4, 6)
+world_position = Vector3(-6.5, 3, 22.25)
 discovery_radius = 5.0
 icon_type = "landmark"
 category = "landmark"

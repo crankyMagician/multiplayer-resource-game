@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "blackened_crest"
 display_name = "Blackened Crest"
-world_position = Vector3(25, 3, -20)
+world_position = Vector3(50, 8, 30)
 discovery_radius = 10.0
 icon_type = "wild_zone"
 category = "wild_zone"

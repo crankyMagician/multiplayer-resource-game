@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "cauldron"
 display_name = "Cauldron"
-world_position = Vector3(0, 0.6, -55)
+world_position = Vector3(-15, 5, -20)
 discovery_radius = 5.0
 icon_type = "crafting"
 category = "crafting"

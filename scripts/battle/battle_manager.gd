@@ -1996,11 +1996,11 @@ func _apply_defeat_penalty(_battle: Dictionary, peer_id: int) -> void:
 	if penalty > 0:
 		NetworkManager.server_remove_money(peer_id, penalty)
 	# Reset position to spawn
-	pdata["position"] = {"x": 0.0, "y": 1.0, "z": 3.0}
+	pdata["position"] = {"x": -32.5, "y": 5.0, "z": 13.75}
 	# Teleport the player node server-side (position syncs via StateSync)
 	var player_node = NetworkManager._get_player_node(peer_id)
 	if player_node:
-		player_node.position = Vector3(0.0, 1.0, 3.0)
+		player_node.position = Vector3(-32.5, 5.0, 13.75)
 	# Notify client
 	_battle_defeat_penalty.rpc_id(peer_id, penalty)
 

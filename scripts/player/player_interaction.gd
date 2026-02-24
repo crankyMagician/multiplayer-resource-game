@@ -95,10 +95,12 @@ func _try_interact() -> void:
 				rm.request_exit_restaurant.rpc_id(1)
 			return
 	# Check for restaurant door proximity (interact key as alternative to walk-over)
-	# Uses _find_nearest_in_group to find both server Area3D doors and client Node3D doors
 	var door = _find_nearest_in_group("restaurant_door", pos, RESTAURANT_DOOR_RANGE)
 	if door:
 		var door_owner = door.get_meta("owner_name", "") if door.has_meta("owner_name") else ""
+		# Static door has empty owner_name — use local player's name (enters YOUR restaurant)
+		if door_owner == "":
+			door_owner = PlayerData.player_name
 		if door_owner != "":
 			var rm = get_node_or_null("/root/Main/GameWorld/RestaurantManager")
 			if rm:
@@ -532,10 +534,15 @@ func _update_restaurant_prompt() -> void:
 	var door = _find_nearest_in_group("restaurant_door", pos, RESTAURANT_DOOR_RANGE)
 	if door:
 		var door_owner = door.get_meta("owner_name", "") if door.has_meta("owner_name") else ""
-		if door_owner != "" and not _showing_restaurant_prompt:
+		if not _showing_restaurant_prompt:
 			var hud = get_node_or_null("/root/Main/GameWorld/UI/HUD")
 			if hud and hud.has_method("show_interaction_prompt"):
-				hud.show_interaction_prompt("Press E to enter %s's Restaurant" % door_owner, true)
+				var prompt_text: String
+				if door_owner == "":
+					prompt_text = "Press E to enter My Restaurant"
+				else:
+					prompt_text = "Press E to enter %s's Restaurant" % door_owner
+				hud.show_interaction_prompt(prompt_text, true)
 				_showing_restaurant_prompt = true
 	elif _showing_restaurant_prompt:
 		_hide_restaurant_prompt()

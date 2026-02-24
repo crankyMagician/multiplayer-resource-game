@@ -6,7 +6,7 @@
 script = ExtResource("1")
 location_id = "lighthouse"
 display_name = "The Lighthouse"
-world_position = Vector3(-36, 0, -10)
+world_position = Vector3(-108.75, 3, -45.5)
 discovery_radius = 8.0
 icon_type = "zone"
 category = "zone"
